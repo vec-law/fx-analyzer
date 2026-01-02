@@ -78,3 +78,8 @@ Do parametrów wejściowych należą:
 * `train_ratio` – współczynnik podziału na dane treningowe
 * `seed` – parametr okreslający losowość danych
 * `epochs` – liczba kroków (epok) pętli treningowej
+
+## Komunikaty wyjściowe
+Komunikaty wyjściowe są wyświetlane w konsoli systemowej i podzielone na 8 etapów. W każdym z nich funkcja wykonująca operację wyświetla komunikat w postaci: `[nazwa_funkcji] komunikat`. 
+
+Rozpoczęcie każdego etapu sygnalizowane jest komunikatem `ETAP x/8 Nazwa etapu`, a zakończenie potwierdzane statusem `OK`. Jeżeli w trakcie trwania etapu wystąpi błąd, wyświetlana jest informacja `Przerwano`.
