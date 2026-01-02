@@ -1,3 +1,5 @@
+__version__ = "1.0.0"
+
 from src.utils import clear_console
 from src.ingestion import load_data
 from src.features import prepare_features, normalize
