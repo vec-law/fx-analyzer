@@ -36,7 +36,7 @@ Narzędzie do analizy trendów na rynkach walutowych Forex.
    pipenv run python main.py
    ```
 ## Interwały czasowe
-W obecniej wersji programu zaimplementowano dzienne interwały czasowe.
+W obecnej wersji programu zaimplementowano dzienne interwały czasowe.
 
 ## Dane wejściowe (Cechy)
 Wejściem modelu jest **31 prostych średnich kroczących (SMA)** w zakresie od SMA10 do SMA40.
@@ -46,5 +46,5 @@ Wartościami docelowymi (target) są **ceny zamknięcia (close)**.
 
 ## Architektura modelu
 Zastosowano Wielowarstwowy Perceptron (MLP) o płytkiej strukturze z dwiema warstwami ukrytymi:
-***Konfiguracja warstw:** 31 (wejście) -> 16 -> 8 -> 1 (wyjście)
-**Kształt:** Architektura lejka (redukcyjna)
+* **Konfiguracja warstw:** 31 (wejście) -> 16 -> 8 -> 1 (wyjście)
+* **Kształt:** Architektura lejka (redukcyjna)
