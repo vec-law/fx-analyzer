@@ -13,12 +13,17 @@
 
 ---
 
+## Opis projektu
+Projekt ma na celu stworzenie narzędzia do analizy kursów par walutowych na rynku Forex, a dokładniej do wykrywania krótko- i średnioterminowych trendów oraz testowania i implementowania strategii autotradingu opartych na linii trendu. 
+
+Zamiast ręcznie określać, który ze wskaźników najlepiej odwzorowuje trend i w jakim stopniu, wykorzystano do tego celu model sieci neuronowej. Jako wejść modelu świadomie użyto wskaźników o dużej inercji (prostych średnich kroczących z dziennych cen zamknięcia), aby model nie uczył się surowych cen, lecz skupił się na odwzorowaniu trendu danego instrumentu. Otrzymaną w ten sposób predykcją posłużono się do generowania sygnałów kupna i sprzedaży. Stworzono także moduł symulacji do oceny wygenerowanych sygnałów.
+
 ## Struktura projektu
 * `src/` - katalog źródłowy z modułami programu
-* `src/ingestion.py` - pobranie i przygotowanie danych
-* `src/features.py` - dodanie cech, normalizacja danych
-* `src/model.py` - przygotowanie tensorów, parametrów modelu, trening, ewaluacja
-* `src/strategy.py` - obliczenia wskaźników, symulacja strategii, obliczenia transakcji, wizualizacja
+* `src/ingestion.py` - moduł odpowiadający za pobranie i przygotowanie danych
+* `src/features.py` - moduł odpowiadający za dodanie cech oraz normalizację danych
+* `src/model.py` - moduł odpowiadający za przygotowanie tensorów, parametrów modelu, trening i ewaluację
+* `src/strategy.py` - moduł odpowiadający za obliczenia wskaźników, symulację strategii, obliczenia transakcji oraz wizualizację
 * `src/utils.py` - funkcje pomocnicze
 * `main.py` - główny punkt wejścia aplikacji
 * `Pipfile` & `Pipfile.lock` - konfiguracja środowiska (Pipenv)
