@@ -44,14 +44,14 @@ Zamiast ręcznie określać, który ze wskaźników najlepiej odwzorowuje trend 
    ```
 ## Ładowanie danych
 Program posiada zaimplementowane automatyczne ładowanie danych z dwóch źródeł:
-* **Plik CSV:** program najpierw wyszukuje plik o nazwie `instrument_interval.csv` w folderze `/data/raw`
-* **Biblioteka yfinance:** w przypadku nieodnalezienia pliku CSV, program automatycznie pobiera dane za pomocą modułu `yfinance`
+* **Plik CSV:** Program w pierwszej kolejności wyszukuje plik o nazwie `instrument_interval.csv` w katalogu `/data/raw`. Pliki CSV pozwalają na analizę dowolnych instrumentów. Należy jednak upewnić się, że dane te mają następującą strukturę: `['date', 'time', 'open', 'high', 'low', 'close', 'vol']`. Strukturę tę można dostosować bezpośrednio w module `ingestion.py`.
+* **Biblioteka yfinance:** W przypadku braku pliku CSV, program automatycznie próbuje pobrać dane za pomocą modułu `yfinance`. Obecna wersja programu pozwala na pobieranie z `yfinance` tylko kursów par walutowych.
 
 ## Korekta danych
 Program automatycznie sprawdza ciągłość załadowanych danych. W przypadku wykrycia luk, zbiór danych jest automatycznie przycinany do **najdłuższego spójnego zakresu**, co zapewnia poprawność wyliczania cech (średnich SMA).
 
 ## Interwały czasowe
-W obecnej wersji programu zaimplementowano dzienne interwały czasowe.
+W obecnej wersji programu zaimplementowano dzienne interwały czasowe. Należy pamiętać, aby interwał zapisywać w postaci `1d`.
 
 ## Dane wejściowe (Cechy)
 Wejściem modelu jest **31 prostych średnich kroczących (SMA)** w zakresie od SMA10 do SMA40 z historycznych cen zamknięcia.
