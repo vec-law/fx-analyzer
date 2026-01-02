@@ -25,7 +25,7 @@ Narzędzie do analizy trendów na rynkach walutowych Forex.
 
 1. Sklonuj repozytorium:
    ```bash
-   git clone [https://github.com/TwojUzytkownik/fx-analyzer.git](https://github.com/TwojUzytkownik/fx-analyzer.git)
+   git clone [https://github.com/vec-law/fx-analyzer.git](https://github.com/vec-law/fx-analyzer.git)
    cd fx-analyzer
    ```
 2. Zainstaluj biblioteki używając Pipenv:
