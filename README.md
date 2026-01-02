@@ -22,7 +22,6 @@ Narzędzie do analizy trendów na rynkach walutowych Forex.
 - `Pipfile` & `Pipfile.lock` - konfiguracja środowiska (Pipenv)
 
 ## Instalacja i użycie
-
 1. Sklonuj repozytorium:
    ```bash
    git clone [https://github.com/vec-law/fx-analyzer.git](https://github.com/vec-law/fx-analyzer.git)
@@ -36,3 +35,16 @@ Narzędzie do analizy trendów na rynkach walutowych Forex.
    ```bash
    pipenv run python main.py
    ```
+## Interwały czasowe
+W obecniej wersji programu zaimplementowano dzienne interwały czasowe.
+
+## Dane wejściowe (Cechy)
+Wejściem modelu jest **31 prostych średnich kroczących (SMA)** w zakresie od SMA10 do SMA40.
+
+## Wartości docelowe
+Wartościami docelowymi (target) są **ceny zamknięcia (close)**.
+
+## Architektura modelu
+Zastosowano Wielowarstwowy Perceptron (MLP) o płytkiej strukturze z dwiema warstwami ukrytymi:
+***Konfiguracja warstw:** 31 (wejście) -> 16 -> 8 -> 1 (wyjście)
+**Kształt:** Architektura lejka (redukcyjna)
