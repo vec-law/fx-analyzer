@@ -1,4 +1,4 @@
-# fx-analyzer [v1.0.0]
+# fx-analyzer
 
 Narzędzie do analizy trendów na rynkach walutowych Forex.
 
