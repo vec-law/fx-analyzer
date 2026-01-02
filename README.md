@@ -12,14 +12,14 @@ Narzędzie do analizy trendów na rynkach walutowych Forex.
 ---
 
 ## Struktura projektu
-- `src/` - katalog źródłowy z modułami programu
-- `src/ingestion.py` - pobranie i przygotowanie danych
-- `src/features.py` - dodanie cech, normalizacja danych
-- `src/model.py` - przygotowanie tensorów, parametrów modelu, trening, ewaluacja
-- `src/strategy.py` - obliczenia wskaźników, symulacja strategii, obliczenia transakcji, wizualizacja
-- `src/utils.py` - funkcje pomocnicze
-- `main.py` - główny punkt wejścia aplikacji
-- `Pipfile` & `Pipfile.lock` - konfiguracja środowiska (Pipenv)
+* `src/` - katalog źródłowy z modułami programu
+* `src/ingestion.py` - pobranie i przygotowanie danych
+* `src/features.py` - dodanie cech, normalizacja danych
+* `src/model.py` - przygotowanie tensorów, parametrów modelu, trening, ewaluacja
+* `src/strategy.py` - obliczenia wskaźników, symulacja strategii, obliczenia transakcji, wizualizacja
+* `src/utils.py` - funkcje pomocnicze
+* `main.py` - główny punkt wejścia aplikacji
+* `Pipfile` & `Pipfile.lock` - konfiguracja środowiska (Pipenv)
 
 ## Instalacja i użycie
 1. Sklonuj repozytorium:
@@ -35,11 +35,16 @@ Narzędzie do analizy trendów na rynkach walutowych Forex.
    ```bash
    pipenv run python main.py
    ```
+## Ładowanie danych
+Program posiada zaimplementowane automatyczne ładowanie danych z dwóch źródeł:
+* **Plik CSV:** program najpierw wyszukuje plik o nazwie `instrument_interval.csv` w folderze `/data/raw`
+* **Biblioteka yfinance:** w przypadku nieodnalezienia pliku CSV, program automatycznie pobiera dane za pomocą modułu `yfinance`
+
 ## Interwały czasowe
 W obecnej wersji programu zaimplementowano dzienne interwały czasowe.
 
 ## Dane wejściowe (Cechy)
-Wejściem modelu jest **31 prostych średnich kroczących (SMA)** w zakresie od SMA10 do SMA40.
+Wejściem modelu jest **31 prostych średnich kroczących (SMA)** w zakresie od SMA10 do SMA40 z historycznych cen zamknięcia.
 
 ## Wartości docelowe
 Wartościami docelowymi (target) są **ceny zamknięcia (close)**.
