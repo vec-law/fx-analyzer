@@ -117,9 +117,6 @@ def load_yf(instrument, interval, target_column):
         return None
 
 def load_data(instrument, interval, target_column, samples_limit=None):
-
-    
-
     if any(condition is None for condition in [instrument, interval, target_column]):
         print("  [load_data]: Nieprawidłowe parametry")
         return None
