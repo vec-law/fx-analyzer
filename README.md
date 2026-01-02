@@ -1,6 +1,8 @@
 # fx-analyzer
 
-Narzędzie do analizy trendów na rynkach walutowych Forex.
+**PL:** Narzędzie do analizy rynku FX
+
+**EN:** FX market analysis tool
 
 ---
 
