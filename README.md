@@ -12,7 +12,7 @@ Narzędzie do analizy trendów na rynkach walutowych Forex.
 - `main.py` - główny punkt wejścia aplikacji
 
 ## Użycie
-Główny skrypt uruchamiający pełną ścieżkę analizy:
+Główny skrypt uruchamiający:
 ```bash
 python main.py
 ```
