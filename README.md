@@ -63,3 +63,18 @@ Wartościami docelowymi (target) są **ceny zamknięcia (close)**.
 Zastosowano Wielowarstwowy Perceptron (MLP) o płytkiej strukturze z dwiema warstwami ukrytymi:
 * **Konfiguracja warstw:** 31 (wejście) -> 16 -> 8 -> 1 (wyjście)
 * **Kształt:** Architektura lejka (redukcyjna)
+
+## Parametry wejściowe
+W obecnej wersji programu nie ma możliwości ustawiania parametrów za pomocą interfejsu użytkownika. Należy je zdefiniować bezpośrednio w pliku `main.py`.
+
+Do parametrów wejściowych należą:
+* `instrument` – nazwa instrumentu
+* `interval` – interwał czasowy
+* `target_column` – wybór kolumny z ceną docelową
+* `strategy` – numer strategii
+* `indicators` – wskaźniki, na podstawie których obliczane są cechy wejściowe
+* `max_ind_period` – maksymalny okres średniej kroczącej
+* `samples_limit` – limit długości zbioru danych
+* `train_ratio` – współczynnik podziału na dane treningowe
+* `seed` – parametr okreslający losowość danych
+* `epochs` – liczba kroków (epok) pętli treningowej
