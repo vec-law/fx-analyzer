@@ -40,6 +40,9 @@ Program posiada zaimplementowane automatyczne ładowanie danych z dwóch źróde
 * **Plik CSV:** program najpierw wyszukuje plik o nazwie `instrument_interval.csv` w folderze `/data/raw`
 * **Biblioteka yfinance:** w przypadku nieodnalezienia pliku CSV, program automatycznie pobiera dane za pomocą modułu `yfinance`
 
+## Korekta danych
+Program automatycznie sprawdza ciągłość załadowanych danych. W przypadku wykrycia luk, zbiór danych jest automatycznie przycinany do **najdłuższego spójnego zakresu**, co zapewnia poprawność wyliczania cech (średnich SMA).
+
 ## Interwały czasowe
 W obecnej wersji programu zaimplementowano dzienne interwały czasowe.
 
