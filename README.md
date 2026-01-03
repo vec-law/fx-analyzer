@@ -148,6 +148,7 @@ Jak wspomniano wcześniej, w programie zaimplementowano moduł do symulacji stra
 * indeksu z ceną zamknięcia: `idx_close`
 
 ### Przykładowa strategia rynkowa:
+#### Założenia
 W programie udostępniono przykładową strategię rynkową (`strategy` = 1), która bazuje na następujących parametrach:
 * `delta`, `delta_minus_1`, `delta_minus_2`, `delta_minus_3`, `delta_minus_4` – różnica między n-tą a n-1 predykcją dla obecnej próbki i 4 kolejnych wstecz (należy zauważyć, że predykcja n-tej próbki jest wyliczana na podstawie cen `target` z n-1 próbki i wcześniejszych)
 * `target` – bieżąca cena (w obecnej strukturze danych `df_dict[test]` jedyną dostępną bieżącą ceną jest cena `target` = `close`)
