@@ -163,15 +163,15 @@ Szczegółowe warunki zostały zapisane w programie, ale można je streścić na
 #### Wyniki
 Poniżej przedstawiono wykresy dla rozpatrywanych przypadków wielkości zbioru testowego z wynikami przykładowej strategii:
 
-| Zbiór testowy: 250 (`train_ratio` = 0.9375, `strategy` = None) |
+| Zbiór testowy: 250 (`train_ratio` = 0.9375, `strategy` = 1) |
 | :--- |
 | ![Wykres 250](docs/img/EURUSD_1d_1_250.png) |
 
-| Zbiór testowy: 500 (`train_ratio` = 0.875, `strategy` = None) |
+| Zbiór testowy: 500 (`train_ratio` = 0.875, `strategy` = 1) |
 | :--- |
 | ![Wykres 250](docs/img/EURUSD_1d_1_500.png) |
 
-| Zbiór testowy: 1000 (`train_ratio` = 0.75, `strategy` = None) |
+| Zbiór testowy: 1000 (`train_ratio` = 0.75, `strategy` = 1) |
 | :--- |
 | ![Wykres 250](docs/img/EURUSD_1d_1_1000.png) |
 
