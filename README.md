@@ -94,27 +94,22 @@ Trening i ewaluację modelu przeprowadzono przyjmując następujące parametry:
 Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech różnych wielkości zbioru testowego:
 
 #### Zbiór testowy: 250 (`train_ratio` = 0.9375)
+
 | Trening | Ewaluacja |
 | --- | --- |
 | ![Trening](docs/img/EURUSD_1d_train_250.png) | ![Ewaluacja](docs/img/EURUSD_1d_eval_250.png) |
 
 #### Zbiór testowy: 500 (`train_ratio` = 0.875)
-| Trening|
-| --- |
-| ![Trening](docs/img/EURUSD_1d_train_500.png) |
 
-| Ewaluacja|
-| --- |
-| ![Ewaluacja](docs/img/EURUSD_1d_eval_500.png) |
+| Trening | Ewaluacja |
+| --- | --- |
+| ![Trening](docs/img/EURUSD_1d_train_500.png) | ![Ewaluacja](docs/img/EURUSD_1d_eval_500.png) |
 
 #### Zbiór testowy: 1000 (`train_ratio` = 0.75)
-| Trening|
-| --- |
-| ![Trening](docs/img/EURUSD_1d_train_1000.png) |
 
-| Ewaluacja|
-| --- |
-| ![Ewaluacja](docs/img/EURUSD_1d_eval_1000.png) |
+| Trening | Ewaluacja |
+| --- | --- |
+| ![Trening](docs/img/EURUSD_1d_train_1000.png) | ![Ewaluacja](docs/img/EURUSD_1d_eval_1000.png) |
 
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
