@@ -23,7 +23,7 @@ Zamiast ręcznie określać, który ze wskaźników najlepiej odwzorowuje trend 
 * `src/utils.py` - funkcje pomocnicze
 * `tests/` - katalog zawierający testy programu
 * `tests/test_integration.py` - testy integracyjne sprawdzające poprawność przepływu danych
-* `docs/img/` - katalog zawierający wygenerowane wykresy i dokumentację graficzną
+* `docs/img/` - katalog zawierający dokumentację graficzną
 * `main.py` - główny punkt wejścia aplikacji
 * `Pipfile` & `Pipfile.lock` - konfiguracja środowiska (Pipenv)
 
