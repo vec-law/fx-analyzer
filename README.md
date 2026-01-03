@@ -100,14 +100,14 @@ Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech 
 | :--- | :--- |
 | ![Trening](docs/img/EURUSD_1d_train_250.png) | ![Ewaluacja](docs/img/EURUSD_1d_eval_250.png) |
 
-| Zbiór testowy: 250 (`train_ratio` = 0.875) |
+| Zbiór testowy: 500 (`train_ratio` = 0.875) |
 | :--- |
 
 | Trening | Ewaluacja |
 | --- | --- |
 | ![Trening](docs/img/EURUSD_1d_train_500.png) | ![Ewaluacja](docs/img/EURUSD_1d_eval_500.png) |
 
-| Zbiór testowy: 250 (`train_ratio` = 0.75) |
+| Zbiór testowy: 1000 (`train_ratio` = 0.75) |
 | :--- |
 
 | Trening | Ewaluacja |
