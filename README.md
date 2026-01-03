@@ -84,6 +84,34 @@ Komunikaty wyjściowe są wyświetlane w konsoli systemowej i podzielone na 8 et
 
 Rozpoczęcie każdego etapu sygnalizowane jest komunikatem `ETAP x/8 Nazwa etapu`, a zakończenie potwierdzane statusem `OK`. Jeżeli w trakcie trwania etapu wystąpi błąd, wyświetlana jest informacja `Przerwano`.
 
+## Trening i ewaluacja
+
+Trening i ewaluację modelu przeprowadzono przyjmując następujące parametry:
+* **Instrument:** `EURUSD`
+* **Interwał:** `1d` (dzienny)
+* **Wartość docelowa (target):** `close` (cena zamknięcia)
+* **Długość zbioru danych:** `4000`
+* **Liczba epok:** `1000`
+* **Źródło danych:** `yfinance`
+* **Data wykonania:** `2026-01-03`
+
+---
+
+### Wyniki
+Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech różnych wielkości zbioru testowego:
+
+#### Zbiór testowy: 250 (`train_ratio` = 0.9375)
+![Trening](docs/img/EURUSD_1d_train_250.png)
+![Ewaluacja](docs/img/EURUSD_1d_eval_250.png)
+
+#### Zbiór testowy: 500 (`train_ratio` = 0.875)
+![Trening](docs/img/EURUSD_1d_train_500.png)
+![Ewaluacja](docs/img/EURUSD_1d_eval_500.png)
+
+#### Zbiór testowy: 1000 (`train_ratio` = 0.75)
+![Trening](docs/img/EURUSD_1d_train_1000.png)
+![Ewaluacja](docs/img/EURUSD_1d_eval_1000.png)
+
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
 
