@@ -135,6 +135,9 @@ Poniżej przedstawiono wykresy dla rozpatrywanych przypadków wielkości zbioru 
 | :--- |
 | ![Wykres 250](docs/img/EURUSD_1d_None_1000.png) |
 
+> [!NOTE]
+> Analiza wykresów pokazuje że kierunek predykcji w większości przypadków trafnie określił kierunek zmiany ceny, jednocześnie wskazując na stałość okresów tych zmian.
+
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
 
