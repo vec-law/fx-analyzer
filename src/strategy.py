@@ -3,11 +3,6 @@ import matplotlib.pyplot as plt
 import os
 from src.utils import save_df
 
-import numpy as np
-import matplotlib.pyplot as plt
-import os
-from src.utils import save_df
-
 SUPPORTED_STRATEGIES = [1]
 
 def plot_strategy(df_test, strategy):
