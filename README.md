@@ -156,7 +156,7 @@ W programie udostępniono przykładową strategię rynkową (`strategy` = 1), kt
 * `target` – bieżąca cena (w obecnej strukturze danych `df_dict[test]` jedyną dostępną bieżącą ceną jest cena `target` = `close`)
 * `diff_rel` – względna różnica między bieżącą ceną `target` a predykcją
 
-Szczegółowe warunki otwierania i zamykania pozycji zostały zapisane w programie, ale można je streścić następująco:
+Szczegółowe warunki otwierania i zamykania pozycji zostały zapisane w programie i można je streścić następująco:
 * otwieranie pozycji w stronę trendu przy zmianie kierunku predykcji,
 * otwieranie pozycji w kierunku trendu przy zbliżaniu się ceny bieżącej do predykcji,
 * zamykanie pozycji przy zmianie predykcji na kierunek przeciwny,
