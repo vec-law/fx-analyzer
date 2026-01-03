@@ -163,7 +163,7 @@ Szczegółowe warunki otwierania i zamykania pozycji zostały zapisane w program
 * zamykanie pozycji przy dużych wahaniach ceny bieżącej od predykcji w stronę trendu.
 
 #### Wyniki
-Poniżej przedstawiono wykresy dla z wynikami przykładowej strategii:
+Poniżej przedstawiono wykresy z wynikami przykładowej strategii:
 
 | Zbiór testowy: 250 (`train_ratio` = 0.9375, `strategy` = 1) |
 | :--- |
