@@ -95,6 +95,7 @@ Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech 
 
 #### Zbiór testowy: 250 (`train_ratio` = 0.9375)
 
+| Zbiór testowy: 250 (`train_ratio` = 0.9375) |
 | Trening | Ewaluacja |
 | --- | --- |
 | ![Trening](docs/img/EURUSD_1d_train_250.png) | ![Ewaluacja](docs/img/EURUSD_1d_eval_250.png) |
