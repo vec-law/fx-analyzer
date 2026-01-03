@@ -93,9 +93,7 @@ Trening i ewaluację modelu przeprowadzono przyjmując następujące parametry:
 ### Wyniki
 Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech różnych wielkości zbioru testowego:
 
-#### Zbiór testowy: 250 (`train_ratio` = 0.9375)
-
-| **Wyniki treningu i ewaluacji** |
+| Zbiór testowy: 250 (`train_ratio` = 0.9375) |
 | :--- |
 
 | Trening | Ewaluacja |
