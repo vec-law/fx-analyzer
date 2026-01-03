@@ -180,6 +180,9 @@ Poniżej przedstawiono wykresy z wynikami przykładowej strategii:
 > [!IMPORTANT]
 > Wyniki symulacji nie uwzględniają kosztów transakcyjnych, takich jak prowizje, spready czy punkty swapowe.
 
+> [!NOTE]
+> Wyniki strategii pokazują, że przynosi ona bardzo dobre rezultaty w przypadku występowania silnych trendów na rynku, jednak zagrożeniem są tutaj okresy konsolidacji bez jego wyraźnego kierunku.
+
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
 
