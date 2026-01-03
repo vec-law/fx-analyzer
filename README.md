@@ -83,3 +83,10 @@ Do parametrów wejściowych należą:
 Komunikaty wyjściowe są wyświetlane w konsoli systemowej i podzielone na 8 etapów. W każdym z nich funkcja wykonująca operację wyświetla komunikat w postaci: `[nazwa_funkcji] komunikat`. 
 
 Rozpoczęcie każdego etapu sygnalizowane jest komunikatem `ETAP x/8 Nazwa etapu`, a zakończenie potwierdzane statusem `OK`. Jeżeli w trakcie trwania etapu wystąpi błąd, wyświetlana jest informacja `Przerwano`.
+
+## Testowanie
+Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
+
+```bash
+pytest tests/test_integration.py
+```
