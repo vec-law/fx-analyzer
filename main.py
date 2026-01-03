@@ -1,4 +1,4 @@
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 from src.utils import clear_console
 from src.ingestion import load_data
