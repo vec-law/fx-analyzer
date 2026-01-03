@@ -49,10 +49,10 @@ Program automatycznie sprawdza ciągłość załadowanych danych. W przypadku wy
 ## Interwały czasowe
 W obecnej wersji programu zaimplementowano dzienne interwały czasowe. Należy pamiętać, aby interwał zapisywać w postaci `1d`.
 
-## Dane wejściowe (Features)
+## Dane wejściowe
 Wejściem modelu jest **31 prostych średnich kroczących (SMA)** w zakresie od SMA10 do SMA40 z historycznych cen zamknięcia.
 
-## Wartości docelowe (Targets)
+## Wartości docelowe
 Wartościami docelowymi (target) są **ceny zamknięcia (close)**.
 
 ## Architektura modelu
