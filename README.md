@@ -160,6 +160,21 @@ Szczegółowe warunki zostały zapisane w programie, ale można je streścić na
 * zamykanie pozycji przy zmianie predykcji na kierunek przeciwny,
 * zamykanie pozycji przy dużych wahaniach ceny bieżącej od predykcji w stronę trendu.
 
+#### Wyniki
+Poniżej przedstawiono wykresy dla rozpatrywanych przypadków wielkości zbioru testowego z wynikami przykładowej strategii:
+
+| Zbiór testowy: 250 (`train_ratio` = 0.9375, `strategy` = None) |
+| :--- |
+| ![Wykres 250](docs/img/EURUSD_1d_1_250.png) |
+
+| Zbiór testowy: 500 (`train_ratio` = 0.875, `strategy` = None) |
+| :--- |
+| ![Wykres 250](docs/img/EURUSD_1d_1_500.png) |
+
+| Zbiór testowy: 1000 (`train_ratio` = 0.75, `strategy` = None) |
+| :--- |
+| ![Wykres 250](docs/img/EURUSD_1d_1_1000.png) |
+
 
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
