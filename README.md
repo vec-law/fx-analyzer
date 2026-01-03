@@ -21,6 +21,9 @@ Zamiast ręcznie określać, który ze wskaźników najlepiej odwzorowuje trend 
 * `src/model.py` - moduł odpowiadający za przygotowanie tensorów, parametrów modelu, trening i ewaluację
 * `src/strategy.py` - moduł odpowiadający za obliczenia wskaźników, symulację strategii, obliczenia transakcji oraz wizualizację
 * `src/utils.py` - funkcje pomocnicze
+* `tests/` - katalog zawierający testy programu
+* `tests/test_integration.py` - testy integracyjne sprawdzające poprawność przepływu danych
+* `docs/img/` - katalog zawierający wygenerowane wykresy i dokumentację graficzną
 * `main.py` - główny punkt wejścia aplikacji
 * `Pipfile` & `Pipfile.lock` - konfiguracja środowiska (Pipenv)
 
