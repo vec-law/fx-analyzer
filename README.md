@@ -123,9 +123,17 @@ Program pozwala na wizualną analizę predykcji, która odzwierciedla trend inst
 
 Poniżej przedstawiono wykresy dla rozpatrywanych przypadków wielkości zbioru testowego:
 
-| Zbiór testowy: 250 (`train_ratio` = 0.9375) |
+| Zbiór testowy: 250 (`train_ratio` = 0.9375, `strategy` = None) |
 | :--- |
-| ![Wykres 250](link_do_obrazka_250) |
+| ![Wykres 250](docs/img/EURUSD_1d_None_250.png) |
+
+| Zbiór testowy: 500 (`train_ratio` = 0.875, `strategy` = None) |
+| :--- |
+| ![Wykres 250](docs/img/EURUSD_1d_None_500.png) |
+
+| Zbiór testowy: 1000 (`train_ratio` = 0.75, `strategy` = None) |
+| :--- |
+| ![Wykres 250](docs/img/EURUSD_1d_None_1000.png) |
 
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
