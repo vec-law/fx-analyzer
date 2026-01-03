@@ -121,7 +121,6 @@ Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech 
 > Analiza średniego bezwzględnego błędu MAE wskazuje na poprawność doboru wektora cech oraz modelu – średnie odchylenie predykcji od wartości docelowej utrzymuje się na poziomie **~1%**, niezależnie od wielkości zbioru testowego.
 
 ## Analiza trendu instrumentu
-
 Program pozwala na wizualną analizę predykcji, która odzwierciedla trend instrumentu na podstawie generowanych wykresów. Kierunek predykcji oznaczono kolorem **żółtym** w przypadku trendu wzrostowego i **fioletowym** w przypadku trendu spadkowego. 
 
 Poniżej przedstawiono wykresy dla rozpatrywanych przypadków wielkości zbioru testowego:
@@ -149,7 +148,7 @@ Jak wspomniano wcześniej, w programie zaimplementowano moduł do symulacji stra
 
 ### Przykładowa strategia rynkowa:
 #### Założenia
-Wszystkie ustawienia parametrów programu, wykorzytywanego przy testowaniu strategii są analogiczne jak w sekcji "Trening i ewaluacja".
+Program wykorzystywany do testowania strategii ma identyczne ustawienia parametrów jak te opisane w sekcji "Trening i ewaluacja" za wyjątkiem parametru `strategy`.
 
 W programie udostępniono przykładową strategię rynkową (`strategy` = 1), która bazuje na następujących wskaźnikach:
 * `delta`, `delta_minus_1`, `delta_minus_2`, `delta_minus_3`, `delta_minus_4` – różnica między n-tą a n-1 predykcją dla obecnej próbki i 4 kolejnych wstecz (należy zauważyć, że predykcja n-tej próbki jest wyliczana na podstawie cen `target` z n-1 próbki i wcześniejszych)
