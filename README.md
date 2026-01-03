@@ -114,11 +114,7 @@ Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech 
 | --- | --- |
 | ![Trening](docs/img/EURUSD_1d_train_1000.png) | ![Ewaluacja](docs/img/EURUSD_1d_eval_1000.png) |
 
-| Trening | Ewaluacja |
-| :--- | :--- |
-| ![Trening](...) | ![Ewaluacja](...) |
-
-> [!IMPORTANT]
+> [!NOTE]
 > **Analiza wskaźnika MAE wskazuje na poprawność doboru wektora cech oraz modelu** – średnie odchylenie predykcji od wartości docelowej (targetu) utrzymuje się na poziomie **~1%**, niezależnie od wielkości zbioru testowego.
 
 ## Testowanie
