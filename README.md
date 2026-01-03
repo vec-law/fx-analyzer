@@ -117,6 +117,16 @@ Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech 
 > [!NOTE]
 > Analiza średniego bezwzględnego błędu MAE wskazuje na poprawność doboru wektora cech oraz modelu – średnie odchylenie predykcji od wartości docelowej utrzymuje się na poziomie **~1%**, niezależnie od wielkości zbioru testowego.
 
+## Analiza trendu instrumentu
+
+Program pozwala na wizualną analizę predykcji, która odzwierciedla trend instrumentu na podstawie generowanych wykresów. Kierunek predykcji oznaczono kolorem **żółtym** w przypadku trendu wzrostowego i **fioletowym** w przypadku trendu spadkowego. 
+
+Poniżej przedstawiono wykresy dla rozpatrywanych przypadków wielkości zbioru testowego:
+
+| Zbiór testowy: 250 (`train_ratio` = 0.9375) |
+| :--- |
+| ![Wykres 250](link_do_obrazka_250) |
+
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
 
