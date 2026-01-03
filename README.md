@@ -141,6 +141,25 @@ Poniżej przedstawiono wykresy dla rozpatrywanych przypadków wielkości zbioru 
 > [!NOTE]
 > Analiza wykresów pokazuje że kierunek predykcji w większości przypadków trafnie określił kierunek zmiany ceny, jednocześnie wskazując na stałość okresów tych zmian.
 
+## Symulacja strategii
+Jak wspomniano wcześniej, w programie zaimplementowano moduł do symulacji strategii pozwalający na testowanie dowolnej logiki rynkowej. Aby jednak było to możliwe, konieczne jest zapisanie w strukturze danych `df_dict[test]` następujących pól za pomocą funkcji `set_positions`:
+* cen otwarcia transakcji: `buy_open`, `sell_open`
+* cen zamknięcia transakcji: `buy_close`, `sell_close`
+* indeksu z ceną zamknięcia: `idx_close`
+
+### Przykładowa strategia rynkowa:
+W programie udostępniono przykładową strategię rynkową (`strategy` = 1), która bazuje na następujących parametrach:
+* `delta`, `delta_minus_1`, `delta_minus_2`, `delta_minus_3`, `delta_minus_4` – różnica między n-tą a n-1 predykcją dla obecnej próbki i 4 kolejnych wstecz (należy zauważyć, że predykcja n-tej próbki jest wyliczana na podstawie cen `target` z n-1 próbki i wcześniejszych)
+* `target` – bieżąca cena (w obecnej strukturze danych `df_dict[test]` jedyną dostępną bieżącą ceną jest cena `target` = `close`)
+* `diff_rel` – względna różnica między bieżącą ceną `target` a predykcją
+
+Szczegółowe warunki zostały zapisane w programie, ale można je streścić następująco:
+* otwieranie pozycji w stronę trendu przy zmianie kierunku predykcji,
+* otwieranie pozycji w kierunku trendu przy zbliżaniu się ceny bieżącej do predykcji,
+* zamykanie pozycji przy zmianie predykcji na kierunek przeciwny,
+* zamykanie pozycji przy dużych wahaniach ceny bieżącej od predykcji w stronę trendu.
+
+
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
 
