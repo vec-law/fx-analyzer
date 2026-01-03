@@ -90,3 +90,5 @@ Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `
 ```bash
 pytest tests/test_integration.py
 ```
+## License
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
