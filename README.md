@@ -1,5 +1,4 @@
 # fx-analyzer
-***
 
 **PL:** Narzędzie do analizy rynku FX
 
