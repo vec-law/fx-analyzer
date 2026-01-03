@@ -177,6 +177,8 @@ Poniżej przedstawiono wykresy z wynikami przykładowej strategii:
 | :--- |
 | ![Wykres 250](docs/img/EURUSD_1d_1_1000.png) |
 
+> [!IMPORTANT]
+> Wyniki symulacji nie uwzględniają kosztów transakcyjnych, takich jak prowizje, spready czy punkty swapowe.
 
 ## Testowanie
 Aby uruchomić testy integracyjne, upewnij się, że masz zainstalowany pakiet `pytest`, a następnie wykonaj:
