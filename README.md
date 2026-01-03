@@ -149,12 +149,14 @@ Jak wspomniano wcześniej, w programie zaimplementowano moduł do symulacji stra
 
 ### Przykładowa strategia rynkowa:
 #### Założenia
-W programie udostępniono przykładową strategię rynkową (`strategy` = 1), która bazuje na następujących parametrach:
+Wszystkie ustawienia parametrów programu, wykorzytywanego przy testowaniu strategii są analogiczne jak w sekcji "Trening i ewaluacja".
+
+W programie udostępniono przykładową strategię rynkową (`strategy` = 1), która bazuje na następujących wskaźnikach:
 * `delta`, `delta_minus_1`, `delta_minus_2`, `delta_minus_3`, `delta_minus_4` – różnica między n-tą a n-1 predykcją dla obecnej próbki i 4 kolejnych wstecz (należy zauważyć, że predykcja n-tej próbki jest wyliczana na podstawie cen `target` z n-1 próbki i wcześniejszych)
 * `target` – bieżąca cena (w obecnej strukturze danych `df_dict[test]` jedyną dostępną bieżącą ceną jest cena `target` = `close`)
 * `diff_rel` – względna różnica między bieżącą ceną `target` a predykcją
 
-Szczegółowe warunki zostały zapisane w programie, ale można je streścić następująco:
+Szczegółowe warunki otwierania i zamykania pozycji zostały zapisane w programie, ale można je streścić następująco:
 * otwieranie pozycji w stronę trendu przy zmianie kierunku predykcji,
 * otwieranie pozycji w kierunku trendu przy zbliżaniu się ceny bieżącej do predykcji,
 * zamykanie pozycji przy zmianie predykcji na kierunek przeciwny,
