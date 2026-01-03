@@ -94,13 +94,13 @@ Trening i ewaluację modelu przeprowadzono przyjmując następujące parametry:
 Poniżej przedstawiono zrzuty ekranu z wynikami treningu i ewaluacji dla trzech różnych wielkości zbioru testowego:
 
 #### Zbiór testowy: 250 (`train_ratio` = 0.9375)
-<div align="center" style="border: 1px solid #30363d; border-radius: 6px; padding: 10px;">
-  <img src="docs/img/EURUSD_1d_train_250.png" alt="Trening" width="100%">
-</div>
+| |
+| :---: |
+| ![Trening](docs/img/EURUSD_1d_train_250.png) |
 
-<div align="center" style="border: 1px solid #30363d; border-radius: 6px; padding: 10px; margin-top: 10px;">
-  <img src="docs/img/EURUSD_1d_eval_250.png" alt="Ewaluacja" width="100%">
-</div>
+| |
+| :---: |
+| ![Ewaluacja](docs/img/EURUSD_1d_eval_250.png) |
 
 #### Zbiór testowy: 500 (`train_ratio` = 0.875)
 ![Trening](docs/img/EURUSD_1d_train_500.png)
