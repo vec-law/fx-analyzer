@@ -3,20 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import os
 from src.utils import get_path
-
-class ModelV1(nn.Module):
-    def __init__(self, features_num, target_num):
-        super(ModelV1, self).__init__()
-        self.net = nn.Sequential(
-            nn.Linear(features_num, 16),
-            nn.ReLU(),
-            nn.Linear(16, 8),
-            nn.ReLU(),
-            nn.Linear(8, target_num)
-        )
-
-    def forward(self, x):
-        return self.net(x)
+from . import architectures as arch
 
 def load_model(mod_dict, instrument, interval):
     path = get_path('mod', f"{instrument}_{interval}_model.pt")
@@ -150,7 +137,7 @@ def prepare_model_params(ten_dict, seed):
         torch.cuda.manual_seed(seed)
         print(f"  [torch.cuda.manual_seed] Ustawiono seed = {seed} na {device}")
 
-    model = ModelV1(features_num, target_num)
+    model = arch.ModelV1(features_num, target_num)
     print(f"  [prepare_model_params] Ustawiono model ModelV1")
 
     model = model.to(device)

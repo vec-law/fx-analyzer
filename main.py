@@ -3,7 +3,7 @@ __version__ = "1.0.1"
 from src.utils import clear_console
 from src.ingestion import load_data
 from src.features import prepare_features, normalize
-from src.model import prepare_tensors, prepare_model_params, train_model, evaluate_model
+from src.model.functions import prepare_tensors, prepare_model_params, train_model, evaluate_model
 from src.strategy import simulate_strategy
 
 instrument = 'EURUSD'
