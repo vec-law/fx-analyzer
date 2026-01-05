@@ -18,6 +18,7 @@ samples_limit = 4000 + max_ind_period
 train_ratio = 0.875
 seed = 42
 epochs = 1000
+model_num = 1
 
 clear_console()
 
@@ -50,7 +51,7 @@ print("OK")
 
 print()
 print(f"ETAP 5/8: Konfiguracja modelu...")
-if (mod_dict := prepare_model_params(ten_dict, seed)) is None:
+if (mod_dict := prepare_model_params(ten_dict, seed, model_num)) is None:
     print("Przerwano")
     exit()
 print("OK")

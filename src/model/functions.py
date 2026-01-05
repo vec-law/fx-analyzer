@@ -3,7 +3,17 @@ import torch.nn as nn
 import torch.optim as optim
 import os
 from src.utils import get_path
-from . import architectures as arch
+from . import architectures as archs
+
+def get_model(model_num, features_num, target_num):
+    class_name = f"ModelV{model_num}"
+    model_class = getattr(archs, class_name, None)
+    
+    if model_class is None:
+        print(f"   [get_model] {class_name} nie istnieje w architectures.py")
+        return None
+        
+    return model_class(features_num, target_num)
 
 def load_model(mod_dict, instrument, interval):
     path = get_path('mod', f"{instrument}_{interval}_model.pt")
@@ -122,7 +132,11 @@ def train_model(ten_dict, mod_dict, epochs):
             
     return mod_dict
 
-def prepare_model_params(ten_dict, seed):
+def prepare_model_params(ten_dict, seed, model_num):
+    if not isinstance(model_num, int) or model_num <=0:
+        print("   [prepare_model_params] Nieprawidłowy numer modelu")
+        return None
+
     features_num = ten_dict['train_features_norm'].shape[1]
     target_num = ten_dict['train_target_norm'].shape[1]
 
@@ -137,8 +151,8 @@ def prepare_model_params(ten_dict, seed):
         torch.cuda.manual_seed(seed)
         print(f"  [torch.cuda.manual_seed] Ustawiono seed = {seed} na {device}")
 
-    model = arch.ModelV1(features_num, target_num)
-    print(f"  [prepare_model_params] Ustawiono model ModelV1")
+    if (model := get_model(model_num, features_num, target_num)) is None: return None
+    print(f"  [prepare_model_params] Ustawiono model ModelV{model_num}")
 
     model = model.to(device)
     print(f"  [prepare_model_params] Przeniesiono model na {device}")
