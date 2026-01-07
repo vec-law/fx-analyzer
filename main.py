@@ -24,9 +24,7 @@
 __version__ = "1.0.3-alpha"
 
 import json
-from src.instruments import Instrument
-from src.utils import clear_console
-from src.ingestion import load_data
+from src.analysis import Analysis
 
 def main():
     try:
@@ -35,22 +33,8 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Błąd konfiguracji: {e}")
 
-    clear_console()
-    print(f"--- fx-analyzer v{__version__} ---")
-
-    instrument_name = 'EURUSD'
-    instrument_type = 'currency_pair'
-    instrument_interval = '1d'
-    repair_gaps = True
-    mode = 'server'
-
-    instrument = Instrument(instrument_name, instrument_type, instrument_interval, config)
-
-    print(f"ETAP 1/8: Ładowanie danych...")
-    if not load_data(instrument, mode, repair_gaps, config):
-        print("Przerwano")
-        return
-    print("OK")
+    analysis = Analysis(config)
+    analysis.run()
 
 if __name__ == "__main__":
     main()

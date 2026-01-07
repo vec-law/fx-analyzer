@@ -31,24 +31,44 @@
     }
   },
   
-  "FEATURE_DEFINITIONS": [
+  "FEATURE_SERIES": [
     {
-      "feature": "sma",
-      "params": { 
-        "start": 5, 
-        "end": 100, 
-        "step": 5, 
-        "source_column": "close" 
-      }
-    },
+      "name": "trend_following_basic",
+      "features": [
+        {
+          "feature": "sma",
+          "params": { 
+            "start": 10, 
+            "end": 50, 
+            "step": 10, 
+            "source_column": "close" 
+          }
+        },
+        {
+          "feature": "sma",
+          "params": { 
+            "start": 100, 
+            "end": 200, 
+            "step": 50, 
+            "source_column": "close" 
+          }
+        }
+      ]
+    }
+  ],
+
+  "INSTRUMENT_LIST": [
     {
-      "feature": "sma",
-      "params": { 
-        "start": 20, 
-        "end": 20, 
-        "step": 1, 
-        "source_column": "low" 
-      }
+      "name": "EURUSD",
+      "type": "currency_pair",
+      "interval": "1d"
+    }
+  ],
+
+  "ANALYSIS_PARAMS_LIST": [
+    {
+      "repair_gaps": true,
+      "mode": "local"
     }
   ]
 }

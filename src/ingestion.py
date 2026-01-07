@@ -1,4 +1,4 @@
-from .instruments import Instrument
+from .instrument import Instrument
 import pandas as pd
 import os
 import yfinance as yf
