@@ -9,14 +9,14 @@ def check_and_repair_data(instrument, repair_gaps):
         return False
     
     instrument.df = instrument.df.dropna().copy()
-    instrument.df = instrument.df[instrument.df['Datetime'].dt.dayofweek < 5]
+    instrument.df = instrument.df[instrument.df['datetime'].dt.dayofweek < 5]
     
     if instrument.df.empty:
         print(f"  [check_and_repair_data] {instrument.name}: Brak danych po usunięciu wekendów")
         return False
 
     if repair_gaps:
-        periods = instrument.df['Datetime'].dt.to_period(instrument.check_period)
+        periods = instrument.df['datetime'].dt.to_period(instrument.check_period)
         counts = periods.value_counts()
         current_period = periods.iloc[-1]
 
@@ -24,7 +24,7 @@ def check_and_repair_data(instrument, repair_gaps):
 
         if not invalid_periods.empty:
             is_invalid = periods.isin(invalid_periods)
-            last_invalid_date = instrument.df[is_invalid]['Datetime'].iloc[-1]
+            last_invalid_date = instrument.df[is_invalid]['datetime'].iloc[-1]
             last_invalid_idx = instrument.df[is_invalid].index[-1]
             
             instrument.df = instrument.df.loc[last_invalid_idx:].iloc[1:].copy()
@@ -58,10 +58,11 @@ def load_csv(instrument, config, path):
             names=config['BROKER_COLUMNS'], 
             sep=','
         )
-
-        df['Datetime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
-        df = df.drop(columns=['Date', 'Time'])
-        df = df.sort_values('Datetime').reset_index(drop=True)
+        
+        df.columns = [col.lower() for col in df.columns]
+        df['datetime'] = pd.to_datetime(df['date'] + ' ' + df['time'])
+        df = df.drop(columns=['date', 'time'])
+        df = df.sort_values('datetime').reset_index(drop=True)
         
         df = df[config['FINAL_COLUMNS']]
 
@@ -99,8 +100,9 @@ def load_yf(instrument, config):
 
         df = df.reset_index()
 
-        df.rename(columns={df.columns[0]: 'Datetime'}, inplace=True)
-        df['Datetime'] = pd.to_datetime(df['Datetime']).dt.tz_localize(None)
+        df.columns = [col.lower() for col in df.columns]
+        df.rename(columns={df.columns[0]: 'datetime'}, inplace=True)
+        df['datetime'] = pd.to_datetime(df['datetime']).dt.tz_localize(None)
         
         df = df[config['FINAL_COLUMNS']]
 
@@ -144,4 +146,3 @@ def load_data(instrument, mode, repair_gaps, config):
         
     print(f"  [load_data] {instrument.name}: Pobrano {instrument.df.shape[0]} rekordów")
     return True
-

@@ -42,7 +42,7 @@ instrument_name = 'EURUSD'
 instrument_type = 'currency_pair'
 instrument_interval = '1d'
 repair_gaps = True
-mode = 'local'
+mode = 'server'
 
 instrument = Instrument(instrument_name, instrument_type, instrument_interval, config)
 
@@ -51,12 +51,6 @@ if not load_data(instrument, mode, repair_gaps, config):
     print("Przerwano")
     exit()
 print("OK")
-
-# print(f"ETAP 1/8: Ładowanie danych...")
-# if(df := load_data(instrument_name, instrument_type, instrument_interval, target_column, samples_limit, repair_gaps)) is None:
-#     print("Przerwano")
-#     exit()
-# print("OK")
 
 # print()
 # print(f"ETAP 2/8: Preprocessing...")

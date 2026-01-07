@@ -1,9 +1,9 @@
 {
   "INSTRUMENT_TYPES": ["index", "future", "crypto", "currency_pair"],
+ 
+  "BROKER_COLUMNS": ["date", "time", "open", "high", "low", "close", "volume"],
 
-  "FINAL_COLUMNS": ["Datetime", "Open", "High", "Low", "Close", "Volume"],
-
-  "BROKER_COLUMNS": ["Date", "Time", "Open", "High", "Low", "Close", "Volume"],
+  "FINAL_COLUMNS": ["datetime", "close", "open", "high", "low", "volume"],
 
   "INTERVAL_SETTINGS": {
     "1d":  {"range": "max",  "check_period": "M", "min_count": 18},
