@@ -23,5 +23,32 @@
     "GOLD":  {"future": "GC=F", "index": "GC=F"},
     "BRENT": {"future": "BZ=F"},
     "CABLE": {"currency_pair": "GBPUSD=X"}
-  }
+  },
+
+  "SUPPORTED_FEATURES": {
+    "sma": {
+      "supported_params": ["start", "end", "step", "source_column"]
+    }
+  },
+  
+  "FEATURE_DEFINITIONS": [
+    {
+      "feature": "sma",
+      "params": { 
+        "start": 5, 
+        "end": 100, 
+        "step": 5, 
+        "source_column": "close" 
+      }
+    },
+    {
+      "feature": "sma",
+      "params": { 
+        "start": 20, 
+        "end": 20, 
+        "step": 1, 
+        "source_column": "low" 
+      }
+    }
+  ]
 }
