@@ -1,0 +1,27 @@
+{
+  "INSTRUMENT_TYPES": ["index", "future", "crypto", "currency_pair"],
+
+  "FINAL_COLUMNS": ["Datetime", "Open", "High", "Low", "Close", "Volume"],
+
+  "BROKER_COLUMNS": ["Date", "Time", "Open", "High", "Low", "Close", "Volume"],
+
+  "INTERVAL_SETTINGS": {
+    "1d":  {"range": "max",  "check_period": "M", "min_count": 18},
+    "1wk": {"range": "max",  "check_period": "Y", "min_count": 45},
+    "1mo": {"range": "max",  "check_period": "Y", "min_count": 10},
+    "1h":  {"range": "730d", "check_period": "W", "min_count": 100},
+    "15m": {"range": "60d",  "check_period": "D", "min_count": 50},
+    "5m":  {"range": "60d",  "check_period": "D", "min_count": 200},
+    "2m":  {"range": "60d",  "check_period": "H", "min_count": 25},
+    "1m":  {"range": "7d",   "check_period": "H", "min_count": 50}
+  },
+
+  "OWN_NAMES": {
+    "US100": {"index": "^NDX", "future": "NQ=F"},
+    "DE40":  {"index": "^GDAXI", "future": "FDAX.EX"},
+    "BTC":   {"crypto": "BTC-USD"},
+    "GOLD":  {"future": "GC=F", "index": "GC=F"},
+    "BRENT": {"future": "BZ=F"},
+    "CABLE": {"currency_pair": "GBPUSD=X"}
+  }
+}

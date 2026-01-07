@@ -1,160 +1,147 @@
+from .instruments import Instrument
 import pandas as pd
 import os
 import yfinance as yf
 from src.utils import get_path, save_df
 
-MIN_WORKDAYS = 18
-SUPPORTED_INTERVALS = ['1d']
-
-def check_and_repair_data(df):
-    df = df.dropna().copy()
-    if df.empty:
-        print(f"  [check_and_repair_data] df nie zawiera użytecznych danych")
-        return None
-
-    interval = df['interval'].iloc[0]
-    instrument = df['instrument'].iloc[0]
-
-    if interval == '1d':        
-        df = df[df['datetime'].dt.dayofweek < 5].copy()
-        if df.empty:
-            print(f"  [check_and_repair_data] df nie zawiera danych z dni roboczych")
-            return None
-
-        month_periods = df['datetime'].dt.to_period('M')
-        workdays_number = month_periods.value_counts()
-        df['workdays_per_month'] = month_periods.map(workdays_number)
-
-        current_month = df['datetime'].iloc[-1].to_period('M')
-        too_few_workdays = (df['workdays_per_month'] < MIN_WORKDAYS) & (month_periods != current_month)
-
-        last_invalid_idx = df[too_few_workdays].index.max()
-
-        if pd.notna(last_invalid_idx):
-            df_err = df[too_few_workdays].copy()
-            if not df_err.empty:
-                save_df(df_err, 'raw', f"{instrument}_{interval}_err.csv")
-                print(f"  [check_and_repair_data] Znaleziono nieprawidłowe wiersze w df")
-                print(f"  [save_df] Nieprawidłowe wiersze zapisano w pliku data/raw/{instrument}_{interval}_err.csv")
-            
-            if last_invalid_idx >= df.index.max():
-                print(f"  [check_and_repair_data] df nie zawiera pawidłowych danych z dni roboczych")
-                return None
-            
-            df = df.loc[last_invalid_idx + 1:].copy()
-            
-        if len(df) < MIN_WORKDAYS:
-            print(f"  [check_and_repair_data] df nie zawiera odpowiedniej liczby danych z dni roboczych")
-            return None
-        
-        print(f"  [check_and_repair_data] Pozostawiono w df ostatnich {len(df)} prawidłowych wierszy")
-
-        save_df(df, 'raw', f"{instrument}_{interval}_crd.csv")
-        print(f"  [save_df] df zapisano w pliku data/raw/{instrument}_{interval}_crd.csv")
-
-    return df
-
-def load_csv(target_column, path):
-    try:
-        all_columns = ['date', 'time', 'open', 'high', 'low', 'close', 'vol']
-
-        print(f"  [load_csv] Pobieranie danych z pliku {path}")
-        
-        df = pd.read_csv(path, header=None, names=all_columns)
-         
-        df = pd.DataFrame({
-            'original_idx': df.index,
-            'datetime': pd.to_datetime(
-                df['date'] + ' ' + df['time'],
-                format='%Y.%m.%d %H:%M',
-                errors='coerce'
-            ),
-            'target': df[target_column.lower()].values
-        })
-
-        df = df.dropna(subset=['datetime']).copy()
-
-        print(f"  [load_csv] Pobrano {len(df)} wierszy")
-        
-        return df
+def check_and_repair_data(instrument, repair_gaps):
+    if instrument.df is None or instrument.df.empty:
+        return False
     
-    except Exception as e:
-        print(f"  [load_csv] Błąd: {e}")
-        return None
-
-
-def load_yf(instrument, interval, target_column):
-    try:
-        ticker = f"{instrument}=X"
-        print(f"  [load_yf] Pobieranie danych z YF")
-
-        df = yf.download(ticker, period="max", interval=interval, auto_adjust=True, progress=False)
-
-        if df.empty:
-            print(f"  [load_yf] Brak danych dla {instrument}")
-            return None
-
-        df_temp = df[target_column.capitalize()].copy()
-        if isinstance(df_temp, pd.DataFrame): df_temp = df_temp.iloc[:, 0]
-        df_temp = df_temp.reset_index()
-
-        df = pd.DataFrame({
-            'original_idx': df_temp.index,
-            'datetime': df_temp.iloc[:, 0].dt.tz_localize(None),
-            'target': df_temp.iloc[:, 1].values
-        })
-
-        print(f"  [load_yf] Pobrano {len(df)} wierszy")
-
-        file_name = f"{instrument}_{interval}_yf.csv"
-        save_df(df, 'raw', file_name)
-        print(f"  [save_df] Dane zapisano w pliku data/raw/{file_name}")
-
-        return df
-
-    except Exception as e:
-        print(f"  [load_yf] Błąd: {e}")
-        return None
-
-def load_data(instrument, interval, target_column, samples_limit=None):
-    if any(condition is None for condition in [instrument, interval, target_column]):
-        print("  [load_data]: Nieprawidłowe parametry")
-        return None
+    instrument.df = instrument.df.dropna().copy()
+    instrument.df = instrument.df[instrument.df['Datetime'].dt.dayofweek < 5]
     
-    if interval not in SUPPORTED_INTERVALS:
-        print("  [load_data]: Nieobsługiwany interwał")
-        return None
+    if instrument.df.empty:
+        print(f"  [check_and_repair_data] {instrument.name}: Brak danych po usunięciu wekendów")
+        return False
 
-    path = get_path('raw', f"{instrument}_{interval}.csv")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if repair_gaps:
+        periods = instrument.df['Datetime'].dt.to_period(instrument.check_period)
+        counts = periods.value_counts()
+        current_period = periods.iloc[-1]
 
+        invalid_periods = counts[(counts < instrument.min_count) & (counts.index != current_period)].index
+
+        if not invalid_periods.empty:
+            is_invalid = periods.isin(invalid_periods)
+            last_invalid_date = instrument.df[is_invalid]['Datetime'].iloc[-1]
+            last_invalid_idx = instrument.df[is_invalid].index[-1]
+            
+            instrument.df = instrument.df.loc[last_invalid_idx:].iloc[1:].copy()
+            print(f"  [check_and_repair_data] {instrument.name}: Odcięto historię do {last_invalid_date}, do indeksu {last_invalid_idx}")
+
+    if instrument.df.empty:
+        print(f"  [check_and_repair_data] {instrument.name}: Brak danych po usunięciu luk")
+        return False
+
+    save_df(instrument, 'raw', 'crd')
+    print(f"  [check_and_repair_data] {instrument.name}: Pozostawiono {instrument.df.shape[0]} rekordów")
+    
+    return True
+
+def load_csv(instrument, config, path):
     if not os.path.exists(path):
-        df = load_yf(instrument, interval, target_column)
+        print(f"  [load_csv] Plik {path} nie istnieje")
+        return False
+    
+    if not config or 'BROKER_COLUMNS' not in config:
+        raise KeyError("Błąd: instrument_data jest pusty lub brak BROKER_COLUMNS")
+
+    if 'FINAL_COLUMNS' not in config:
+        raise KeyError("Błąd: brak FINAL_COLUMNS w instrument_data")
+    
+    try:
+        print(f"  [load_yf] {instrument.name}: Pobieranie danych z {path}")
+        df = pd.read_csv(
+            path, 
+            header=None, 
+            names=config['BROKER_COLUMNS'], 
+            sep=','
+        )
+
+        df['Datetime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'])
+        df = df.drop(columns=['Date', 'Time'])
+        df = df.sort_values('Datetime').reset_index(drop=True)
+        
+        df = df[config['FINAL_COLUMNS']]
+
+        instrument.df = df
+        instrument.source = 'local'
+
+        print(f"  [load_csv] {instrument.name}: Pobrano {instrument.df.shape[0]} rekordów")
+        save_df(instrument, 'raw', 'csv')
+
+        return True
+
+    except Exception as e:
+        print(f"Błąd przy wczytywaniu pliku {path}: {e}")
+        return False
+
+
+def load_yf(instrument, config):
+    if 'FINAL_COLUMNS' not in config:
+        raise KeyError(f"  [load_yf] {instrument.name}: brak klucza FINAL_COLUMNS w konfiguracji")
+
+    try:
+        print(f"  [load_yf] {instrument.name}: Pobieranie danych z serwera")
+        df = yf.download(
+            tickers=instrument.ticker, 
+            period=instrument.history_range, 
+            interval=instrument.interval, 
+            auto_adjust=False,
+            progress=False
+        )
+        df.columns = df.columns.get_level_values(0)
+        
+        if df.empty:
+            print(f"  [load_yf] {instrument.name}: Brak danych na serwerze")
+            return False
+
+        df = df.reset_index()
+
+        df.rename(columns={df.columns[0]: 'Datetime'}, inplace=True)
+        df['Datetime'] = pd.to_datetime(df['Datetime']).dt.tz_localize(None)
+        
+        df = df[config['FINAL_COLUMNS']]
+
+        instrument.df = df
+        instrument.source = 'server'
+
+        save_df(instrument, 'raw', 'yf')
+        print(f"  [load_yf] {instrument.name}: Pobrano {instrument.df.shape[0]} rekordów")
+
+        return True
+
+    except Exception as e:
+        print(f"  [load_yf] {instrument.name}: Błąd przy pobieraniu danych serwera")
+        return False
+
+def load_data(instrument, mode, repair_gaps, config):
+    if not isinstance(instrument, Instrument):
+        raise ValueError("Błąd: Parametr 'instrument' musi być obiektem klasy Instrument.")
+    
+    if mode not in ['auto', 'local', 'server']:
+        raise ValueError(f"Błąd: Nieobsługiwany tryb mode: '{mode}'. Dozwolone tryby to: 'auto', 'local', 'server'")
+
+    if not isinstance(repair_gaps, bool):
+        raise ValueError(f"Błąd: Parametr repair_gaps musi być typem bool (True/False).")
+        
+    path = get_path(instrument.name, instrument.interval, 'raw')
+    success = False
+
+    if mode == 'local':
+        success = load_csv(instrument, config, path)
+    elif mode == 'server':
+        success = load_yf(instrument, config)
     else:
-        df = load_csv(target_column, path)
+        success = load_csv(instrument, config, path) or load_yf(instrument, config)
 
-    if df is None or df.empty: return None
+    if not success:
+        return False
 
-    df['instrument'] = instrument
-    df['interval'] = interval
+    if not check_and_repair_data(instrument, repair_gaps):
+        return False
+        
+    print(f"  [load_data] {instrument.name}: Pobrano {instrument.df.shape[0]} rekordów")
+    return True
 
-    if (df := check_and_repair_data(df)) is None: return None
-
-    if samples_limit:
-        if not isinstance(samples_limit, int) or samples_limit <= 0:
-            print("  [load_data]: Nieprawidłowa liczba samples_limit")
-            return None
-
-        if samples_limit < len(df):
-            df = df.tail(samples_limit)
-            print(f"  [load_data] Pozostawiono w df ostatnich {samples_limit} wierszy")
-        else:
-            print(f"  [load_data] Liczba samples_limit jest większa od ilości wierszy df, nie zmieniono liczby wierszy")
-
-    ordered_columns = ['original_idx', 'datetime', 'instrument', 'interval', 'workdays_per_month', 'target']
-    df = df[ordered_columns].copy()
-
-    save_df(df, 'raw', f"{instrument}_{interval}_ld.csv")
-    print(f"  [save_df] Wiersze df zapisano w pliku data/raw/{instrument}_{interval}_ld.csv")
-
-    return df
