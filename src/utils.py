@@ -14,7 +14,7 @@ def save_df(instrument, folder, sufix=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     instrument.df.to_csv(path, index=False)
     
-    print(f"  [save_df] {instrument.name}: Dane zapisano w pliku {path}")
+    print(f"  [save_df] Dane zapisano w pliku {path}")
 
     return True
 

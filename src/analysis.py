@@ -16,28 +16,29 @@ class Analysis:
             raise KeyError("Błąd: Jedna z list (INSTRUMENT, PARAMS, FEATURE, TARGET) jest pusta lub jej brakuje.")
         
     def run(self):
+        print()
         print("START")
         self._create_args()
 
         for a in self.args:
             print()
-            print(f"ZESTAW: {a['i']['name']} | {a['p']['name']}| {a['f']['name']}")
+            print(f"ZESTAW: {a['i']['name']} | {a['p']['name']} | {a['f']['name']} | {a['t']['name']}")
             
             print("ETAP 1/8: Inicjalizacja...")
             instrument = self._stage_1_create_instrument(a)
             if not instrument:
-                print(">>> Przerwano zestaw (Błąd Etapu 1)")
+                print("Przerwano")
                 continue
 
             print("ETAP 2/8: Ingestion...")
             if not self._stage_2_ingestion(instrument, a):
-                print(">>> Przerwano zestaw (Błąd Etapu 2)")
+                print("Przerwano")
                 continue
 
 
             print("ETAP 3/8: Preprocessing...")
             if not self._stage_3_preprocessing(instrument, a):
-                print(">>> Przerwano zestaw (Błąd Etapu 3)")
+                print("Przerwano")
                 continue
 
     def _create_args(self):
@@ -48,7 +49,7 @@ class Analysis:
             for f in self.feature_list
             for t in self.target_list
         ]
-        print(f"  [_create_args] Przygotowano {len(self.args)} zestawów do przetestowania")
+        print(f"  [_create_args] Przygotowano {len(self.args)} zestaw(-ów) do przetestowania")
 
     def _stage_1_create_instrument(self, a):
         try:
@@ -56,9 +57,11 @@ class Analysis:
                 a['i']['params']['name'],
                 a['i']['params']['type'],
                 a['i']['params']['interval'],
-                self.config
+                self.config['INSTRUMENT_TYPES'],
+                self.config['OWN_NAMES'],
+                self.config['INTERVAL_SETTINGS']
                 )
-            print(f"  [_stage_1_create_instrument] Utworzenie instrumentu {a['i']['name']}")
+            print(f"  [_stage_1_create_instrument] Utworzeno instrument")
             return instrument
         except Exception as e:
             print(f"Nieoczekiwany błąd {e}")
@@ -68,7 +71,7 @@ class Analysis:
         try:
             if not load_data(instrument, a['p']['params']['mode'], a['p']['params']['repair_gaps'], self.config):
                 return False
-            print(f"  [_stage_2_ingestion] Załadowano dane {a['i']['name']}")
+            print(f"  [_stage_2_ingestion] Załadowano dane")
             return True
 
         except KeyError as e:
@@ -83,8 +86,13 @@ class Analysis:
         try:
             if not create_features(instrument, a['f']['features']):
                 return False
+            if not create_targets(instrument, a['t']['targets']):
+                return False
+            
+            if not clean_data(instrument, a['p']['params']['samples_limit']):
+                return False
 
-            print(f"  [_stage_3_preprocessing] Przetworzono zestaw: {a['f']['name']}")
+            print(f"  [_stage_3_preprocessing] Przetworzono dane")
             return True
             
         except KeyError as e:

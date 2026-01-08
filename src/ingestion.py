@@ -12,7 +12,7 @@ def check_and_repair_data(instrument, repair_gaps):
     instrument.df = instrument.df[instrument.df['datetime'].dt.dayofweek < 5]
     
     if instrument.df.empty:
-        print(f"  [check_and_repair_data] {instrument.name}: Brak danych po usunięciu wekendów")
+        print(f"  [check_and_repair_data] Brak danych po usunięciu wekendów")
         return False
 
     if repair_gaps:
@@ -28,14 +28,14 @@ def check_and_repair_data(instrument, repair_gaps):
             last_invalid_idx = instrument.df[is_invalid].index[-1]
             
             instrument.df = instrument.df.loc[last_invalid_idx:].iloc[1:].copy()
-            print(f"  [check_and_repair_data] {instrument.name}: Odcięto historię do {last_invalid_date}, do indeksu {last_invalid_idx}")
+            print(f"  [check_and_repair_data] Odcięto historię do {last_invalid_date}, do indeksu {last_invalid_idx}")
 
     if instrument.df.empty:
-        print(f"  [check_and_repair_data] {instrument.name}: Brak danych po usunięciu luk")
+        print(f"  [check_and_repair_data] Brak danych po usunięciu luk")
         return False
 
     save_df(instrument, 'raw', 'crd')
-    print(f"  [check_and_repair_data] {instrument.name}: Pozostawiono {instrument.df.shape[0]} rekordów")
+    print(f"  [check_and_repair_data] Pozostawiono {instrument.df.shape[0]} rekordów")
     
     return True
 
@@ -51,7 +51,7 @@ def load_csv(instrument, config, path):
         raise KeyError("Błąd: brak FINAL_COLUMNS w instrument_data")
     
     try:
-        print(f"  [load_yf] {instrument.name}: Pobieranie danych z {path}")
+        print(f"  [load_yf] Pobieranie danych z {path}")
         df = pd.read_csv(
             path, 
             header=None, 
@@ -69,7 +69,7 @@ def load_csv(instrument, config, path):
         instrument.df = df
         instrument.source = 'local'
 
-        print(f"  [load_csv] {instrument.name}: Pobrano {instrument.df.shape[0]} rekordów")
+        print(f"  [load_csv] Pobrano {instrument.df.shape[0]} rekordów")
         save_df(instrument, 'raw', 'csv')
 
         return True
@@ -81,10 +81,10 @@ def load_csv(instrument, config, path):
 
 def load_yf(instrument, config):
     if 'FINAL_COLUMNS' not in config:
-        raise KeyError(f"  [load_yf] {instrument.name}: brak klucza FINAL_COLUMNS w konfiguracji")
+        raise KeyError(f"  [load_yf] Brak klucza FINAL_COLUMNS w konfiguracji")
 
     try:
-        print(f"  [load_yf] {instrument.name}: Pobieranie danych z serwera")
+        print(f"  [load_yf] Pobieranie danych z serwera")
         df = yf.download(
             tickers=instrument.ticker, 
             period=instrument.history_range, 
@@ -95,7 +95,7 @@ def load_yf(instrument, config):
         df.columns = df.columns.get_level_values(0)
         
         if df.empty:
-            print(f"  [load_yf] {instrument.name}: Brak danych na serwerze")
+            print(f"  [load_yf] Brak danych na serwerze")
             return False
 
         df = df.reset_index()
@@ -110,12 +110,12 @@ def load_yf(instrument, config):
         instrument.source = 'server'
 
         save_df(instrument, 'raw', 'yf')
-        print(f"  [load_yf] {instrument.name}: Pobrano {instrument.df.shape[0]} rekordów")
+        print(f"  [load_yf] Pobrano {instrument.df.shape[0]} rekordów")
 
         return True
 
     except Exception as e:
-        print(f"  [load_yf] {instrument.name}: Błąd przy pobieraniu danych serwera")
+        print(f"  [load_yf] Błąd przy pobieraniu danych serwera")
         return False
 
 def load_data(instrument, mode, repair_gaps, config):
@@ -144,5 +144,5 @@ def load_data(instrument, mode, repair_gaps, config):
     if not check_and_repair_data(instrument, repair_gaps):
         return False
         
-    print(f"  [load_data] {instrument.name}: Pobrano {instrument.df.shape[0]} rekordów")
+    print(f"  [load_data] Pobrano {instrument.df.shape[0]} rekordów")
     return True

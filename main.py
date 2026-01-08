@@ -29,6 +29,8 @@ from src.utils import clear_console
 
 def main():
     clear_console()
+
+    print(f"fx-analyzer v{__version__}")
     
     try:
         with open('config.json', 'r') as f:
@@ -41,13 +43,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# print()
-# print(f"ETAP 2/8: Preprocessing...")
-# if(df_dict := prepare_features(df, indicators, train_ratio)) is None:
-#     print("Przerwano")
-#     exit()
-# print("OK")
 
 # print()
 # print(f"ETAP 3/8: Normalizacja danych...")

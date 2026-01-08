@@ -47,7 +47,8 @@
       "name": "params_set_1",
       "params": {
         "repair_gaps": true,
-        "mode": "server"
+        "mode": "server",
+        "samples_limit": "4000"
       }
     }
   ],
@@ -64,6 +65,15 @@
             "step": 10, 
             "source_column": "close" 
           }
+        },
+        {
+          "feature": "sma",
+          "params": { 
+            "start": 100, 
+            "stop": 200, 
+            "step": 50, 
+            "source_column": "close" 
+          }
         }
       ]
     }
@@ -73,7 +83,9 @@
     {
       "name": "target_set_1",
       "targets": [
-        "close"
+        "close",
+        "low",
+        "high"
       ]
     }
   ]
