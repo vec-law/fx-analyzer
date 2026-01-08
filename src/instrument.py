@@ -26,13 +26,15 @@ class Instrument:
         self.df = pd.DataFrame()
         self.df_dict = {
             'train': pd.DataFrame(),
-            'test': pd.DataFrame()
+            'test': pd.DataFrame(),
+            'stats': {},
+            'train_norm': pd.DataFrame(),
+            'test_norm': pd.DataFrame()
         }
         self.source = None
 
     def __str__(self):
         return (
             f"Name: {self.name} ({self.type}) | Interval: {self.interval} | Ticker: {self.ticker} | "
-            f"Settings: [Range: {self.history_range}, Check: {self.check_period}, Min: {self.min_count}] | "
-            f"Data: {self.df.shape[0]}x{self.df.shape[1]}"
+            f"Settings: [Range: {self.history_range}, Check: {self.check_period}, Min: {self.min_count}]"
         )

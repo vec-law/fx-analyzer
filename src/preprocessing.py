@@ -79,17 +79,37 @@ def clean_and_split_data(instrument: Instrument, samples_limit, train_ratio=0.87
         instrument.df_dict['test'] = instrument.df.iloc[split_idx:].copy().reset_index(drop=True)
         instrument.df = pd.DataFrame()
         
-        print(f"  [clean_and_split_data] Ustworzono df_dict['train'], df_dict['test']")
+        print(f"  [clean_and_split_data] Ustworzono zbiory _train i _test")
         print(f"  [clean_and_split_data] len(df_dict['train']) = {len(instrument.df_dict['train'])}")
         print(f"  [clean_and_split_data] len(df_dict['test']) = {len(instrument.df_dict['test'])}")
         return True
 
-    except (ValueError, TypeError) as e:
-        print(f"Błąd: samples_limit musi być liczbą: {e}")
-        return False
     except Exception as e:
-        print(f"Przerwano: błąd podczas czyszczenia danych: {e}")
+        print(f"Nieoczekiwany błąd: {e}")
         return False
 
-def scale_data(df):
-    pass
+def scale_data(instrument: Instrument):
+    try:
+        cols_to_norm = [
+            col for col in instrument.df_dict['train'].columns
+            if col.startswith('feature_') or col.startswith('target_')
+        ]
+
+        train_mean = instrument.df_dict['train'][cols_to_norm].mean()
+        train_std = instrument.df_dict['train'][cols_to_norm].std().replace(0, 1e-9)
+
+        instrument.df_dict['stats'] = {'mean': train_mean, 'std': train_std}
+
+        for label in ['train', 'test']:
+            source_df = instrument.df_dict[label]
+            norm_key = f"{label}_norm"
+            
+            instrument.df_dict[norm_key] = source_df.copy()
+            instrument.df_dict[norm_key][cols_to_norm] = (source_df[cols_to_norm] - train_mean) / train_std
+
+        print(f"  [scale_data] Utworzono zbiory znormalizowane (_norm)")
+        return True
+
+    except Exception as e:
+        print(f"Błąd skalowania: {e}")
+        return False

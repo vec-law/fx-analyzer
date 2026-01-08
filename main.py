@@ -1,25 +1,13 @@
-
-
-
 # from src.ingestion import load_data
 # from src.features import prepare_features, normalize
 # from src.model.functions import prepare_tensors, prepare_model_params, train_model, evaluate_model
 # from src.strategy import simulate_strategy
 
-
-
 # target_column ='close'
 # strategy = 1
-# indicators = {
-#     'sma': list(range(10, 41, 1))}
-
-# max_ind_period = max(max(periods) for periods in indicators.values())
-# samples_limit = 4000 + max_ind_period
-# train_ratio = 0.875
 # seed = 42
 # epochs = 1000
 # model_num = 1
-# repair_gaps = False
 
 __version__ = "1.0.3-alpha"
 
@@ -43,13 +31,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# print()
-# print(f"ETAP 3/8: Normalizacja danych...")
-# if (df_dict := normalize(df_dict)) is None:
-#     print("Przerwano")
-#     exit()
-# print("OK")
 
 # print()
 # print(f"ETAP 4/8: Przygotowanie tensorów...")

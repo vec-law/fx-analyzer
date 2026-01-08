@@ -17,12 +17,14 @@ class Analysis:
         
     def run(self):
         print()
+        print(90 * '=')
         print("START")
         self._create_args()
+        print(90 * '=')
 
         for a in self.args:
-            print()
             print(f"ZESTAW: {a['i']['name']} | {a['p']['name']} | {a['f']['name']} | {a['t']['name']}")
+            print(90 * '=')
             
             print("ETAP 1/8: Inicjalizacja...")
             instrument = self._stage_1_create_instrument(a)
@@ -35,11 +37,18 @@ class Analysis:
                 print("Przerwano")
                 continue
 
-
             print("ETAP 3/8: Preprocessing...")
             if not self._stage_3_preprocessing(instrument, a):
                 print("Przerwano")
                 continue
+
+            print("ETAP 4/8: Normalizacja...")
+            if not self._stage_4_normalization(instrument):
+                print("Przerwano")
+                continue
+
+            print(90 * '=')
+            
 
     def _create_args(self):
         self.args = [
@@ -61,7 +70,7 @@ class Analysis:
                 self.config['OWN_NAMES'],
                 self.config['INTERVAL_SETTINGS']
                 )
-            print(f"  [_stage_1_create_instrument] Utworzeno instrument")
+            print(f"  [_stage_1_create_instrument] Utworzono instrument")
             return instrument
         except Exception as e:
             print(f"Nieoczekiwany błąd {e}")
@@ -102,19 +111,15 @@ class Analysis:
         except Exception as e:
             print(f"Nieoczekiwany błąd: {e}")
             return False
+        
+    def _stage_4_normalization(self, instrument):
+        try:
+            if not scale_data(instrument):
+                return False
 
-    # def _stage_3_preprocessing(self, instrument, p):
-    #     for f in self.feature_list:
-    #         if not create_features(instrument, f):
-    #             print("Przerwano")
-    #             return
-    #         if not create_targets(instrument, self.target_list):
-    #             print("Przerwano")
-    #             return
-    #     # if not clean_data(instrument, p):
-    #     #     print("Przerwano")
-    #     #     return
-    #     # if not scale_data(instrument, p):
-    #     #     print("Przerwano")
-    #     #     return
-    #     print("OK")
+            print(f"  [_stage_4_normalization] Znormalizowano dane")
+            return True
+
+        except Exception as e:
+            print(f"Nieoczekiwany błąd: {e}")
+            return False
