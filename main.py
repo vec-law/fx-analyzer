@@ -25,8 +25,11 @@ __version__ = "1.0.3-alpha"
 
 import json
 from src.analysis import Analysis
+from src.utils import clear_console
 
 def main():
+    clear_console()
+    
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)

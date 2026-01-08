@@ -31,25 +31,37 @@
     }
   },
   
-  "FEATURE_SERIES": [
+  "INSTRUMENT_LIST": [
     {
-      "name": "trend_following_basic",
+      "name": "instrument_1",
+      "params": {
+        "name": "EURUSD",
+        "type": "currency_pair",
+        "interval": "1d"
+      }
+    }
+  ],
+
+  "PARAMS_LIST": [
+    {
+      "name": "params_set_1",
+      "params": {
+        "repair_gaps": true,
+        "mode": "server"
+      }
+    }
+  ],
+
+  "FEATURE_LIST": [
+    {
+      "name": "feature_set_1",
       "features": [
         {
           "feature": "sma",
           "params": { 
             "start": 10, 
-            "end": 50, 
+            "stop": 50, 
             "step": 10, 
-            "source_column": "close" 
-          }
-        },
-        {
-          "feature": "sma",
-          "params": { 
-            "start": 100, 
-            "end": 200, 
-            "step": 50, 
             "source_column": "close" 
           }
         }
@@ -57,18 +69,12 @@
     }
   ],
 
-  "INSTRUMENT_LIST": [
+  "TARGET_LIST": [
     {
-      "name": "EURUSD",
-      "type": "currency_pair",
-      "interval": "1d"
-    }
-  ],
-
-  "ANALYSIS_PARAMS_LIST": [
-    {
-      "repair_gaps": true,
-      "mode": "local"
+      "name": "target_set_1",
+      "targets": [
+        "close"
+      ]
     }
   ]
 }
