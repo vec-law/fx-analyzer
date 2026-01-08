@@ -55,14 +55,17 @@ def create_targets(instrument: Instrument, t):
         print(f"Przerwano: nieoczekiwany błąd: {e}")
         return False
 
-def clean_data(instrument: Instrument, samples_limit):
+def clean_and_split_data(instrument: Instrument, samples_limit, train_ratio=0.875):
     try:
         instrument.df.dropna(inplace=True)
         
         limit = int(samples_limit)
-
         if limit > 0 and len(instrument.df) > limit:
             instrument.df = instrument.df.tail(limit)
+
+        ratio = float(train_ratio)
+        if ratio <= 0 or ratio > 1:
+            ratio = 0.875
 
         cols_to_keep = [col for col in instrument.df.columns 
             if col == 'datetime' 
@@ -70,8 +73,15 @@ def clean_data(instrument: Instrument, samples_limit):
             or col.startswith('target_')]
         
         instrument.df = instrument.df[cols_to_keep]
+
+        split_idx = int(len(instrument.df) * ratio)
+        instrument.df_dict['train'] = instrument.df.iloc[:split_idx].copy().reset_index(drop=True)
+        instrument.df_dict['test'] = instrument.df.iloc[split_idx:].copy().reset_index(drop=True)
+        instrument.df = pd.DataFrame()
         
-        print(f"  [clean_data] Pozostawiono {len(instrument.df)} ostatnich wierszy")
+        print(f"  [clean_and_split_data] Ustworzono df_dict['train'], df_dict['test']")
+        print(f"  [clean_and_split_data] len(df_dict['train']) = {len(instrument.df_dict['train'])}")
+        print(f"  [clean_and_split_data] len(df_dict['test']) = {len(instrument.df_dict['test'])}")
         return True
 
     except (ValueError, TypeError) as e:

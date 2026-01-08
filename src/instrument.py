@@ -24,6 +24,10 @@ class Instrument:
         self.check_period = settings['check_period']
         self.min_count = settings['min_count']
         self.df = pd.DataFrame()
+        self.df_dict = {
+            'train': pd.DataFrame(),
+            'test': pd.DataFrame()
+        }
         self.source = None
 
     def __str__(self):

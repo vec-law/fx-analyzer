@@ -1,7 +1,7 @@
 from .instrument import Instrument
 from src.ingestion import load_data
 from src.preprocessing import create_features, create_targets
-from src.preprocessing import clean_data, scale_data
+from src.preprocessing import clean_and_split_data, scale_data
 
 class Analysis:
     def __init__(self, config):
@@ -89,7 +89,7 @@ class Analysis:
             if not create_targets(instrument, a['t']['targets']):
                 return False
             
-            if not clean_data(instrument, a['p']['params']['samples_limit']):
+            if not clean_and_split_data(instrument, a['p']['params']['samples_limit'], a['p']['params']['train_ratio']):
                 return False
 
             print(f"  [_stage_3_preprocessing] Przetworzono dane")
