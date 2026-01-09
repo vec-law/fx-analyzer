@@ -1,11 +1,10 @@
-from .instrument import Instrument
 from .container import Container
 from .loader import Loader
 from .cleaner import Cleaner
 from .preprocessor import Preprocessor
 
 
-class Analysis:
+class Orchestrator:
     def __init__(self, config):
         self.config = config
 
@@ -13,10 +12,6 @@ class Analysis:
         self.params_list = config.get('PARAMS_LIST', [])
         self.feature_list = config.get('FEATURE_LIST', [])
         self.target_list = config.get('TARGET_LIST', [])
-
-        self.supported_types = config.get('INSTRUMENT_TYPES', [])
-        self.custom_names = config.get('CUSTOM_NAMES', {})
-        self.interval_settings = config.get('INTERVAL_SETTINGS', {})
 
         self.args = []
         self._validate_config()
@@ -39,7 +34,7 @@ class Analysis:
         
         self._create_args()
 
-        for arg_set in self.args:
+        for idx, arg_set in enumerate(self.args, start=1):
             i = arg_set['i']
             p = arg_set['p']
             f = arg_set['f']
@@ -48,7 +43,7 @@ class Analysis:
             print(f"ZESTAW: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
             print(90 * '-')
 
-            self._run_pipeline(arg_set)
+            self._run_pipeline(arg_set, idx)
             print(90 * '=')
 
     def _create_args(self):
@@ -59,52 +54,29 @@ class Analysis:
             for f in self.feature_list
             for t in self.target_list
         ]
-        print(f"  [_create_args] Przygotowano {len(self.args)} zestaw(ów) do przetestowania\n{'=' * 90}")
-        
-    def _create_instrument(self, arg_set):
+        print(f"   [_create_args] Przygotowano {len(self.args)} zestaw(ów) do przetestowania\n{'=' * 90}")
+
+    def _run_pipeline(self, arg_set, idx):
         try:
-            params = arg_set['i']['params']
-            instrument = Instrument(
-                params['name'],
-                params['type_of_instrument'],
-                params['interval'],
-                self.supported_types,
-                self.custom_names,
-                self.interval_settings
-            )
-            print(f"  [_create_instrument] Utworzono instrument: {arg_set['i']['name']}")
-            return instrument
+            container = Container(arg_set, self.config, idx)
 
-        except Exception as e:
-            print(f"  [_create_instrument] Nieoczekiwany błąd: {e}")
-            return None
-
-    def _run_pipeline(self, arg_set):
-        try:
-            instrument = self._create_instrument(arg_set)
-            if not instrument:
+            if not Loader.load_data(container):
                 return
 
-            container = Container()
-            container.instrument = instrument
-            
-            if not Loader.load_data(container, arg_set, self.config):
+            if not Cleaner.clean_data(container):
                 return
 
-            if not Cleaner.clean_data(container, arg_set):
-                return
-
-            if not Preprocessor.create_features(container, arg_set):
+            if not Preprocessor.create_features(container):
                 return
             
-            if not Preprocessor.create_targets(container, arg_set):
+            if not Preprocessor.create_targets(container):
                 return
 
-            if not Preprocessor.cut_and_split_data(container, arg_set):
+            if not Preprocessor.cut_and_split_data(container):
                 return
             
             if not Preprocessor.scale_data(container):
                 return
 
         except Exception as e:
-            print(f"  [_run_pipeline] Błąd podczas przetwarzania: {e}")
+            print(f"   [_run_pipeline] Błąd podczas przetwarzania: {e}")

@@ -1,12 +1,11 @@
 from src.utils import save_df
-from src.utils import save_df
 
 
 class Cleaner:
     @staticmethod
-    def clean_data(container, arg_set):
+    def clean_data(container):
         try:
-            params = arg_set['p']['params']
+            params = container.params_set['p']['params']
             repair_gaps = params.get('repair_gaps')
             if container.df is None or container.df.empty:
                 return False

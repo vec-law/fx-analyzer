@@ -3,9 +3,9 @@ import pandas as pd
 
 class Preprocessor:
     @staticmethod
-    def create_features(container, arg_set):
+    def create_features(container):
         try:
-            f_config = arg_set['f']['features']
+            f_config = container.params_set['f']['features']
             feature_cols = []
             n = 0
             
@@ -35,9 +35,9 @@ class Preprocessor:
             return False
 
     @staticmethod
-    def create_targets(container, arg_set):
+    def create_targets(container):
         try:
-            t_config = arg_set['t']['targets']
+            t_config = container.params_set['t']['targets']
             target_cols = []
             n = 0
             
@@ -57,13 +57,16 @@ class Preprocessor:
             return False
 
     @staticmethod
-    def cut_and_split_data(container, arg_set):
+    def cut_and_split_data(container):
         try:
-            params = arg_set['p']['params']
+            params = container.params_set['p']['params']
             samples_limit = params.get('samples_limit', 0)
             train_ratio = params.get('train_ratio', 0.875)
 
             container.df.dropna(inplace=True)
+            if container.df.empty:
+                print("  [cut_and_split_data] Błąd: Brak danych po usunięciu wartości NaN (za krótka historia?)")
+                return False
             
             limit = int(samples_limit)
             if limit > 0 and len(container.df) > limit:

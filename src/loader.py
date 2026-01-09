@@ -8,10 +8,10 @@ from src.utils import get_path, save_df
 
 class Loader:        
     @staticmethod
-    def load_data(container, arg_set, config):
+    def load_data(container):
         try:
             instrument = container.instrument
-            params = arg_set['p']['params']
+            params = container.params_set['p']['params']
             mode = params.get('mode')
 
             if not isinstance(instrument, Instrument) or mode not in ['auto', 'local', 'server']:
@@ -21,13 +21,13 @@ class Loader:
             path = get_path(instrument.name, instrument.interval, 'raw')
             
             if mode == 'local':
-                return Loader.load_csv(container, config, path)
+                return Loader.load_csv(container, path)
             elif mode == 'server':
-                return Loader.load_yf(container, config)
+                return Loader.load_yf(container)
             else:
-                success = Loader.load_csv(container, config, path)
+                success = Loader.load_csv(container, path)
                 if not success:
-                    success = Loader.load_yf(container, config)
+                    success = Loader.load_yf(container)
                 return success
 
         except Exception as e:
@@ -35,7 +35,7 @@ class Loader:
             return False
     
     @staticmethod
-    def load_csv(container, config, path):
+    def load_csv(container, path):
         if not os.path.exists(path):
             print(f"  [load_csv] Plik {path} nie istnieje")
             return False
@@ -45,7 +45,7 @@ class Loader:
             df = pd.read_csv(
                 path, 
                 header=None, 
-                names=config['BROKER_COLUMNS'], 
+                names=container.config['BROKER_COLUMNS'], 
                 sep=','
             )
             
@@ -53,7 +53,7 @@ class Loader:
             df['datetime'] = pd.to_datetime(df['date'] + ' ' + df['time'])
             df = df.drop(columns=['date', 'time'])
             df = df.sort_values('datetime').reset_index(drop=True)
-            df = df[config['FINAL_COLUMNS']]
+            df = df[container.config['FINAL_COLUMNS']]
 
             container.df = df
 
@@ -67,7 +67,7 @@ class Loader:
             return False
 
     @staticmethod
-    def load_yf(container, config):
+    def load_yf(container):
         try:
             inst = container.instrument
             print(f"  [load_yf] Pobieranie danych z serwera YF")
@@ -91,7 +91,7 @@ class Loader:
             df.columns = [col.lower() for col in df.columns]
             df.rename(columns={df.columns[0]: 'datetime'}, inplace=True)
             df['datetime'] = pd.to_datetime(df['datetime']).dt.tz_localize(None)
-            df = df[config['FINAL_COLUMNS']]
+            df = df[container.config['FINAL_COLUMNS']]
 
             container.df = df
 

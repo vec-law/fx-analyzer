@@ -12,7 +12,7 @@
 __version__ = "1.0.3-alpha"
 
 import json
-from src.analysis import Analysis
+from src.orchestrator import Orchestrator
 from src.utils import clear_console
 
 def main():
@@ -26,8 +26,8 @@ def main():
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(f"Błąd konfiguracji: {e}")
 
-    analysis = Analysis(config)
-    analysis.run()
+    orchestrator = Orchestrator(config)
+    orchestrator.run()
 
 if __name__ == "__main__":
     main()
