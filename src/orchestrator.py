@@ -40,7 +40,7 @@ class Orchestrator:
             f = arg_set['f']
             t = arg_set['t']
 
-            print(f"ZESTAW: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
+            print(f"ZESTAW nr {idx}: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
             print(90 * '-')
 
             self._run_pipeline(arg_set, idx)
