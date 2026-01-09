@@ -16,7 +16,7 @@
     "1m":  {"range": "7d",   "check_period": "H", "min_count": 50}
   },
 
-  "OWN_NAMES": {
+  "CUSTOM_NAMES": {
     "US100": {"index": "^NDX", "future": "NQ=F"},
     "DE40":  {"index": "^GDAXI", "future": "FDAX.EX"},
     "BTC":   {"crypto": "BTC-USD"},
@@ -36,7 +36,7 @@
       "name": "instrument_1",
       "params": {
         "name": "EURUSD",
-        "type": "currency_pair",
+        "type_of_instrument": "currency_pair",
         "interval": "1d"
       }
     }

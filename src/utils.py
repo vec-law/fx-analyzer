@@ -6,16 +6,14 @@ def get_path(instrument_name, instrument_interval, folder, sufix=None):
         filename += '_' + sufix
     filename += ".csv"
     base_dir = os.path.dirname(os.path.abspath(__file__))
-
     return os.path.normpath(os.path.join(base_dir, "..", "data", folder, filename))
 
-def save_df(instrument, folder, sufix=None):
-    path = get_path(instrument.name, instrument.interval, folder, sufix)
+def save_df(container, folder, sufix=None):
+    inst = container.instrument
+    path = get_path(inst.name, inst.interval, folder, sufix)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    instrument.df.to_csv(path, index=False)
-    
+    container.df.to_csv(path, index=False)
     print(f"  [save_df] Dane zapisano w pliku {path}")
-
     return True
 
 def clear_console():

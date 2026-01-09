@@ -1,54 +1,55 @@
 from .instrument import Instrument
-from src.ingestion import load_data
-from src.preprocessing import create_features, create_targets
-from src.preprocessing import clean_and_split_data, scale_data
+from .container import Container
+from .loader import Loader
+from .cleaner import Cleaner
+from .preprocessor import Preprocessor
+
 
 class Analysis:
     def __init__(self, config):
         self.config = config
-        
+
         self.instrument_list = config.get('INSTRUMENT_LIST', [])
         self.params_list = config.get('PARAMS_LIST', [])
         self.feature_list = config.get('FEATURE_LIST', [])
         self.target_list = config.get('TARGET_LIST', [])
 
-        if not all([self.instrument_list, self.params_list, self.feature_list, self.target_list]):
-            raise KeyError("Błąd: Jedna z list (INSTRUMENT, PARAMS, FEATURE, TARGET) jest pusta lub jej brakuje.")
-        
+        self.supported_types = config.get('INSTRUMENT_TYPES', [])
+        self.custom_names = config.get('CUSTOM_NAMES', {})
+        self.interval_settings = config.get('INTERVAL_SETTINGS', {})
+
+        self.args = []
+        self._validate_config()
+
+    def _validate_config(self):
+        required_lists = [
+            self.instrument_list,
+            self.params_list,
+            self.feature_list,
+            self.target_list
+        ]
+
+        if not all(required_lists):
+            raise KeyError(
+                "Błąd: Jedna z wymaganych list (INSTRUMENT, PARAMS, FEATURE, TARGET) jest pusta."
+            )
+
     def run(self):
-        print()
-        print(90 * '=')
-        print("START")
+        print(f"{'=' * 90}\nSTART")
+        
         self._create_args()
-        print(90 * '=')
 
-        for a in self.args:
-            print(f"ZESTAW: {a['i']['name']} | {a['p']['name']} | {a['f']['name']} | {a['t']['name']}")
+        for arg_set in self.args:
+            i = arg_set['i']
+            p = arg_set['p']
+            f = arg_set['f']
+            t = arg_set['t']
+
+            print(f"ZESTAW: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
+            print(90 * '-')
+
+            self._run_pipeline(arg_set)
             print(90 * '=')
-            
-            print("ETAP 1/8: Inicjalizacja...")
-            instrument = self._stage_1_create_instrument(a)
-            if not instrument:
-                print("Przerwano")
-                continue
-
-            print("ETAP 2/8: Ingestion...")
-            if not self._stage_2_ingestion(instrument, a):
-                print("Przerwano")
-                continue
-
-            print("ETAP 3/8: Preprocessing...")
-            if not self._stage_3_preprocessing(instrument, a):
-                print("Przerwano")
-                continue
-
-            print("ETAP 4/8: Normalizacja...")
-            if not self._stage_4_normalization(instrument):
-                print("Przerwano")
-                continue
-
-            print(90 * '=')
-            
 
     def _create_args(self):
         self.args = [
@@ -58,68 +59,52 @@ class Analysis:
             for f in self.feature_list
             for t in self.target_list
         ]
-        print(f"  [_create_args] Przygotowano {len(self.args)} zestaw(-ów) do przetestowania")
-
-    def _stage_1_create_instrument(self, a):
+        print(f"  [_create_args] Przygotowano {len(self.args)} zestaw(ów) do przetestowania\n{'=' * 90}")
+        
+    def _create_instrument(self, arg_set):
         try:
+            params = arg_set['i']['params']
             instrument = Instrument(
-                a['i']['params']['name'],
-                a['i']['params']['type'],
-                a['i']['params']['interval'],
-                self.config['INSTRUMENT_TYPES'],
-                self.config['OWN_NAMES'],
-                self.config['INTERVAL_SETTINGS']
-                )
-            print(f"  [_stage_1_create_instrument] Utworzono instrument")
+                params['name'],
+                params['type_of_instrument'],
+                params['interval'],
+                self.supported_types,
+                self.custom_names,
+                self.interval_settings
+            )
+            print(f"  [_create_instrument] Utworzono instrument: {arg_set['i']['name']}")
             return instrument
+
         except Exception as e:
-            print(f"Nieoczekiwany błąd {e}")
+            print(f"  [_create_instrument] Nieoczekiwany błąd: {e}")
             return None
 
-    def _stage_2_ingestion(self, instrument, a):
+    def _run_pipeline(self, arg_set):
         try:
-            if not load_data(instrument, a['p']['params']['mode'], a['p']['params']['repair_gaps'], self.config):
-                return False
-            print(f"  [_stage_2_ingestion] Załadowano dane")
-            return True
+            instrument = self._create_instrument(arg_set)
+            if not instrument:
+                return
 
-        except KeyError as e:
-            print(f"Błąd klucza w konfiguracji cech: {e}")
-            return False
-
-        except Exception as e:
-            print(f"Nieoczekiwany błąd {e}")
-            return False
-
-    def _stage_3_preprocessing(self, instrument, a):
-        try:
-            if not create_features(instrument, a['f']['features']):
-                return False
-            if not create_targets(instrument, a['t']['targets']):
-                return False
+            container = Container()
+            container.instrument = instrument
             
-            if not clean_and_split_data(instrument, a['p']['params']['samples_limit'], a['p']['params']['train_ratio']):
-                return False
+            if not Loader.load_data(container, arg_set, self.config):
+                return
 
-            print(f"  [_stage_3_preprocessing] Przetworzono dane")
-            return True
+            if not Cleaner.clean_data(container, arg_set):
+                return
+
+            if not Preprocessor.create_features(container, arg_set):
+                return
             
-        except KeyError as e:
-            print(f"Błąd klucza w konfiguracji cech: {e}")
-            return False
+            if not Preprocessor.create_targets(container, arg_set):
+                return
+
+            if not Preprocessor.cut_and_split_data(container, arg_set):
+                return
+            
+            if not Preprocessor.scale_data(container):
+                return
 
         except Exception as e:
-            print(f"Nieoczekiwany błąd: {e}")
-            return False
-        
-    def _stage_4_normalization(self, instrument):
-        try:
-            if not scale_data(instrument):
-                return False
-
-            print(f"  [_stage_4_normalization] Znormalizowano dane")
-            return True
-
-        except Exception as e:
-            print(f"Nieoczekiwany błąd: {e}")
-            return False
+            print(f"  [_run_pipeline] Błąd podczas przetwarzania: {e}")
