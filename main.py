@@ -33,20 +33,6 @@ if __name__ == "__main__":
     main()
 
 # print()
-# print(f"ETAP 4/8: Przygotowanie tensorów...")
-# if (ten_dict := prepare_tensors(df_dict)) is None:
-#     print("Przerwano")
-#     exit()
-# print("OK")
-
-# print()
-# print(f"ETAP 5/8: Konfiguracja modelu...")
-# if (mod_dict := prepare_model_params(ten_dict, seed, model_num)) is None:
-#     print("Przerwano")
-#     exit()
-# print("OK")
-
-# print()
 # print(f"ETAP 6/8: Trening modelu...")
 # if (mod_dict := train_model(ten_dict, mod_dict, epochs)) is None:
 #     print("Przerwano")

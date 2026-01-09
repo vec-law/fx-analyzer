@@ -2,6 +2,7 @@ from .container import Container
 from .loader import Loader
 from .cleaner import Cleaner
 from .preprocessor import Preprocessor
+from .model_manager import ModelManager
 
 
 class Orchestrator:
@@ -76,6 +77,12 @@ class Orchestrator:
                 return
             
             if not Preprocessor.scale_data(container):
+                return
+            
+            if not Preprocessor.create_tensors(container):
+                return
+            
+            if not ModelManager.create_model_and_params(container):
                 return
 
         except Exception as e:

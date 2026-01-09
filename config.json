@@ -48,8 +48,10 @@
       "params": {
         "repair_gaps": true,
         "mode": "server",
-        "samples_limit": "4000",
-        "train_ratio": "0.875"
+        "samples_limit": 4000,
+        "train_ratio": 0.875,
+        "seed": 42,
+        "model_id": 1
       }
     }
   ],

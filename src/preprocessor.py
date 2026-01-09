@@ -1,4 +1,6 @@
 import pandas as pd
+import torch
+from src.container import Container
 
 
 class Preprocessor:
@@ -22,6 +24,10 @@ class Preprocessor:
                         feature_cols.append(series)
                         n += 1
             
+            if n == 0:
+                print("  [create_features] Błąd: Wygenerowano 0 cech. Sprawdź konfigurację")
+                return False
+
             container.df = pd.concat([container.df] + feature_cols, axis=1)
 
             print(f"  [create_features] Dodano {n} cech(-y)")
@@ -46,6 +52,10 @@ class Preprocessor:
                 series.name = 'target_' + str(n)
                 target_cols.append(series)
                 n += 1
+
+            if n == 0:
+                print("  [create_targets] Błąd: Nie zdefiniowano żadnych wartości docelowych")
+                return False
                     
             container.df = pd.concat([container.df] + target_cols, axis=1)
 
@@ -122,3 +132,46 @@ class Preprocessor:
         except Exception as e:
             print(f"  [scale_data] Błąd skalowania: {e}")
             return False
+
+    @staticmethod
+    def create_tensors(container):
+        try:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            container.ten_dict['device'] = device
+            
+            cols_to_ten_x = [col for col in container.df_dict['train_norm'].columns
+                             if col.startswith('feature_')]
+            cols_to_ten_y = [col for col in container.df_dict['train_norm'].columns
+                             if col.startswith('target_')]
+
+            container.ten_dict['x_train_norm'] = torch.tensor(
+                container.df_dict['train_norm'][cols_to_ten_x].values, 
+                dtype=torch.float32
+            ).to(device)
+            
+            container.ten_dict['y_train_norm'] = torch.tensor(
+                container.df_dict['train_norm'][cols_to_ten_y].values, 
+                dtype=torch.float32
+            ).to(device)
+
+            container.ten_dict['x_test_norm'] = torch.tensor(
+                container.df_dict['test_norm'][cols_to_ten_x].values, 
+                dtype=torch.float32
+            ).to(device)
+            
+            container.ten_dict['y_test_norm'] = torch.tensor(
+                container.df_dict['test_norm'][cols_to_ten_y].values, 
+                dtype=torch.float32
+            ).to(device)
+
+            print(f"  [create_tensors] Utworzono tensory w ten_dict")
+            print(f"  [create_tensors] ten_dict['x_train_norm']: {container.ten_dict['x_train_norm'].shape}")
+            print(f"  [create_tensors] ten_dict['y_train_norm']: {container.ten_dict['y_train_norm'].shape}")
+            print(f"  [create_tensors] ten_dict['x_test_norm']: {container.ten_dict['x_test_norm'].shape}")
+            print(f"  [create_tensors] ten_dict['y_test_norm']: {container.ten_dict['y_test_norm'].shape}")
+            return True
+
+        except Exception as e:
+            print(f"   [create_tensors] Błąd: {e}")
+            return False
+

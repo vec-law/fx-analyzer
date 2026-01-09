@@ -132,77 +132,77 @@ def train_model(ten_dict, mod_dict, epochs):
             
     return mod_dict
 
-def prepare_model_params(ten_dict, seed, model_num):
-    if not isinstance(model_num, int) or model_num <=0:
-        print("   [prepare_model_params] Nieprawidłowy numer modelu")
-        return None
+# def prepare_model_params(ten_dict, seed, model_num):
+#     if not isinstance(model_num, int) or model_num <=0:
+#         print("   [prepare_model_params] Nieprawidłowy numer modelu")
+#         return None
 
-    features_num = ten_dict['train_features_norm'].shape[1]
-    target_num = ten_dict['train_target_norm'].shape[1]
+#     features_num = ten_dict['train_features_norm'].shape[1]
+#     target_num = ten_dict['train_target_norm'].shape[1]
 
-    if features_num < 1 or target_num < 1: 
-        print("  [prepare_model_params] Nieporawidłowa ilość target i/lub features")
-        return None
+#     if features_num < 1 or target_num < 1: 
+#         print("  [prepare_model_params] Nieporawidłowa ilość target i/lub features")
+#         return None
 
-    torch.manual_seed(seed)
-    device = ten_dict['device']
-    print(f"  [torch.manual_seed] Ustawiono seed = {seed}")
-    if device.type == 'cuda':
-        torch.cuda.manual_seed(seed)
-        print(f"  [torch.cuda.manual_seed] Ustawiono seed = {seed} na {device}")
+#     torch.manual_seed(seed)
+#     device = ten_dict['device']
+#     print(f"  [torch.manual_seed] Ustawiono seed = {seed}")
+#     if device.type == 'cuda':
+#         torch.cuda.manual_seed(seed)
+#         print(f"  [torch.cuda.manual_seed] Ustawiono seed = {seed} na {device}")
 
-    if (model := get_model(model_num, features_num, target_num)) is None: return None
-    print(f"  [prepare_model_params] Ustawiono model ModelV{model_num}")
+#     if (model := get_model(model_num, features_num, target_num)) is None: return None
+#     print(f"  [prepare_model_params] Ustawiono model ModelV{model_num}")
 
-    model = model.to(device)
-    print(f"  [prepare_model_params] Przeniesiono model na {device}")
+#     model = model.to(device)
+#     print(f"  [prepare_model_params] Przeniesiono model na {device}")
 
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-2)
-    print(f"  [prepare_model_params] Ustawiono optimizer na optim.Adam")
+#     optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-2)
+#     print(f"  [prepare_model_params] Ustawiono optimizer na optim.Adam")
 
-    loss_function = nn.MSELoss()
-    print(f"  [prepare_model_params] Ustawiono funkcję loss_function na nn.MSELoss")
+#     loss_function = nn.MSELoss()
+#     print(f"  [prepare_model_params] Ustawiono funkcję loss_function na nn.MSELoss")
 
-    mod_dict = {
-        'model': model,
-        'optimizer': optimizer,
-        'loss_function': loss_function
-    }
+#     mod_dict = {
+#         'model': model,
+#         'optimizer': optimizer,
+#         'loss_function': loss_function
+#     }
 
-    print(f"  [prepare_model_params] Utworzono słownik mod_dict[model], mod_dict[optimizer], mod_dict[loss_function]")
+#     print(f"  [prepare_model_params] Utworzono słownik mod_dict[model], mod_dict[optimizer], mod_dict[loss_function]")
     
-    return mod_dict
+#     return mod_dict
 
-def prepare_tensors(df_dict):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# def prepare_tensors(df_dict):
+#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    ten_train_target_norm = torch.tensor(df_dict['train_norm']['target'].to_numpy(), dtype=torch.float32).unsqueeze(1)
-    ten_train_features_norm = torch.tensor(df_dict['train_norm'].drop(columns=['target']).to_numpy(), dtype=torch.float32)
+#     ten_train_target_norm = torch.tensor(df_dict['train_norm']['target'].to_numpy(), dtype=torch.float32).unsqueeze(1)
+#     ten_train_features_norm = torch.tensor(df_dict['train_norm'].drop(columns=['target']).to_numpy(), dtype=torch.float32)
 
-    ten_dict = {}
-    ten_dict['train_target_norm'] = ten_train_target_norm
-    ten_dict['train_features_norm'] = ten_train_features_norm
-    print(f"  [prepare_tensors] Utworzono tensory ten_dict[train_target_norm] i ten_dict[train_features_norm]")
+#     ten_dict = {}
+#     ten_dict['train_target_norm'] = ten_train_target_norm
+#     ten_dict['train_features_norm'] = ten_train_features_norm
+#     print(f"  [prepare_tensors] Utworzono tensory ten_dict[train_target_norm] i ten_dict[train_features_norm]")
 
-    ten_dict['instrument'] = df_dict['train']['instrument'].iloc[0]
-    ten_dict['interval'] = df_dict['train']['interval'].iloc[0]
-    print(f"  [prepare_tensors] Zapisano ten_dict[instrument] = {ten_dict['instrument']}, ten_dict[interval] = {ten_dict['interval']}")
+#     ten_dict['instrument'] = df_dict['train']['instrument'].iloc[0]
+#     ten_dict['interval'] = df_dict['train']['interval'].iloc[0]
+#     print(f"  [prepare_tensors] Zapisano ten_dict[instrument] = {ten_dict['instrument']}, ten_dict[interval] = {ten_dict['interval']}")
 
-    ten_dict['device'] = device
-    print(f"  [prepare_tensors] Zapisano obecne urządzenie ({device}) w ten_dict[device]")
+#     ten_dict['device'] = device
+#     print(f"  [prepare_tensors] Zapisano obecne urządzenie ({device}) w ten_dict[device]")
 
-    instrument = df_dict['train']['instrument'].iloc[0]
-    interval = df_dict['train']['interval'].iloc[0]
+#     instrument = df_dict['train']['instrument'].iloc[0]
+#     interval = df_dict['train']['interval'].iloc[0]
 
-    path = get_path('ten', f"{instrument}_{interval}.pt")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    torch.save(ten_dict, path)
-    print(f"  [prepare_tensors] Zapisano słownik ten_dict do pliku {path}")
+#     path = get_path('ten', f"{instrument}_{interval}.pt")
+#     os.makedirs(os.path.dirname(path), exist_ok=True)
+#     torch.save(ten_dict, path)
+#     print(f"  [prepare_tensors] Zapisano słownik ten_dict do pliku {path}")
 
-    ten_dict['train_target_norm'] = ten_dict['train_target_norm'].to(device)
-    ten_dict['train_features_norm'] = ten_dict['train_features_norm'].to(device)
-    print(f"  [prepare_tensors] Przeniesiono tensory ten_dict[train_target_norm] i ten_dict[train_features_norm] na {device}")
+#     ten_dict['train_target_norm'] = ten_dict['train_target_norm'].to(device)
+#     ten_dict['train_features_norm'] = ten_dict['train_features_norm'].to(device)
+#     print(f"  [prepare_tensors] Przeniesiono tensory ten_dict[train_target_norm] i ten_dict[train_features_norm] na {device}")
 
-    print(f"  [prepare_tensors] Rozmiar ten_dict[train_target_norm]: {list(ten_dict['train_target_norm'].shape)}, rozmiar ten_dict[train_features_norm]: {list(ten_dict['train_features_norm'].shape)}")
+#     print(f"  [prepare_tensors] Rozmiar ten_dict[train_target_norm]: {list(ten_dict['train_target_norm'].shape)}, rozmiar ten_dict[train_features_norm]: {list(ten_dict['train_features_norm'].shape)}")
     
-    return ten_dict
+#     return ten_dict
