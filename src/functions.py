@@ -94,43 +94,43 @@ def evaluate_model(mod_dict, df_dict, ten_dict):
     
     return df_dict, ten_dict, mod_dict
 
-def train_model(ten_dict, mod_dict, epochs):
+# def train_model(ten_dict, mod_dict, epochs):
 
-    if not isinstance(epochs, int) or epochs < 10:
-        print("[train_model] Nieprawidłowa liczba kroków")
-        return None
+#     if not isinstance(epochs, int) or epochs < 10:
+#         print("[train_model] Nieprawidłowa liczba kroków")
+#         return None
 
-    model = mod_dict['model']
-    optimizer = mod_dict['optimizer']
-    loss_function = mod_dict['loss_function']
+#     model = mod_dict['model']
+#     optimizer = mod_dict['optimizer']
+#     loss_function = mod_dict['loss_function']
 
-    instrument = ten_dict['instrument']
-    interval = ten_dict['interval']
+#     instrument = ten_dict['instrument']
+#     interval = ten_dict['interval']
 
-    ten_train_features_norm = ten_dict['train_features_norm']
-    ten_train_target_norm = ten_dict['train_target_norm']
+#     ten_train_features_norm = ten_dict['train_features_norm']
+#     ten_train_target_norm = ten_dict['train_target_norm']
 
-    model.train()
-    losses = []
+#     model.train()
+#     losses = []
 
-    for epoch in range(epochs):
-        optimizer.zero_grad()
-        noise = torch.randn_like(ten_train_features_norm) * 0.01
-        ten_train_predictions_norm = model(ten_train_features_norm + noise)
-        loss = loss_function(ten_train_predictions_norm, ten_train_target_norm)
-        loss.backward()
-        optimizer.step()
+#     for epoch in range(epochs):
+#         optimizer.zero_grad()
+#         noise = torch.randn_like(ten_train_features_norm) * 0.01
+#         ten_train_predictions_norm = model(ten_train_features_norm + noise)
+#         loss = loss_function(ten_train_predictions_norm, ten_train_target_norm)
+#         loss.backward()
+#         optimizer.step()
 
-        losses.append(loss.item())
+#         losses.append(loss.item())
         
-        if (epoch + 1) % 100 == 0: print(f"   [train_model] Epoch: {epoch+1}/{epochs}, Loss: {loss.item():.6f}")
+#         if (epoch + 1) % 100 == 0: print(f"   [train_model] Epoch: {epoch+1}/{epochs}, Loss: {loss.item():.6f}")
     
-    mod_dict['train_losses'] = losses
-    print(f"   [train_model] Zapisano mod_dict['train_losses'] = losses")
+#     mod_dict['train_losses'] = losses
+#     print(f"   [train_model] Zapisano mod_dict['train_losses'] = losses")
 
-    save_model(mod_dict, instrument, interval)
+#     save_model(mod_dict, instrument, interval)
             
-    return mod_dict
+#     return mod_dict
 
 # def prepare_model_params(ten_dict, seed, model_num):
 #     if not isinstance(model_num, int) or model_num <=0:

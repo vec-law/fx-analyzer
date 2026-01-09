@@ -1,14 +1,3 @@
-# from src.ingestion import load_data
-# from src.features import prepare_features, normalize
-# from src.model.functions import prepare_tensors, prepare_model_params, train_model, evaluate_model
-# from src.strategy import simulate_strategy
-
-# target_column ='close'
-# strategy = 1
-# seed = 42
-# epochs = 1000
-# model_num = 1
-
 __version__ = "1.0.3-alpha"
 
 import json
@@ -31,13 +20,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# print()
-# print(f"ETAP 6/8: Trening modelu...")
-# if (mod_dict := train_model(ten_dict, mod_dict, epochs)) is None:
-#     print("Przerwano")
-#     exit()
-# print("OK")
 
 # print()
 # print(f"ETAP 7/8: Ewaluacja modelu...")

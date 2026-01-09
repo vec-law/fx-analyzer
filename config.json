@@ -51,7 +51,8 @@
         "samples_limit": 4000,
         "train_ratio": 0.875,
         "seed": 42,
-        "model_id": 1
+        "model_id": 1,
+        "epochs": 1000
       }
     }
   ],
@@ -64,8 +65,8 @@
           "feature": "sma",
           "params": { 
             "start": 10, 
-            "stop": 50, 
-            "step": 5, 
+            "stop": 100, 
+            "step": 1, 
             "source_column": "close" 
           }
         },
