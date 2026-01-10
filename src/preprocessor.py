@@ -74,7 +74,12 @@ class Preprocessor:
             train_ratio = params.get('train_ratio', 0.875)
 
             if not container.df.empty:
-                container.last_df_row = container.df.tail(1).copy().reset_index(drop=True)
+                if not container.save_df_to_parquet():
+                    return False
+                print(container.df)
+            else:
+                print("  [cut_and_split_data] Błąd: Brak danych w df")
+                return False
 
             container.df.dropna(inplace=True)
             if container.df.empty:
@@ -111,8 +116,10 @@ class Preprocessor:
     @staticmethod
     def scale_data(container):
         try:
-            Preprocessor.create_stats(container.df_dict)
-            Preprocessor.scale_with_stats(container.df_dict)
+            if not Preprocessor.create_stats(container.df_dict):
+                return False
+            if not Preprocessor.scale_with_stats(container.df_dict):
+                return False
 
             print("  [scale_data] Utworzono zbiory znormalizowane (_norm)")
             return True

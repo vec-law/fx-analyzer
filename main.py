@@ -16,7 +16,8 @@ def main():
         print(f"Błąd konfiguracji: {e}")
 
     orchestrator = Orchestrator(config)
-    orchestrator.run()
+    # orchestrator.run_fits()
+    orchestrator.run_preds()
 
 if __name__ == "__main__":
     main()

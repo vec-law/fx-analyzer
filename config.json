@@ -66,7 +66,7 @@
           "feature": "sma",
           "params": { 
             "start": 10, 
-            "stop": 250, 
+            "stop": 50, 
             "step": 5, 
             "source_column": "close" 
           }

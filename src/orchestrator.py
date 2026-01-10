@@ -4,6 +4,10 @@ from .cleaner import Cleaner
 from .preprocessor import Preprocessor
 from .model_manager import ModelManager
 from .trainer import Trainer
+import gc
+import torch
+import os
+import json
 
 
 class Orchestrator:
@@ -31,21 +35,21 @@ class Orchestrator:
                 "Błąd: Jedna z wymaganych list (INSTRUMENT, PARAMS, FEATURE, TARGET) jest pusta."
             )
 
-    def run(self):
+    def run_fits(self):
         print(f"{'=' * 90}\nSTART")
-        
+
         self._create_args()
 
-        for idx, arg_set in enumerate(self.args, start=1):
+        for id, arg_set in enumerate(self.args, start=1):
             i = arg_set['i']
             p = arg_set['p']
             f = arg_set['f']
             t = arg_set['t']
 
-            print(f"ZESTAW nr {idx}: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
+            print(f"ZESTAW nr {id}: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
             print(90 * '-')
 
-            self._run_pipeline(arg_set, idx)
+            self.run_fit(arg_set, id)
             print(90 * '=')
 
     def _create_args(self):
@@ -58,9 +62,13 @@ class Orchestrator:
         ]
         print(f"   [_create_args] Przygotowano {len(self.args)} zestaw(ów) do przetestowania\n{'=' * 90}")
 
-    def _run_pipeline(self, arg_set, idx):
+    def run_fit(self, arg_set, id=1):
+        container = None
         try:
-            container = Container(arg_set, self.config, idx)
+            container = Container(arg_set, self.config, id)
+
+            if not container.save_params_set():
+                return
 
             if not Loader.load_data(container):
                 return
@@ -91,6 +99,54 @@ class Orchestrator:
             
             if not Trainer.evaluate_model(container):
                 return
+            
+            if not container.save_model_and_stats():
+                return
 
         except Exception as e:
             print(f"   [_run_pipeline] Błąd podczas przetwarzania: {e}")
+        
+        finally:
+            if container:
+                self._release_resources(container)
+                container = None
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    
+    @staticmethod
+    def _release_resources(container):
+        container.df = None
+        container.df_dict.clear()
+        container.ten_dict.clear()
+        container.mod_dict.clear()
+
+    def run_preds(self):
+        base_path = os.path.join("data", "fit")
+        if not os.path.exists(base_path):
+            return
+        
+        folders = [f.name for f in os.scandir(base_path) if f.is_dir()]
+
+        for folder in folders:
+            path = os.path.join(base_path, folder)
+            json_path = os.path.join(path, 'params_set.json')
+
+            if not os.path.exists(json_path):
+                continue
+
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    arg_set = json.load(f)
+                
+                self.run_pred(arg_set, folder)
+
+            except Exception as e:
+                print(f"Błąd w {folder}: {e}")
+                continue
+
+
+    def run_pred(self, arg_set, id):
+        container = Container(arg_set, self.config, id)
+        print(container)
+    
