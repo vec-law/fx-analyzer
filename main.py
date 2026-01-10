@@ -22,14 +22,6 @@ if __name__ == "__main__":
     main()
 
 # print()
-# print(f"ETAP 7/8: Ewaluacja modelu...")
-# if (result := evaluate_model(mod_dict, df_dict, ten_dict)) is None:
-#     print("Przerwano")
-#     exit()
-# df_dict, ten_dict, mod_dict = result
-# print("OK")
-
-# print()
 # print(f"ETAP 8/8: Symulacja strategii...")
 # if (strategy_results := simulate_strategy(df_dict, strategy)) is None:
 #     print("Przerwano")

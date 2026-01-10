@@ -111,23 +111,8 @@ class Preprocessor:
     @staticmethod
     def scale_data(container):
         try:
-            cols_to_norm = [
-                col for col in container.df_dict['train'].columns
-                if col.startswith('feature_') or col.startswith('target_')
-            ]
-
-            train_df = container.df_dict['train']
-            train_mean = train_df[cols_to_norm].mean()
-            train_std = train_df[cols_to_norm].std().replace(0, 1e-9)
-
-            container.df_dict['stats'] = {'mean': train_mean, 'std': train_std}
-
-            for label in ['train', 'test']:
-                source_df = container.df_dict[label]
-                norm_key = f"{label}_norm"
-                
-                container.df_dict[norm_key] = source_df.copy()
-                container.df_dict[norm_key][cols_to_norm] = (source_df[cols_to_norm] - train_mean) / train_std
+            Preprocessor.create_stats(container.df_dict)
+            Preprocessor.scale_with_stats(container.df_dict)
 
             print("  [scale_data] Utworzono zbiory znormalizowane (_norm)")
             return True
@@ -135,10 +120,105 @@ class Preprocessor:
         except Exception as e:
             print(f"  [scale_data] Błąd skalowania: {e}")
             return False
+        
+    @staticmethod
+    def create_stats(df_dict):
+        try:
+            cols_to_norm = [
+                col for col in df_dict['train'].columns
+                if col.startswith('feature_') or col.startswith('target_')
+            ]
+
+            if 'train' not in df_dict:
+                print(f"  [create_stats] Błąd: Brak kolumny train df_dict")
+                return False
+
+            train_df = df_dict['train']
+            train_mean = train_df[cols_to_norm].mean()
+            train_std = train_df[cols_to_norm].std().replace(0, 1e-9)
+
+            df_dict['stats'] = {'mean': train_mean, 'std': train_std}
+
+            print("  [create_stats] Utworzono statystyki")
+            return True
+
+        except Exception as e:
+            print(f"  [create_stats] Błąd skalowania: {e}")
+            return False
+    
+    @staticmethod
+    def scale_with_stats(df_dict):
+        try:
+            if 'train' not in df_dict or 'test' not in df_dict:
+                print(f"  [scale_with_stats] Błąd: Brak kolumn train lub test w df_dict")
+                return False
+            
+            cols_in_train = [
+                col for col in df_dict['train'].columns
+                if col.startswith('feature_') or col.startswith('target_')
+            ]
+
+            has_features = any(col.startswith('feature_') for col in cols_in_train)
+            has_targets = any(col.startswith('target_') for col in cols_in_train)
+
+            if not has_features or not has_targets:
+                print(f"  [scale_with_stats] Błąd: Brak kolumn feature_ lub target_ w df_dict['train]")
+                return False
+            
+            missing_in_test = [
+                col for col in cols_in_train 
+                if col not in df_dict['test'].columns
+            ]
+
+            if missing_in_test:
+                print(f"  [scale_with_stats] Błąd: Różne kolumy feature_ lub target_ w df_dict['train] i df_dict['test']")
+                return False
+            
+            if 'stats' not in df_dict:
+                print("  [scale_with_stats] Błąd: Brak 'stats' w df_dict")
+                return False
+                
+            if 'mean' not in df_dict['stats'] or 'std' not in df_dict['stats']:
+                print("  [scale_with_stats] Błąd: 'stats' musi zawierać mean i std")
+                return False
+            
+            stats_mean_cols = df_dict['stats']['mean'].index
+            stats_std_cols = df_dict['stats']['std'].index
+
+            missing_in_stats = [
+                col for col in cols_in_train 
+                if col not in stats_mean_cols or col not in stats_std_cols
+            ]
+
+            if missing_in_stats:
+                print(f"  [scale_with_stats] Błąd: Brak kolumn z df_dict['train'] w df_dict['stats']['mean'] lub df_dict['stats']['std']")
+                return False
+
+            for label in ['train', 'test']:
+                source_df = df_dict[label]
+                norm_key = f"{label}_norm"
+                
+                df_dict[norm_key] = source_df.copy()
+                
+                diff = source_df[cols_in_train] - df_dict['stats']['mean']
+                df_dict[norm_key][cols_in_train] = diff / df_dict['stats']['std']
+
+                df_dict[norm_key][cols_in_train] = df_dict[norm_key][cols_in_train].fillna(0.0)
+
+            print("  [scale_with_stats] Utworzono zbiory znormalizowane (_norm)")
+            return True
+        
+        except Exception as e:
+            print(f"  [scale_with_stats] Błąd podczas skalowania danych: {e}")
+            return False
 
     @staticmethod
     def create_tensors(container):
         try:
+            if 'train_norm' not in container.df_dict or 'test_norm' not in container.df_dict:
+                print("  [create_tensors] Błąd: Brak zbiorów znormalizowanych (_norm)")
+                return False
+
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             container.ten_dict['device'] = device
             
@@ -146,6 +226,10 @@ class Preprocessor:
                              if col.startswith('feature_')]
             cols_to_ten_y = [col for col in container.df_dict['train_norm'].columns
                              if col.startswith('target_')]
+            
+            if not cols_to_ten_x or not cols_to_ten_y:
+                print("  [create_tensors] Błąd: Brak kolumn feature_ lub target_ w train_norm")
+                return False
 
             container.ten_dict['x_train_norm'] = torch.tensor(
                 container.df_dict['train_norm'][cols_to_ten_x].values, 

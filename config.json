@@ -52,7 +52,8 @@
         "train_ratio": 0.875,
         "seed": 42,
         "model_id": 1,
-        "epochs": 1000
+        "epochs": 1000,
+        "train_noise": 0.01
       }
     }
   ],
@@ -78,7 +79,8 @@
     {
       "name": "target_set_1",
       "targets": [
-        "close"
+        "close",
+        "low"
       ]
     }
   ]

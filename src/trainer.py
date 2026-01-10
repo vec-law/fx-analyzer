@@ -9,11 +9,22 @@ class Trainer:
     @staticmethod
     def train_model(container: Container):
         try:
+            req_components = ['model', 'optimizer', 'loss_function']
+            if not all(k in container.mod_dict for k in req_components):
+                print("  [train_model] Błąd: Brak modelu, optymalizatora lub funkcji kosztu")
+                return False
+
+            if 'x_train_norm' not in container.ten_dict or 'y_train_norm' not in container.ten_dict:
+                print("  [train_model] Błąd: Brak kluczy 'x_train_norm', 'y_train_norm' w ten_dict")
+                return False
+
             params = container.params_set['p']['params']
 
             epochs = params.get('epochs', 1000)
             if epochs < 10:
                 epochs = 1000
+
+            train_noise = params.get('train_noise', 0.01)
             
             model = container.mod_dict['model']
             optimizer = container.mod_dict['optimizer']
@@ -28,7 +39,7 @@ class Trainer:
             for epoch in range(epochs):
                 optimizer.zero_grad()
                 
-                noise = torch.randn_like(x_train_norm) * 0.01
+                noise = torch.randn_like(x_train_norm) * train_noise
                 p_train_norm = model(x_train_norm + noise)
                 
                 loss = loss_function(p_train_norm, y_train_norm)
@@ -52,6 +63,10 @@ class Trainer:
     @staticmethod
     def evaluate_model(container: Container):
         try:
+            if 'model' not in container.mod_dict or 'x_test_norm' not in container.ten_dict:
+                print("  [evaluate_model] Błąd: Brak modelu lub danych testowych")
+                return False
+
             model = container.mod_dict['model']
             loss_function = container.mod_dict['loss_function']
             
@@ -69,30 +84,13 @@ class Trainer:
             container.mod_dict['test_mae'] = mae_loss.item()
             container.ten_dict['p_test_norm'] = p_test_norm
 
+            print(f"  [evaluate_model] Obliczono błędy")
             print(f"  [evaluate_model] Błąd MSE: {mse_loss.item():.6f}")
             print(f"  [evaluate_model] Błąd MAE: {mae_loss.item():.6f}")
 
-            stats = container.df_dict['stats']
-            p_test_norm_np = p_test_norm.detach().cpu().numpy()
-            
-            num_targets = p_test_norm_np.shape[1]
-            pred_col_names = [f"pred_{i}" for i in range(num_targets)]
-            container.df_dict['test_norm'][pred_col_names] = p_test_norm_np
-            
-            p_test_denorm_np = p_test_norm_np.copy()
-            
-            for i in range(num_targets):
-                col_name = f"target_{i}"
-                mean_val = stats['mean'][col_name]
-                std_val = stats['std'][col_name]
-                p_test_denorm_np[:, i] = (p_test_denorm_np[:, i] * std_val) + mean_val
-
-            container.df_dict['test'][pred_col_names] = p_test_denorm_np
-
-            print(f"  [evaluate_model] Przeskalowano predykcje i dodano do df_dict['test']")
-            plt.plot(range(len(y_test_norm)), y_test_norm[:, 0])
-            plt.plot(range(len(y_test_norm)), p_test_norm[:, 0])
-            plt.show()
+            # plt.plot(range(len(y_test_norm)), y_test_norm[:, 0])
+            # plt.plot(range(len(y_test_norm)), p_test_norm[:, 0])
+            # plt.show()
             
             return True
 
