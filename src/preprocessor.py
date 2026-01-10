@@ -1,6 +1,5 @@
 import pandas as pd
 import torch
-from src.container import Container
 
 
 class Preprocessor:

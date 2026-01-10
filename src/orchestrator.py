@@ -104,7 +104,7 @@ class Orchestrator:
                 return
 
         except Exception as e:
-            print(f"   [_run_pipeline] Błąd podczas przetwarzania: {e}")
+            print(f"   [run_fit] Błąd: {e}")
         
         finally:
             if container:
@@ -144,9 +144,20 @@ class Orchestrator:
             except Exception as e:
                 print(f"Błąd w {folder}: {e}")
                 continue
-
-
+        
     def run_pred(self, arg_set, id):
-        container = Container(arg_set, self.config, id)
-        print(container)
+        try:
+            container = Container(arg_set, self.config, id)
+            print(container)
+
+        except Exception as e:
+            print(f"   [run_pred] Błąd: {e}")
+        
+        finally:
+            if container:
+                self._release_resources(container)
+                container = None
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
     
