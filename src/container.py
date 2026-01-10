@@ -22,6 +22,7 @@ class Container:
         )
         
         self.df = None
+        self.last_df_row = None
         self.df_dict = {}
         self.ten_dict = {}
         self.mod_dict = {}

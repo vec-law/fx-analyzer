@@ -49,50 +49,50 @@ def save_model(mod_dict, instrument, interval):
 
     return True
 
-def evaluate_model(mod_dict, df_dict, ten_dict):
+# def evaluate_model(mod_dict, df_dict, ten_dict):
 
-    model = mod_dict['model']
-    loss_function = mod_dict['loss_function']
-    device = ten_dict['device']
+#     model = mod_dict['model']
+#     loss_function = mod_dict['loss_function']
+#     device = ten_dict['device']
 
-    mean_val = df_dict['stats']['mean']['target']
-    std_val = df_dict['stats']['std']['target']
+#     mean_val = df_dict['stats']['mean']['target']
+#     std_val = df_dict['stats']['std']['target']
 
-    model.eval()
+#     model.eval()
     
-    with torch.no_grad():
+#     with torch.no_grad():
 
-        ten_test_features_norm = torch.tensor(df_dict['test_norm'].drop(columns=['target']).to_numpy(), dtype=torch.float32).to(device)
-        ten_test_target_norm = torch.tensor(df_dict['test_norm']['target'].to_numpy(), dtype=torch.float32).unsqueeze(1).to(device)
-        ten_test_predictions_norm = model(ten_test_features_norm)
+#         ten_test_features_norm = torch.tensor(df_dict['test_norm'].drop(columns=['target']).to_numpy(), dtype=torch.float32).to(device)
+#         ten_test_target_norm = torch.tensor(df_dict['test_norm']['target'].to_numpy(), dtype=torch.float32).unsqueeze(1).to(device)
+#         ten_test_predictions_norm = model(ten_test_features_norm)
 
-        loss = loss_function(ten_test_predictions_norm, ten_test_target_norm)
+#         loss = loss_function(ten_test_predictions_norm, ten_test_target_norm)
     
-    ten_test_predictions = (ten_test_predictions_norm * std_val) + mean_val
-    ten_test_target = torch.tensor(df_dict['test']['target'].to_numpy(), dtype=torch.float32).unsqueeze(1).to(device)
+#     ten_test_predictions = (ten_test_predictions_norm * std_val) + mean_val
+#     ten_test_target = torch.tensor(df_dict['test']['target'].to_numpy(), dtype=torch.float32).unsqueeze(1).to(device)
 
-    ten_test_diff = ten_test_predictions - ten_test_target
+#     ten_test_diff = ten_test_predictions - ten_test_target
 
-    ten_dict['test_features_norm'] = ten_test_features_norm
-    print(f"   [evaluate_model] Zapis ten_dict[test_features_norm] = ten_test_features_norm")
+#     ten_dict['test_features_norm'] = ten_test_features_norm
+#     print(f"   [evaluate_model] Zapis ten_dict[test_features_norm] = ten_test_features_norm")
 
-    ten_dict['test_target'] = ten_test_target
-    print(f"   [evaluate_model] Zapis ten_dict[test_target] = ten_test_target")
+#     ten_dict['test_target'] = ten_test_target
+#     print(f"   [evaluate_model] Zapis ten_dict[test_target] = ten_test_target")
     
-    ten_dict['test_predictions'] = ten_test_predictions
-    print(f"   [evaluate_model] Zapis ten_dict[test_predictions] = ten_test_predictions")
+#     ten_dict['test_predictions'] = ten_test_predictions
+#     print(f"   [evaluate_model] Zapis ten_dict[test_predictions] = ten_test_predictions")
 
-    df_dict['test'].loc[:, 'predictions'] = ten_dict['test_predictions'].cpu().numpy().flatten()
-    print(f"   [evaluate_model] Zapis df_dict[test][predictions] z ten_dict[test_predictions]")
+#     df_dict['test'].loc[:, 'predictions'] = ten_dict['test_predictions'].cpu().numpy().flatten()
+#     print(f"   [evaluate_model] Zapis df_dict[test][predictions] z ten_dict[test_predictions]")
 
-    mod_dict['test_loss'] = loss.item()
-    mod_dict['test_mae'] = ten_test_diff.abs().mean().item()
-    print(f"   [evaluate_model] Zapis mod_dict[test_loss], mod_dict[test_mae]")
+#     mod_dict['test_loss'] = loss.item()
+#     mod_dict['test_mae'] = ten_test_diff.abs().mean().item()
+#     print(f"   [evaluate_model] Zapis mod_dict[test_loss], mod_dict[test_mae]")
 
-    print(f"   [evaluate_model] Błąd MSE: {mod_dict['test_loss']:.6f}")
-    print(f"   [evaluate_model] Błąd MAE: {mod_dict['test_mae']:.6f}")
+#     print(f"   [evaluate_model] Błąd MSE: {mod_dict['test_loss']:.6f}")
+#     print(f"   [evaluate_model] Błąd MAE: {mod_dict['test_mae']:.6f}")
     
-    return df_dict, ten_dict, mod_dict
+#     return df_dict, ten_dict, mod_dict
 
 # def train_model(ten_dict, mod_dict, epochs):
 

@@ -65,17 +65,8 @@
           "feature": "sma",
           "params": { 
             "start": 10, 
-            "stop": 100, 
-            "step": 1, 
-            "source_column": "close" 
-          }
-        },
-        {
-          "feature": "sma",
-          "params": { 
-            "start": 100, 
-            "stop": 200, 
-            "step": 10, 
+            "stop": 250, 
+            "step": 5, 
             "source_column": "close" 
           }
         }
@@ -87,9 +78,7 @@
     {
       "name": "target_set_1",
       "targets": [
-        "close",
-        "low",
-        "high"
+        "close"
       ]
     }
   ]

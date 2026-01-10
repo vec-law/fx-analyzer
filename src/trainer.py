@@ -67,11 +67,29 @@ class Trainer:
 
             container.mod_dict['test_mse'] = mse_loss.item()
             container.mod_dict['test_mae'] = mae_loss.item()
-            container.ten_dict['p_test_norm'] = p_test_norm 
+            container.ten_dict['p_test_norm'] = p_test_norm
 
             print(f"  [evaluate_model] Błąd MSE: {mse_loss.item():.6f}")
             print(f"  [evaluate_model] Błąd MAE: {mae_loss.item():.6f}")
 
+            stats = container.df_dict['stats']
+            p_test_norm_np = p_test_norm.detach().cpu().numpy()
+            
+            num_targets = p_test_norm_np.shape[1]
+            pred_col_names = [f"pred_{i}" for i in range(num_targets)]
+            container.df_dict['test_norm'][pred_col_names] = p_test_norm_np
+            
+            p_test_denorm_np = p_test_norm_np.copy()
+            
+            for i in range(num_targets):
+                col_name = f"target_{i}"
+                mean_val = stats['mean'][col_name]
+                std_val = stats['std'][col_name]
+                p_test_denorm_np[:, i] = (p_test_denorm_np[:, i] * std_val) + mean_val
+
+            container.df_dict['test'][pred_col_names] = p_test_denorm_np
+
+            print(f"  [evaluate_model] Przeskalowano predykcje i dodano do df_dict['test']")
             plt.plot(range(len(y_test_norm)), y_test_norm[:, 0])
             plt.plot(range(len(y_test_norm)), p_test_norm[:, 0])
             plt.show()

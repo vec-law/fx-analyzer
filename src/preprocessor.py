@@ -73,6 +73,9 @@ class Preprocessor:
             samples_limit = params.get('samples_limit', 0)
             train_ratio = params.get('train_ratio', 0.875)
 
+            if not container.df.empty:
+                container.last_df_row = container.df.tail(1).copy().reset_index(drop=True)
+
             container.df.dropna(inplace=True)
             if container.df.empty:
                 print("  [cut_and_split_data] Błąd: Brak danych po usunięciu wartości NaN (za krótka historia?)")
