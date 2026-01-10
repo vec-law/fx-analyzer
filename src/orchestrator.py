@@ -146,10 +146,16 @@ class Orchestrator:
                 continue
         
     def run_pred(self, arg_set, id):
+        container = None
         try:
             container = Container(arg_set, self.config, id)
-            print(container)
 
+            if not container.load_df_from_parquet():
+                print(f"   [run_pred] Nie udało się wczytać danych dla ID: {id}")
+                return
+            
+            print(container.df)
+        
         except Exception as e:
             print(f"   [run_pred] Błąd: {e}")
         

@@ -49,7 +49,7 @@
         "repair_gaps": true,
         "mode": "server",
         "samples_limit": 4000,
-        "train_ratio": 0.875,
+        "train_ratio": 0.75,
         "seed": 42,
         "model_id": 1,
         "epochs": 1000,

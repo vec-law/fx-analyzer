@@ -1,8 +1,8 @@
-from .instrument import Instrument
 import os
 import json
 import torch
-
+import pandas as pd
+from .instrument import Instrument
 
 class Container:
     def __str__(self):
@@ -63,6 +63,45 @@ class Container:
             return True
         except Exception as e:
             print(f"Błąd zapisu df: {e}")
+            return False
+        
+    def load_df_from_parquet(self):
+        try:
+            if not self.id:
+                print("  [load_df_from_parquet] Błąd: Brak ID kontenera")
+                return False
+
+            path = os.path.join("data", "fit", str(self.id), "data.parquet")
+
+            if not os.path.exists(path):
+                print(f"  [load_df_from_parquet] Błąd: Plik nie istnieje: {path}")
+                return False
+
+            df = pd.read_parquet(path)
+
+            targets_source = self.params_set.get('t', {}).get('targets', [])
+            target_cols = [f"target_{i}" for i in range(len(targets_source))]
+            df = df.drop(columns=[c for c in target_cols if c in df.columns], errors='ignore')
+            
+            df = df.dropna()
+
+            p_params = self.params_set.get('p', {}).get('params', {})
+            samples_limit = p_params.get('samples_limit')
+            train_ratio = p_params.get('train_ratio')
+
+            if samples_limit and isinstance(samples_limit, int):
+                if train_ratio and isinstance(train_ratio, float):
+                    if train_ratio > 0 and train_ratio < 1:
+                        test_samples = int(samples_limit * (1 - train_ratio))
+                        df = df.tail(test_samples)
+
+            self.df = df
+            
+            print(f"  [load_df_from_parquet] Wczytano {len(self.df)} wierszy z {path}")
+            return True
+
+        except Exception as e:
+            print(f"  [load_df_from_parquet] Błąd podczas wczytywania: {e}")
             return False
 
     def save_model_and_stats(self):

@@ -88,9 +88,9 @@ class Trainer:
             print(f"  [evaluate_model] Błąd MSE: {mse_loss.item():.6f}")
             print(f"  [evaluate_model] Błąd MAE: {mae_loss.item():.6f}")
 
-            # plt.plot(range(len(y_test_norm)), y_test_norm[:, 0])
-            # plt.plot(range(len(y_test_norm)), p_test_norm[:, 0])
-            # plt.show()
+            plt.plot(range(len(y_test_norm)), y_test_norm[:, 0])
+            plt.plot(range(len(y_test_norm)), p_test_norm[:, 0])
+            plt.show()
             
             return True
 
