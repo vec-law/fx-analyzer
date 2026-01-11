@@ -1,8 +1,8 @@
 import os
 import json
-import torch
 import pandas as pd
 from .instrument import Instrument
+from safetensors.torch import save_file, load_file
 
 class Container:
     def __str__(self):
@@ -68,7 +68,7 @@ class Container:
     def load_df_from_parquet(self):
         try:
             if not self.id:
-                print("  [load_df_from_parquet] Błąd: Brak ID kontenera")
+                print("  [load_df_from_parquet] Błąd: Brak id kontenera")
                 return False
 
             path = os.path.join("data", "fit", str(self.id), "data.parquet")
@@ -79,24 +79,8 @@ class Container:
 
             df = pd.read_parquet(path)
 
-            targets_source = self.params_set.get('t', {}).get('targets', [])
-            target_cols = [f"target_{i}" for i in range(len(targets_source))]
-            df = df.drop(columns=[c for c in target_cols if c in df.columns], errors='ignore')
-            
-            df = df.dropna()
-
-            p_params = self.params_set.get('p', {}).get('params', {})
-            samples_limit = p_params.get('samples_limit')
-            train_ratio = p_params.get('train_ratio')
-
-            if samples_limit and isinstance(samples_limit, int):
-                if train_ratio and isinstance(train_ratio, float):
-                    if train_ratio > 0 and train_ratio < 1:
-                        test_samples = int(samples_limit * (1 - train_ratio))
-                        df = df.tail(test_samples)
-
             self.df = df
-            
+
             print(f"  [load_df_from_parquet] Wczytano {len(self.df)} wierszy z {path}")
             return True
 
@@ -112,9 +96,55 @@ class Container:
             target_dir = os.path.join("data", "fit", str(self.id))
             os.makedirs(target_dir, exist_ok=True)
 
-            torch.save(self.mod_dict['model'].state_dict(), os.path.join(target_dir, "model.pth"))
-            torch.save(self.df_dict['stats'], os.path.join(target_dir, "stats.pth"))
+            model_path = os.path.join(target_dir, "model.safetensors")
+            state_dict = self.mod_dict['model'].state_dict()
+
+            save_dict = {k: v.cpu().contiguous() for k, v in state_dict.items()}
+            save_file(save_dict, model_path)
+
+            stats_path = os.path.join(target_dir, "stats.json")
+            stats_json = {
+                'mean': self.df_dict['stats']['mean'].to_dict(),
+                'std': self.df_dict['stats']['std'].to_dict()
+            }
+            with open(stats_path, "w", encoding="utf-8") as f:
+                json.dump(stats_json, f, indent=4)
+
             return True
         except Exception as e:
-            print(f"Błąd zapisu modelu: {e}")
+            print(f"  [save_model_and_stats] Błąd: {e}")
+            return False
+
+    def load_stats(self):
+        try:
+            target_dir = os.path.join("data", "fit", str(self.id))
+            stats_path = os.path.join(target_dir, "stats.json")
+            
+            with open(stats_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            self.df_dict['stats'] = {
+                'mean': pd.Series(data['mean']),
+                'std': pd.Series(data['std'])
+            }
+            return True
+        except Exception as e:
+            print(f"  [load_stats] Błąd: {e}")
+            return False
+
+    def load_model_weights(self):
+        try:
+            if 'model' not in self.mod_dict:
+                print("  [load_model_weights] Błąd: Brak modelu w mod_dict")
+                return False
+
+            target_dir = os.path.join("data", "fit", str(self.id))
+            model_path = os.path.join(target_dir, "model.safetensors")
+            
+            state_dict = load_file(model_path)
+            self.mod_dict['model'].load_state_dict(state_dict)
+            self.mod_dict['model'].eval()
+            return True
+        except Exception as e:
+            print(f"  [load_model_weights] Error: {e}")
             return False

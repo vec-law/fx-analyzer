@@ -53,7 +53,8 @@
         "seed": 42,
         "model_id": 1,
         "epochs": 1000,
-        "train_noise": 0.01
+        "train_noise": 0.01,
+        "strategy": 1
       }
     }
   ],

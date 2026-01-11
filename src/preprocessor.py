@@ -1,6 +1,6 @@
 import pandas as pd
 import torch
-
+from src.container import Container
 
 class Preprocessor:
     @staticmethod
@@ -27,7 +27,7 @@ class Preprocessor:
                 print("  [create_features] Błąd: Wygenerowano 0 cech. Sprawdź konfigurację")
                 return False
 
-            container.df = pd.concat([container.df] + feature_cols, axis=1)
+            container.df = pd.concat([container.df] + feature_cols, axis=1).copy()
 
             print(f"  [create_features] Dodano {n} cech(-y)")
             return True
@@ -56,7 +56,7 @@ class Preprocessor:
                 print("  [create_targets] Błąd: Nie zdefiniowano żadnych wartości docelowych")
                 return False
                     
-            container.df = pd.concat([container.df] + target_cols, axis=1)
+            container.df = pd.concat([container.df] + target_cols, axis=1).copy()
 
             print(f"  [create_targets] Dodano {n} wartość(-i) docelową(-e)")
             return True
@@ -68,27 +68,13 @@ class Preprocessor:
     @staticmethod
     def cut_and_split_data(container):
         try:
-            params = container.params_set['p']['params']
-            samples_limit = params.get('samples_limit', 0)
-            train_ratio = params.get('train_ratio', 0.875)
-
             if not container.df.empty:
                 if not container.save_df_to_parquet():
                     return False
-                print(container.df)
             else:
                 print("  [cut_and_split_data] Błąd: Brak danych w df")
                 return False
-
-            container.df.dropna(inplace=True)
-            if container.df.empty:
-                print("  [cut_and_split_data] Błąd: Brak danych po usunięciu wartości NaN (za krótka historia?)")
-                return False
-            
-            limit = int(samples_limit)
-            if limit > 0 and len(container.df) > limit:
-                container.df = container.df.tail(limit)
-
+                
             cols_to_keep = [col for col in container.df.columns 
                             if col == 'datetime' 
                             or col.startswith('feature_') 
@@ -96,28 +82,51 @@ class Preprocessor:
             
             container.df = container.df[cols_to_keep]
 
-            split_idx = int(len(container.df) * float(train_ratio))
-            
-            container.df_dict['train'] = container.df.iloc[:split_idx].copy().reset_index(drop=True)
-            container.df_dict['test'] = container.df.iloc[split_idx:].copy().reset_index(drop=True)
+            container.df.dropna(inplace=True)
+            if container.df.empty:
+                print("  [split_data] Błąd: Brak danych po usunięciu wartości NaN")
+                return False
 
-            container.df = None
+            if not Preprocessor.split_data(container):
+                return False
             
-            print("  [cut_and_split_data] Utworzono zbiory _train i _test")
-            print(f"  [cut_and_split_data] len(df_dict['train']) = {len(container.df_dict['train'])}")
-            print(f"  [cut_and_split_data] len(df_dict['test']) = {len(container.df_dict['test'])}")
+            container.df = None
+
             return True
 
         except Exception as e:
             print(f"  [cut_and_split_data] Nieoczekiwany błąd: {e}")
             return False
+        
+    @staticmethod
+    def split_data(container):
+        try:
+            params = container.params_set['p']['params']
+            samples_limit = params.get('samples_limit', 0)
+            train_ratio = params.get('train_ratio', 0.875)
+            
+            limit = int(samples_limit)
+            if limit > 0 and len(container.df) > limit:
+                container.df = container.df.tail(limit)
+
+            split_idx = int(len(container.df) * float(train_ratio))
+            
+            container.df_dict['train'] = container.df.iloc[:split_idx].copy().reset_index(drop=True)
+            container.df_dict['test'] = container.df.iloc[split_idx:].copy().reset_index(drop=True)
+            
+            print("  [split_data] Utworzono zbiory _train i _test")
+            return True
+
+        except Exception as e:
+            print(f"  [split_data] Nieoczekiwany błąd: {e}")
+            return False
 
     @staticmethod
-    def scale_data(container):
+    def scale_data(container: Container):
         try:
             if not Preprocessor.create_stats(container.df_dict):
                 return False
-            if not Preprocessor.scale_with_stats(container.df_dict):
+            if not Preprocessor.scale_with_stats(container):
                 return False
 
             print("  [scale_data] Utworzono zbiory znormalizowane (_norm)")
@@ -130,14 +139,14 @@ class Preprocessor:
     @staticmethod
     def create_stats(df_dict):
         try:
+            if 'train' not in df_dict:
+                print(f"  [create_stats] Błąd: Brak klucza 'train' w df_dict")
+                return False
+
             cols_to_norm = [
                 col for col in df_dict['train'].columns
-                if col.startswith('feature_') or col.startswith('target_')
+                if col.startswith(('feature_', 'target_'))
             ]
-
-            if 'train' not in df_dict:
-                print(f"  [create_stats] Błąd: Brak kolumny train df_dict")
-                return False
 
             train_df = df_dict['train']
             train_mean = train_df[cols_to_norm].mean()
@@ -149,122 +158,86 @@ class Preprocessor:
             return True
 
         except Exception as e:
-            print(f"  [create_stats] Błąd skalowania: {e}")
+            print(f"  [create_stats] Błąd: {e}")
             return False
-    
+
     @staticmethod
-    def scale_with_stats(df_dict):
+    def scale_with_stats(container: Container, col_names=('feature_', 'target_')):
         try:
-            if 'train' not in df_dict or 'test' not in df_dict:
-                print(f"  [scale_with_stats] Błąd: Brak kolumn train lub test w df_dict")
-                return False
-            
-            cols_in_train = [
-                col for col in df_dict['train'].columns
-                if col.startswith('feature_') or col.startswith('target_')
-            ]
-
-            has_features = any(col.startswith('feature_') for col in cols_in_train)
-            has_targets = any(col.startswith('target_') for col in cols_in_train)
-
-            if not has_features or not has_targets:
-                print(f"  [scale_with_stats] Błąd: Brak kolumn feature_ lub target_ w df_dict['train]")
-                return False
-            
-            missing_in_test = [
-                col for col in cols_in_train 
-                if col not in df_dict['test'].columns
-            ]
-
-            if missing_in_test:
-                print(f"  [scale_with_stats] Błąd: Różne kolumy feature_ lub target_ w df_dict['train] i df_dict['test']")
-                return False
+            df_dict = container.df_dict
             
             if 'stats' not in df_dict:
-                print("  [scale_with_stats] Błąd: Brak 'stats' w df_dict")
+                print("  [scale_with_stats] Błąd: Brak klucza 'stats'")
                 return False
-                
-            if 'mean' not in df_dict['stats'] or 'std' not in df_dict['stats']:
-                print("  [scale_with_stats] Błąd: 'stats' musi zawierać mean i std")
-                return False
+
+            stats = df_dict['stats']
             
-            stats_mean_cols = df_dict['stats']['mean'].index
-            stats_std_cols = df_dict['stats']['std'].index
+            df_dict['norm'] = {}         
+            subsets = ['train', 'test']
 
-            missing_in_stats = [
-                col for col in cols_in_train 
-                if col not in stats_mean_cols or col not in stats_std_cols
-            ]
-
-            if missing_in_stats:
-                print(f"  [scale_with_stats] Błąd: Brak kolumn z df_dict['train'] w df_dict['stats']['mean'] lub df_dict['stats']['std']")
-                return False
-
-            for label in ['train', 'test']:
-                source_df = df_dict[label]
-                norm_key = f"{label}_norm"
+            for subset in subsets:
+                df_subset = df_dict[subset]
+                cols_to_scale = [col for col in df_subset.columns if col.startswith(col_names)]
                 
-                df_dict[norm_key] = source_df.copy()
+                if not cols_to_scale:
+                    continue
                 
-                diff = source_df[cols_in_train] - df_dict['stats']['mean']
-                df_dict[norm_key][cols_in_train] = diff / df_dict['stats']['std']
+                df_norm = df_subset[cols_to_scale].copy()
+                current_mean = stats['mean'][cols_to_scale]
+                current_std = stats['std'][cols_to_scale]
+                df_norm = (df_norm - current_mean) / current_std
+                df_norm = df_norm.fillna(0.0)
+                
+                df_dict['norm'][subset] = df_norm
 
-                df_dict[norm_key][cols_in_train] = df_dict[norm_key][cols_in_train].fillna(0.0)
-
-            print("  [scale_with_stats] Utworzono zbiory znormalizowane (_norm)")
+            print("  [scale_with_stats] Pomyślnie utworzono zbiory znormalizowane")
             return True
-        
+
         except Exception as e:
-            print(f"  [scale_with_stats] Błąd podczas skalowania danych: {e}")
+            print(f"  [scale_with_stats] Błąd: {e}")
             return False
 
     @staticmethod
-    def create_tensors(container):
+    def create_tensors(container, col_names=('feature_', 'target_')):
         try:
-            if 'train_norm' not in container.df_dict or 'test_norm' not in container.df_dict:
-                print("  [create_tensors] Błąd: Brak zbiorów znormalizowanych (_norm)")
+            df_norm = container.df_dict.get('norm', {})
+            subsets = ['train', 'test']
+            
+            if not all(s in df_norm for s in subsets):
+                print("  [create_tensors] Błąd: Brak danych w norm")
                 return False
 
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             container.ten_dict['device'] = device
+
+            all_cols = df_norm['train'].columns
+            selected_cols = [c for c in all_cols if c.startswith(col_names)]
             
-            cols_to_ten_x = [col for col in container.df_dict['train_norm'].columns
-                             if col.startswith('feature_')]
-            cols_to_ten_y = [col for col in container.df_dict['train_norm'].columns
-                             if col.startswith('target_')]
+            x_cols = [c for c in selected_cols if c.startswith('feature_')]
+            y_cols = [c for c in selected_cols if c.startswith('target_')]
+
+            cols_map = {}
+            if x_cols:
+                cols_map['x'] = x_cols
+            if y_cols:
+                cols_map['y'] = y_cols
             
-            if not cols_to_ten_x or not cols_to_ten_y:
-                print("  [create_tensors] Błąd: Brak kolumn feature_ lub target_ w train_norm")
+            if not any(cols_map.values()):
+                print(f"  [create_tensors] Błąd: Nie znaleziono kolumn dla: {col_names}")
                 return False
-
-            container.ten_dict['x_train_norm'] = torch.tensor(
-                container.df_dict['train_norm'][cols_to_ten_x].values, 
-                dtype=torch.float32
-            ).to(device)
             
-            container.ten_dict['y_train_norm'] = torch.tensor(
-                container.df_dict['train_norm'][cols_to_ten_y].values, 
-                dtype=torch.float32
-            ).to(device)
+            container.ten_dict['norm'] = {subset: {} for subset in subsets}
+            ten_norm = container.ten_dict['norm']
 
-            container.ten_dict['x_test_norm'] = torch.tensor(
-                container.df_dict['test_norm'][cols_to_ten_x].values, 
-                dtype=torch.float32
-            ).to(device)
-            
-            container.ten_dict['y_test_norm'] = torch.tensor(
-                container.df_dict['test_norm'][cols_to_ten_y].values, 
-                dtype=torch.float32
-            ).to(device)
+            for subset in subsets:
+                for key, columns in cols_map.items():
+                    if columns:
+                        ten_norm_np = df_norm[subset][columns].to_numpy()
+                        ten_norm[subset][key] = torch.as_tensor(ten_norm_np, dtype=torch.float32).to(device)
 
-            print(f"  [create_tensors] Utworzono tensory w ten_dict")
-            print(f"  [create_tensors] ten_dict['x_train_norm']: {container.ten_dict['x_train_norm'].shape}")
-            print(f"  [create_tensors] ten_dict['y_train_norm']: {container.ten_dict['y_train_norm'].shape}")
-            print(f"  [create_tensors] ten_dict['x_test_norm']: {container.ten_dict['x_test_norm'].shape}")
-            print(f"  [create_tensors] ten_dict['y_test_norm']: {container.ten_dict['y_test_norm'].shape}")
+            print(f"  [create_tensors] Utworzono tensory na {device}")
             return True
 
         except Exception as e:
             print(f"   [create_tensors] Błąd: {e}")
             return False
-

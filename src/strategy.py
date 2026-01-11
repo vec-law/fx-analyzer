@@ -2,6 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from src.utils import save_df
+from .container import Container
+
+class Strategy:
+    @staticmethod
+    def add_indicators(container: Container):
+        df = container.df
+        df['mean'] = (df['high'] + df['low']) / 2
+        pass
 
 SUPPORTED_STRATEGIES = [1]
 

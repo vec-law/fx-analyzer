@@ -1,8 +1,8 @@
-from .container import Container
 from . import architecture as arch
 import torch
 import torch.optim as optim
 import torch.nn as nn
+from .container import Container
 
 
 class ModelManager:
@@ -20,8 +20,14 @@ class ModelManager:
     @staticmethod
     def create_model_and_params(container: Container):
         try:
-            x_num = container.ten_dict['x_train_norm'].shape[1]
-            y_num = container.ten_dict['y_train_norm'].shape[1]
+            ten_train = container.ten_dict.get('norm', {}).get('train', {})
+            
+            if 'x' not in ten_train or 'y' not in ten_train:
+                print("  [create_model_and_params] Błąd: Brak wymaganych tensorów (x/y) w train")
+                return False
+
+            x_num = ten_train['x'].shape[1]
+            y_num = ten_train['y'].shape[1]
             
             params = container.params_set['p']['params']
             model_id = params['model_id']
@@ -30,7 +36,7 @@ class ModelManager:
             
             torch.manual_seed(seed)
             if device.type == 'cuda':
-                torch.cuda.manual_seed(seed)
+                torch.cuda.manual_seed_all(seed)
 
             model = ModelManager.get_model(model_id, x_num, y_num)
             if model is None:

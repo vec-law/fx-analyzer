@@ -14,9 +14,16 @@ class Trainer:
                 print("  [train_model] Błąd: Brak modelu, optymalizatora lub funkcji kosztu")
                 return False
 
-            if 'x_train_norm' not in container.ten_dict or 'y_train_norm' not in container.ten_dict:
-                print("  [train_model] Błąd: Brak kluczy 'x_train_norm', 'y_train_norm' w ten_dict")
+            ten_dict = container.ten_dict
+            ten_norm = ten_dict.get('norm', {})
+            ten_norm_train = ten_norm.get('train', {})
+
+            if 'x' not in ten_norm_train or 'y' not in ten_norm_train:
+                print("  [train_model] Błąd: Brak tensorów ten_dict[norm][train][x] i ten_dict[norm][train][y]")
                 return False
+            
+            ten_norm_train_x = ten_norm_train['x']
+            ten_norm_train_y = ten_norm_train['y']
 
             params = container.params_set['p']['params']
 
@@ -30,19 +37,17 @@ class Trainer:
             optimizer = container.mod_dict['optimizer']
             loss_function = container.mod_dict['loss_function']
 
-            x_train_norm = container.ten_dict['x_train_norm']
-            y_train_norm = container.ten_dict['y_train_norm']
-
             model.train()
             losses = []
 
             for epoch in range(epochs):
                 optimizer.zero_grad()
                 
-                noise = torch.randn_like(x_train_norm) * train_noise
-                p_train_norm = model(x_train_norm + noise)
+                device = ten_norm_train_x.device
+                noise = (torch.randn_like(ten_norm_train_x) * train_noise).to(device)
+                ten_norm_train_p = model(ten_norm_train_x + noise)
                 
-                loss = loss_function(p_train_norm, y_train_norm)
+                loss = loss_function(ten_norm_train_p, ten_norm_train_y)
                 loss.backward()
                 optimizer.step()
 
@@ -63,34 +68,33 @@ class Trainer:
     @staticmethod
     def evaluate_model(container: Container):
         try:
-            if 'model' not in container.mod_dict or 'x_test_norm' not in container.ten_dict:
-                print("  [evaluate_model] Błąd: Brak modelu lub danych testowych")
+            ten_dict = container.ten_dict
+            ten_norm = ten_dict.get('norm', {})
+            ten_norm_test = ten_norm.get('test', {})
+
+            if 'x' not in ten_norm_test or 'y' not in ten_norm_test:
+                print("  [train_model] Błąd: Brak tensorów ten_dict[norm][test][x] i ten_dict[norm][test][y]")
                 return False
+            
+            ten_norm_test_x = ten_norm_test['x']
+            ten_norm_test_y = ten_norm_test['y']
 
             model = container.mod_dict['model']
             loss_function = container.mod_dict['loss_function']
-            
-            x_test_norm = container.ten_dict['x_test_norm']
-            y_test_norm = container.ten_dict['y_test_norm']
 
             model.eval()
             with torch.no_grad():
-                p_test_norm = model(x_test_norm)
+                ten_norm_test_p = model(ten_norm_test_x)
 
-                mse_loss = loss_function(p_test_norm, y_test_norm)
-                mae_loss = F.l1_loss(p_test_norm, y_test_norm)
+                mse_loss = loss_function(ten_norm_test_p, ten_norm_test_y)
+                mae_loss = F.l1_loss(ten_norm_test_p, ten_norm_test_y)
 
             container.mod_dict['test_mse'] = mse_loss.item()
             container.mod_dict['test_mae'] = mae_loss.item()
-            container.ten_dict['p_test_norm'] = p_test_norm
+            container.ten_dict['p_test_norm'] = ten_norm_test_p
 
-            print(f"  [evaluate_model] Obliczono błędy")
             print(f"  [evaluate_model] Błąd MSE: {mse_loss.item():.6f}")
             print(f"  [evaluate_model] Błąd MAE: {mae_loss.item():.6f}")
-
-            plt.plot(range(len(y_test_norm)), y_test_norm[:, 0])
-            plt.plot(range(len(y_test_norm)), p_test_norm[:, 0])
-            plt.show()
             
             return True
 
