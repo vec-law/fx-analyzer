@@ -176,6 +176,8 @@ class Preprocessor:
             subsets = ['train', 'test']
 
             for subset in subsets:
+                if subset not in df_dict:
+                    continue
                 df_subset = df_dict[subset]
                 cols_to_scale = [col for col in df_subset.columns if col.startswith(col_names)]
                 
@@ -213,8 +215,8 @@ class Preprocessor:
             all_cols = df_norm['train'].columns
             selected_cols = [c for c in all_cols if c.startswith(col_names)]
             
-            x_cols = [c for c in selected_cols if c.startswith('feature_')]
-            y_cols = [c for c in selected_cols if c.startswith('target_')]
+            x_cols = sorted([c for c in selected_cols if c.startswith('feature_')])
+            y_cols = sorted([c for c in selected_cols if c.startswith('target_')])
 
             cols_map = {}
             if x_cols:
@@ -240,4 +242,27 @@ class Preprocessor:
 
         except Exception as e:
             print(f"   [create_tensors] Błąd: {e}")
+            return False
+        
+    @staticmethod
+    def descale_preds(container: 'Container'):
+        try:
+            stats = container.df_dict.get('stats')
+            target_cols = sorted([k for k in stats['mean'].index if k.startswith('target_')])
+            
+            mean_p = stats['mean'][target_cols].values
+            std_p = stats['std'][target_cols].values
+
+            for split in ['train', 'test']:
+                if 'p' in container.ten_dict['norm'][split] and split in container.df_dict:
+                    p_norm = container.ten_dict['norm'][split]['p']
+                    p_orig = p_norm.detach().cpu().numpy() * std_p + mean_p
+                    
+                    pred_names = [f"pred_{i}" for i in range(len(target_cols))]
+                    container.df_dict[split][pred_names] = p_orig
+
+            print("  [descale_preds] Dopisano pred_x do df_dict")
+            return True
+        except Exception as e:
+            print(f"  [descale_preds] Błąd: {e}")
             return False

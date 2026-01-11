@@ -9,6 +9,7 @@
     "1d":  {"range": "max",  "check_period": "M", "min_count": 18},
     "1wk": {"range": "max",  "check_period": "Y", "min_count": 45},
     "1mo": {"range": "max",  "check_period": "Y", "min_count": 10},
+    "4h":  {"range": "730d", "check_period": "W", "min_count": 20},
     "1h":  {"range": "730d", "check_period": "W", "min_count": 100},
     "15m": {"range": "60d",  "check_period": "D", "min_count": 50},
     "5m":  {"range": "60d",  "check_period": "D", "min_count": 200},
@@ -46,7 +47,7 @@
     {
       "name": "params_set_1",
       "params": {
-        "repair_gaps": true,
+        "repair_gaps": false,
         "mode": "server",
         "samples_limit": 4000,
         "train_ratio": 0.75,
@@ -66,9 +67,9 @@
         {
           "feature": "sma",
           "params": { 
-            "start": 10, 
-            "stop": 50, 
-            "step": 5, 
+            "start": 20, 
+            "stop": 250, 
+            "step": 1, 
             "source_column": "close" 
           }
         }
@@ -80,8 +81,7 @@
     {
       "name": "target_set_1",
       "targets": [
-        "close",
-        "low"
+        "close"
       ]
     }
   ]

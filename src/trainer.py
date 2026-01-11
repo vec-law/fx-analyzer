@@ -91,7 +91,9 @@ class Trainer:
 
             container.mod_dict['test_mse'] = mse_loss.item()
             container.mod_dict['test_mae'] = mae_loss.item()
-            container.ten_dict['p_test_norm'] = ten_norm_test_p
+
+            if 'p' not in ten_norm_test:
+                container.ten_dict['norm']['test']['p'] = ten_norm_test_p
 
             print(f"  [evaluate_model] Błąd MSE: {mse_loss.item():.6f}")
             print(f"  [evaluate_model] Błąd MAE: {mae_loss.item():.6f}")
@@ -101,3 +103,35 @@ class Trainer:
         except Exception as e:
             print(f"  [evaluate_model] Błąd: {e}")
             return False
+        
+    @staticmethod
+    def predict(container: 'Container'):
+        try:
+            ten_norm = container.ten_dict.get('norm', {})
+            ten_norm_train = ten_norm.get('train', {})
+            ten_norm_test = ten_norm.get('test', {})
+
+            if 'x' not in ten_norm_train or 'x' not in ten_norm_test:
+                print("  [predict] Błąd: Brak tensorów x w ten_dict['norm']['test']")
+                return False
+            
+            ten_norm_train_x = ten_norm_train['x']
+            ten_norm_test_x = ten_norm_test['x']
+            model = container.mod_dict['model']
+
+            model.eval()
+            
+            with torch.no_grad():
+                ten_norm_train_p = model(ten_norm_train_x)
+                ten_norm_test_p = model(ten_norm_test_x)
+
+            container.ten_dict['norm']['train']['p'] = ten_norm_train_p
+            container.ten_dict['norm']['test']['p'] = ten_norm_test_p
+
+            print(f"  [predict] Obliczono tensory p")
+            return True
+
+        except Exception as e:
+            print(f"  [predict] Błąd: {e}")
+            return False
+

@@ -23,7 +23,7 @@ class ModelManager:
             ten_train = container.ten_dict.get('norm', {}).get('train', {})
             
             if 'x' not in ten_train or 'y' not in ten_train:
-                print("  [create_model_and_params] Błąd: Brak wymaganych tensorów (x/y) w train")
+                print("  [create_model_and_params] Błąd: Brak wymaganych tensorów x, y w train")
                 return False
 
             x_num = ten_train['x'].shape[1]

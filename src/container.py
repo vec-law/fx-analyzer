@@ -8,10 +8,10 @@ class Container:
     def __str__(self):
         return str(self.params_set)
 
-    def __init__(self, params_set, config, id):
+    def __init__(self, params_set, config, container_id):
         self.params_set = params_set
         self.config = config
-        self.id = id
+        self.id = container_id
         
         try:
             params = params_set['i']['params']

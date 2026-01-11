@@ -8,6 +8,7 @@ import gc
 import torch
 import os
 import json
+import matplotlib.pyplot as plt
 
 
 class Orchestrator:
@@ -40,16 +41,16 @@ class Orchestrator:
 
         self._create_args()
 
-        for id, arg_set in enumerate(self.args, start=1):
+        for fit_id, arg_set in enumerate(self.args, start=1):
             i = arg_set['i']
             p = arg_set['p']
             f = arg_set['f']
             t = arg_set['t']
 
-            print(f"ZESTAW nr {id}: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
+            print(f"ZESTAW nr {fit_id}: {i['name']} | {p['name']} | {f['name']} | {t['name']}")
             print(90 * '-')
 
-            self.run_fit(arg_set, id)
+            self.run_fit(arg_set, fit_id)
 
     def _create_args(self):
         self.args = [
@@ -61,10 +62,10 @@ class Orchestrator:
         ]
         print(f"   [_create_args] Przygotowano {len(self.args)} zestaw(ów) do przetestowania\n{'=' * 90}")
 
-    def run_fit(self, arg_set, id=1):
+    def run_fit(self, arg_set, container_id=1):
         container = None
         try:
-            container = Container(arg_set, self.config, id)
+            container = Container(arg_set, self.config, container_id)
 
             if not container.save_params_set():
                 return
@@ -137,10 +138,10 @@ class Orchestrator:
                 print(f"Błąd w {folder}: {e}")
                 continue
         
-    def run_pred(self, arg_set, id):
+    def run_pred(self, arg_set, container_id):
         container = None
         try:
-            container = Container(arg_set, self.config, id)
+            container = Container(arg_set, self.config, container_id)
 
             if not container.load_df_from_parquet():
                 return
@@ -156,13 +157,16 @@ class Orchestrator:
                 return
             if not container.load_model_weights():
                 return
+            if not Trainer.predict(container):
+                return
+            if not Preprocessor.descale_preds(container):
+                return
                 
+            print(container.df_dict['train'].columns)
 
-
-            
-            print(container.df_dict['train'])
-            print(container.df_dict['test'])
-            print(container.df_dict['norm']['test'])
+            plt.plot(range(len(container.df_dict['test']['close'])), container.df_dict['test']['target_0'])
+            plt.plot(range(len(container.df_dict['test']['pred_0'])), container.df_dict['test']['pred_0'])
+            plt.show()
         
         except Exception as e:
             print(f"   [run_pred] Błąd: {e}")
