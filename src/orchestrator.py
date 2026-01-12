@@ -4,6 +4,7 @@ from .cleaner import Cleaner
 from .preprocessor import Preprocessor
 from .model_manager import ModelManager
 from .trainer import Trainer
+from .strategy import Strategy
 import gc
 import torch
 import os
@@ -91,7 +92,7 @@ class Orchestrator:
                 return
             if not container.save_model_and_stats():
                 return
-
+            
         except Exception as e:
             print(f"   [run_fit] Błąd: {e}")
         
@@ -160,11 +161,15 @@ class Orchestrator:
             if not Trainer.predict(container):
                 return
             if not Preprocessor.descale_preds(container):
+                return            
+            if not Strategy.add_indicators_and_clean(container):
                 return
-                
-            print(container.df_dict['train'].columns)
 
-            plt.plot(range(len(container.df_dict['test']['close'])), container.df_dict['test']['target_0'])
+                
+            # print(container.df_dict['test'].columns)
+            # print(container.df_dict['test'])
+
+            plt.plot(range(len(container.df_dict['test']['close'])), container.df_dict['test']['close'])
             plt.plot(range(len(container.df_dict['test']['pred_0'])), container.df_dict['test']['pred_0'])
             plt.show()
         

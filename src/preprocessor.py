@@ -47,7 +47,7 @@ class Preprocessor:
             n = 0
             
             for item in t_config:
-                series = container.df[item].shift(-1) 
+                series = container.df[str(item['params']['price'])].shift(int(item['params']['day'])) 
                 series.name = 'target_' + str(n)
                 target_cols.append(series)
                 n += 1

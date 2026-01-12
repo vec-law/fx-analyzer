@@ -36,8 +36,8 @@
     {
       "name": "instrument_1",
       "params": {
-        "name": "EURUSD",
-        "type_of_instrument": "currency_pair",
+        "name": "US100",
+        "type_of_instrument": "index",
         "interval": "1d"
       }
     }
@@ -47,7 +47,7 @@
     {
       "name": "params_set_1",
       "params": {
-        "repair_gaps": false,
+        "repair_gaps": true,
         "mode": "server",
         "samples_limit": 4000,
         "train_ratio": 0.75,
@@ -67,10 +67,10 @@
         {
           "feature": "sma",
           "params": { 
-            "start": 20, 
+            "start": 4, 
             "stop": 250, 
             "step": 1, 
-            "source_column": "close" 
+            "source_column": "close"
           }
         }
       ]
@@ -81,7 +81,13 @@
     {
       "name": "target_set_1",
       "targets": [
-        "close"
+        {
+          "target": "0",
+          "params": { 
+            "price": "close", 
+            "day": -1
+          }
+        }
       ]
     }
   ]

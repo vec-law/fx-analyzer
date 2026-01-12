@@ -1,4 +1,4 @@
-__version__ = "1.0.3-alpha"
+__version__ = "2.0.0-alpha"
 
 import json
 from src.orchestrator import Orchestrator
