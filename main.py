@@ -1,26 +1,9 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTabWidget
-
-def main():
-    app = QApplication(sys.argv)
-
-    db_manager = DatabaseManager(config)
-    window = MainWindow(db_manager)
-
-    window.show()
-    sys.exit(app.exec())
-
-__version__ = "2.0.0-alpha"
-
-import sys
 from PyQt6.QtWidgets import QApplication
-from src.user_interface import UserInterface 
-from src.utils import clear_console
+from src.database_manager import DatabaseManager
+from src.gui import GUI
 
 def main():
-    clear_console()
-    print(f"fx-analyzer v{__version__}")
-
     app = QApplication(sys.argv)
 
     db_config = {
@@ -30,10 +13,11 @@ def main():
         "host": "localhost",
         "port": 5432
     }
-    
-    ui = UserInterface(db_config)
-    ui.show()
-    
+
+    db_manager = DatabaseManager(db_config)
+    gui = GUI(db_manager)
+
+    gui.show()
     sys.exit(app.exec())
 
 if __name__ == "__main__":

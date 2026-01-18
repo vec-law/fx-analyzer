@@ -4,8 +4,9 @@ from PyQt6.QtWidgets import (
 )
 
 class TreningTab(QWidget):
-    def __init__(self):
+    def __init__(self, db_manager):
         super().__init__()
+        self.db_manager = db_manager
         self.init_ui()
 
     def init_ui(self):

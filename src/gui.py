@@ -1,26 +1,23 @@
-import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QTabWidget
-from trening_tab import TreningTab
-from simulation_tab import SimulationTab
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
+from src.trening_tab import TreningTab
+from src.simulation_tab import SimulationTab
+
 
 class GUI(QWidget):
-    def __init__(self):
+    def __init__(self, db_manager):
         super().__init__()
+        self.db_manager = db_manager
         self.init_ui()
 
     def init_ui(self):
         tabs = QTabWidget()
-        tabs.addTab(TreningTab(), "Trening")
-        tabs.addTab(SimulationTab(), "Symulacja")
+
+        # przekazujemy db_manager dalej, GUI nic z nim nie robi
+        tabs.addTab(TreningTab(self.db_manager), "Trening")
+        tabs.addTab(SimulationTab(self.db_manager), "Symulacja")
 
         layout = QVBoxLayout()
         layout.addWidget(tabs)
         self.setLayout(layout)
 
         self.setWindowTitle("fx-analyzer")
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    gui = GUI()
-    gui.show()
-    sys.exit(app.exec())
