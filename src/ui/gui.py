@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
-from src.ui.trening_tab import TreningTab
+from src.ui.training_tab import TrainingTab
 from src.ui.simulation_tab import SimulationTab
 
 
@@ -13,7 +13,7 @@ class GUI(QWidget):
         tabs = QTabWidget()
 
         # przekazujemy db_manager dalej, GUI nic z nim nie robi
-        tabs.addTab(TreningTab(self.db_manager), "Trening")
+        tabs.addTab(TrainingTab(self.db_manager), "Trening")
         tabs.addTab(SimulationTab(self.db_manager), "Symulacja")
 
         layout = QVBoxLayout()

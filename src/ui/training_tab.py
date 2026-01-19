@@ -1,19 +1,23 @@
+import traceback
+from PyQt6.QtCore import QObject, pyqtSignal, QThread
 from PyQt6.QtWidgets import (
     QWidget, QPushButton, QTextEdit, QTableWidget,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
     QTableWidgetItem
 )
+from src.trainer.training_worker import TrainingWorker
 
-class TreningTab(QWidget):
+class TrainingTab(QWidget):
     def __init__(self, db_manager):
         super().__init__()
         self.db_manager = db_manager
         self.last_clicked_uuid = None
+        self.thread = None  # Zmienna przechowująca wątek
+        self.worker = None  # Zmienna przechowująca worker
         self.init_ui()
         self.init_actions()
 
     def init_ui(self):
-        # Lewy panel z przyciskami i polami parametrów
         left_layout = QVBoxLayout()
 
         self.load_tasks_btn = QPushButton("Wczytaj zadania")
@@ -29,12 +33,11 @@ class TreningTab(QWidget):
             self.add_task_btn,
             self.remove_task_btn,
             self.load_params_btn,
-            self.clear_console_btn,   # ← TU
+            self.clear_console_btn,
             self.run_task_btn,
             self.stop_task_btn
         ]:
             left_layout.addWidget(btn)
-
 
         left_layout.addWidget(QLabel("<b>Parametry</b>"))
 
@@ -44,7 +47,7 @@ class TreningTab(QWidget):
         for name in [
             'Instrument', 'Interwał', 'Źródło danych', 'Limit próbek',
             'Współczynnik podziału', 'Losowość', 'Liczba epok', 'Współczynnik szumu',
-            'Współczynnik uczenia', 'Wartości docelowe', 'Cechy', 'Modele'
+            'Współczynnik uczenia', 'Wartości docelowe', 'Cechy', 'Architektury modeli'
         ]:
             field = QLineEdit()
             self.param_fields[name] = field
@@ -73,15 +76,15 @@ class TreningTab(QWidget):
         self.setLayout(main_layout)
 
     def init_actions(self):
-        # Podłączanie przycisków do metod
         self.load_tasks_btn.clicked.connect(self.on_load_tasks)
         self.remove_task_btn.clicked.connect(self.on_remove_tasks)
         self.load_params_btn.clicked.connect(self.on_load_params)
         self.clear_console_btn.clicked.connect(self.on_clear_console)
-        self.add_task_btn.clicked.connect(self.on_add_task)  # <-- tutaj podpięty "Dodaj zadanie"
+        self.add_task_btn.clicked.connect(self.on_add_task)
+        self.run_task_btn.clicked.connect(self.on_run_task)
+        self.stop_task_btn.clicked.connect(self.on_stop_task)
         self.table.cellClicked.connect(self.on_table_cell_clicked)
 
-    # --- Metody akcji ---
     def on_load_tasks(self):
         tasks = self.db_manager.get_training_jobs()
         self.fill_tasks_table(tasks)
@@ -96,17 +99,12 @@ class TreningTab(QWidget):
 
         if success:
             self.console.append(f"Usunięto zadanie: {self.last_clicked_uuid}")
-
             self.last_clicked_uuid = None
             self.table.clearSelection()
-            self.table.setCurrentItem(None)
-
-
             tasks = self.db_manager.get_training_jobs()
             self.fill_tasks_table(tasks)
         else:
             self.console.append(f"Nie udało się usunąć zadania: {self.last_clicked_uuid}")
-
 
     def on_table_cell_clicked(self, row, column):
         uuid_item = self.table.item(row, 0)
@@ -145,7 +143,7 @@ class TreningTab(QWidget):
             "learning_rate": "Współczynnik uczenia",
             "targets": "Wartości docelowe",
             "features": "Cechy",
-            "architectures": "Modele"
+            "architectures": "Architektury modeli"
         }
 
         for db_key, gui_name in param_mapping.items():
@@ -155,7 +153,6 @@ class TreningTab(QWidget):
                 field.setText(str(value))
 
         self.console.append(f"Wczytano parametry zadania: {self.last_clicked_uuid}")
-
 
     def on_add_task(self):
         gui_to_db = {
@@ -170,7 +167,7 @@ class TreningTab(QWidget):
             "Współczynnik uczenia": "learning_rate",
             "Wartości docelowe": "targets",
             "Cechy": "features",
-            "Modele": "architectures"
+            "Architektury modeli": "architectures"
         }
 
         task_data = { db_key: self.param_fields[gui_key].text()
@@ -182,6 +179,8 @@ class TreningTab(QWidget):
                 self.console.append(f"Dodano zadanie: {job_uuid}")
                 tasks = self.db_manager.get_training_jobs()
                 self.fill_tasks_table(tasks)
+                self.last_clicked_uuid = None
+                self.table.clearSelection()
             else:
                 self.console.append("Błąd: nie udało się dodać zadania")
         except Exception as e:
@@ -189,3 +188,47 @@ class TreningTab(QWidget):
 
     def on_clear_console(self):
         self.console.clear()
+
+    def on_run_task(self):
+        if not self.last_clicked_uuid:
+            self.console.append("Nie zaznaczono zadania!")
+            return
+        
+        # Sprawdzenie, czy wątek już działa
+        if self.thread and self.thread.isRunning():
+            self.console.append("Zadanie już jest uruchomione!")
+            return
+
+        # Tworzymy nowy wątek tylko, jeśli nie ma aktywnego
+        self.console.append("Uruchamiam zadanie...")
+
+        self.thread = QThread(self)  # nowy wątek
+        self.worker = TrainingWorker(self.last_clicked_uuid, self.db_manager)
+        self.worker.moveToThread(self.thread)
+
+        # Po rozpoczęciu wątku
+        self.thread.started.connect(self.worker.run)
+
+        # Po zakończeniu wątku
+        self.worker.finished.connect(self.thread.quit)  # kończymy wątek
+        self.worker.finished.connect(self.worker.deleteLater)  # usuwamy worker
+        self.thread.finished.connect(self.thread.deleteLater)  # usuwamy wątek
+
+        # Emisja logów do konsoli
+        self.worker.log.connect(self.console.append)
+
+        # Po zakończeniu zadania
+        self.thread.finished.connect(
+            lambda: self.console.append("Zadanie zakończone")
+        )
+
+        # Uruchamiamy wątek
+        self.thread.start()
+
+    def on_stop_task(self):
+        # Sprawdzenie, czy worker istnieje i jest aktywny
+        if self.worker:
+            self.worker.stop()
+            self.console.append("Zatrzymano zadanie.")
+        else:
+            self.console.append("Brak aktywnego zadania do zatrzymania.")

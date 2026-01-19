@@ -38,7 +38,6 @@ class DatabaseManager:
                         })
                     return results
         except Exception as e:
-            print(f"[get_trainings_overview] Błąd: {e}")
             return []
 
     def del_training_job(self, job_uuid):
@@ -49,13 +48,10 @@ class DatabaseManager:
                     
                     if cur.rowcount > 0:
                         conn.commit()
-                        print(f"[delete_training_job] Usunięto zadanie: {job_uuid}")
                         return True
                     else:
-                        print(f"[delete_training_job] Nie znaleziono zadania o UUID: {job_uuid}")
                         return False
         except Exception as e:
-            print(f"[delete_training_job] Błąd: {e}")
             return False
 
     def get_training_config(self, job_uuid):
@@ -130,11 +126,8 @@ class DatabaseManager:
                     config['architectures'] = [r[0] for r in cur.fetchall()]
                     config['architectures'] = ", ".join(config['architectures'])
 
-                    print(f"[get_training_job_config] Pobrano konfigurację zadania: {job_uuid}")
-
                     return config
         except Exception as e:
-            print(f"[get_training_job_config] Błąd: {e}")
             return None
 
     def add_training_job(self, params):
@@ -180,12 +173,9 @@ class DatabaseManager:
                         """, (job_uuid, architecture))
 
                     conn.commit()
-
-                    print(f"[insert_training_job] Dodano zadanie: {job_uuid}")
                     
                     return job_uuid
         except Exception as e:
-            print(f"[insert_training_job] Błąd: {e}")
             return None
                
     def update_training_job_status(self, job_uuid, status_name):
@@ -200,7 +190,6 @@ class DatabaseManager:
                     conn.commit()
                     return True
         except Exception as e:
-            print(f"[update_training_job_status] Błąd: {e}")
             return False
 
     def update_training_job_config(self, job_uuid, params):
@@ -250,9 +239,7 @@ class DatabaseManager:
                         """, (job_uuid, architecture))
 
                     conn.commit()
-                    print(f"[update_training_job_config] Zaktualizowano konfigurację zadania: {job_uuid}")
                     return True
         except Exception as e:
-            print(f"[update_training_job_config] Błąd: {e}")
             return False
         
