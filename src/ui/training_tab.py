@@ -5,15 +5,15 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
     QTableWidgetItem
 )
-from src.trainer.training_worker import TrainingWorker
+from src.worker.training_worker import TrainingWorker
 
 class TrainingTab(QWidget):
     def __init__(self, db_manager):
         super().__init__()
         self.db_manager = db_manager
         self.last_clicked_uuid = None
-        self.thread = None  # Zmienna przechowująca wątek
-        self.worker = None  # Zmienna przechowująca worker
+        self.thread = None
+        self.worker = None
         self.init_ui()
         self.init_actions()
 
@@ -41,7 +41,6 @@ class TrainingTab(QWidget):
 
         left_layout.addWidget(QLabel("<b>Parametry</b>"))
 
-        # Pola parametrów
         self.param_fields = {}
         params_layout = QFormLayout()
         for name in [
@@ -56,7 +55,6 @@ class TrainingTab(QWidget):
         left_layout.addLayout(params_layout)
         left_layout.addStretch()
 
-        # Prawy panel z tabelą i konsolą
         right_layout = QVBoxLayout()
         self.table = QTableWidget()
         self.table.setColumnCount(5)
@@ -69,11 +67,13 @@ class TrainingTab(QWidget):
         right_layout.addWidget(self.table)
         right_layout.addWidget(self.console)
 
-        # Layout główny
         main_layout = QHBoxLayout()
         main_layout.addLayout(left_layout, 1)
         main_layout.addLayout(right_layout, 3)
         self.setLayout(main_layout)
+
+        self.stop_task_btn.setEnabled(False)
+
 
     def init_actions(self):
         self.load_tasks_btn.clicked.connect(self.on_load_tasks)
@@ -99,10 +99,13 @@ class TrainingTab(QWidget):
 
         if success:
             self.console.append(f"Usunięto zadanie: {self.last_clicked_uuid}")
-            self.last_clicked_uuid = None
-            self.table.clearSelection()
-            tasks = self.db_manager.get_training_jobs()
-            self.fill_tasks_table(tasks)
+            self.fill_tasks_table(self.db_manager.get_training_jobs())
+            
+            if self.table.rowCount() > 0:
+                self.table.selectRow(0)
+                self.last_clicked_uuid = self.table.item(0, 0).text()
+            else:
+                self.last_clicked_uuid = None
         else:
             self.console.append(f"Nie udało się usunąć zadania: {self.last_clicked_uuid}")
 
@@ -179,8 +182,12 @@ class TrainingTab(QWidget):
                 self.console.append(f"Dodano zadanie: {job_uuid}")
                 tasks = self.db_manager.get_training_jobs()
                 self.fill_tasks_table(tasks)
-                self.last_clicked_uuid = None
-                self.table.clearSelection()
+
+                for row in range(self.table.rowCount()):
+                    if self.table.item(row, 0).text() == str(job_uuid):
+                        self.table.selectRow(row)
+                        self.last_clicked_uuid = str(job_uuid)
+                        break
             else:
                 self.console.append("Błąd: nie udało się dodać zadania")
         except Exception as e:
@@ -193,42 +200,58 @@ class TrainingTab(QWidget):
         if not self.last_clicked_uuid:
             self.console.append("Nie zaznaczono zadania!")
             return
-        
-        # Sprawdzenie, czy wątek już działa
-        if self.thread and self.thread.isRunning():
-            self.console.append("Zadanie już jest uruchomione!")
-            return
 
-        # Tworzymy nowy wątek tylko, jeśli nie ma aktywnego
+        # Bezpieczne sprawdzenie czy wątek żyje
+        try:
+            if self.thread and self.thread.isRunning():
+                self.console.append("Zadanie już jest uruchomione!")
+                return
+        except RuntimeError:
+            self.thread = None
+            self.worker = None
+
         self.console.append("Uruchamiam zadanie...")
 
-        self.thread = QThread(self)  # nowy wątek
+        self.thread = QThread() # usunięto self jako parent, by deleteLater działało szybciej
         self.worker = TrainingWorker(self.last_clicked_uuid, self.db_manager)
         self.worker.moveToThread(self.thread)
 
-        # Po rozpoczęciu wątku
+        # Łączenie sygnałów
         self.thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
 
-        # Po zakończeniu wątku
-        self.worker.finished.connect(self.thread.quit)  # kończymy wątek
-        self.worker.finished.connect(self.worker.deleteLater)  # usuwamy worker
-        self.thread.finished.connect(self.thread.deleteLater)  # usuwamy wątek
+        # Czyszczenie zmiennych po faktycznym usunięciu obiektów C++
+        self.thread.destroyed.connect(lambda: setattr(self, 'thread', None))
+        self.thread.destroyed.connect(lambda: setattr(self, 'worker', None))
 
-        # Emisja logów do konsoli
         self.worker.log.connect(self.console.append)
+        self.thread.finished.connect(lambda: self.console.append("Zadanie zakończone"))
+        self.thread.finished.connect(lambda: self.set_running_ui(False))
 
-        # Po zakończeniu zadania
-        self.thread.finished.connect(
-            lambda: self.console.append("Zadanie zakończone")
-        )
-
-        # Uruchamiamy wątek
+        self.set_running_ui(True)
         self.thread.start()
 
     def on_stop_task(self):
-        # Sprawdzenie, czy worker istnieje i jest aktywny
-        if self.worker:
-            self.worker.stop()
-            self.console.append("Zatrzymano zadanie.")
-        else:
-            self.console.append("Brak aktywnego zadania do zatrzymania.")
+        self.set_running_ui(False)
+        try:
+            # Sprawdzamy czy worker istnieje i czy jego obiekt C++ nie został usunięty
+            if self.worker:
+                self.worker.stop()
+                self.console.append("Wysłano sygnał zatrzymania...")
+            else:
+                self.console.append("Brak aktywnego zadania.")
+        except RuntimeError:
+            self.worker = None
+            self.thread = None
+            self.console.append("Zadanie nie było aktywne (obiekt usunięty).")
+
+    def set_running_ui(self, running: bool):
+        self.run_task_btn.setEnabled(not running)
+        self.stop_task_btn.setEnabled(running)
+
+        self.load_tasks_btn.setEnabled(not running)
+        self.add_task_btn.setEnabled(not running)
+        self.remove_task_btn.setEnabled(not running)
+        self.load_params_btn.setEnabled(not running)
