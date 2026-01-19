@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
-from src.trening_tab import TreningTab
-from src.simulation_tab import SimulationTab
+from src.ui.trening_tab import TreningTab
+from src.ui.simulation_tab import SimulationTab
 
 
 class GUI(QWidget):

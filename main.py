@@ -1,7 +1,7 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 from src.database_manager import DatabaseManager
-from src.gui import GUI
+from src.ui.gui import GUI
 
 def main():
     app = QApplication(sys.argv)
