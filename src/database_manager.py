@@ -61,6 +61,7 @@ class DatabaseManager:
                     cur.execute("""
                         SELECT 
                             instrument.name, 
+                            instrument.ticker,
                             timeframe.name,
                             data_source.name,
                             parameter_set.samples_limit, 
@@ -82,15 +83,16 @@ class DatabaseManager:
                         return None
 
                     config = {
-                        'instrument': row[0],
-                        'timeframe': row[1],
-                        'data_source': row[2],
-                        'samples_limit': row[3],
-                        'train_ratio': row[4],
-                        'seed': row[5],
-                        'epochs': row[6],
-                        'train_noise': row[7],
-                        'learning_rate': row[8],
+                        'instrument_name': row[0],
+                        'instrument_ticker': row[1],
+                        'timeframe': row[2],
+                        'data_source': row[3],
+                        'samples_limit': row[4],
+                        'train_ratio': row[5],
+                        'seed': row[6],
+                        'epochs': row[7],
+                        'train_noise': row[8],
+                        'learning_rate': row[9],
                         'targets': [],
                         'features': [],
                         'architectures': []
@@ -142,7 +144,7 @@ class DatabaseManager:
                             (SELECT id FROM timeframe WHERE name = %s), 
                             (SELECT id FROM status WHERE name = 'pending'),
                             (SELECT id FROM data_source WHERE name = %s))
-                    """, (job_uuid, params['instrument'], params['timeframe'], params['data_source']))
+                    """, (job_uuid, params['instrument_name'], params['timeframe'], params['data_source']))
 
                     cur.execute("""
                         INSERT INTO parameter_set (training_job_uuid, samples_limit, train_ratio, seed, epochs, train_noise, learning_rate) 

@@ -135,7 +135,7 @@ class TrainingTab(QWidget):
             return
 
         param_mapping = {
-            "instrument": "Instrument",
+            "instrument_name": "Instrument",
             "timeframe": "Interwał",
             "data_source": "Źródło danych",
             "train_ratio": "Współczynnik podziału",
@@ -159,7 +159,7 @@ class TrainingTab(QWidget):
 
     def on_add_task(self):
         gui_to_db = {
-            "Instrument": "instrument",
+            "Instrument": "instrument_name",
             "Interwał": "timeframe",
             "Źródło danych": "data_source",
             "Limit próbek": "samples_limit",
@@ -229,6 +229,8 @@ class TrainingTab(QWidget):
         self.worker.log.connect(self.console.append)
         self.thread.finished.connect(lambda: self.console.append("Zadanie zakończone"))
         self.thread.finished.connect(lambda: self.set_running_ui(False))
+
+        self.load_tasks_btn.setFocus()
 
         self.set_running_ui(True)
         self.thread.start()
