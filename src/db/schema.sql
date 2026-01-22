@@ -1,0 +1,108 @@
+-- 1. SŁOWNIKI
+CREATE TABLE instrument (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    ticker TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE timeframe (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+	range TEXT NOT NULL,
+    check_period TEXT,
+	min_count INTEGER
+);
+
+CREATE TABLE architecture (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE target_type (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE feature_type (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE status (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE data_source (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+-- 2. GŁÓWNE ZLECENIE
+CREATE TABLE training_job (
+    job_uuid UUID PRIMARY KEY,
+    instrument_id INTEGER REFERENCES instrument(id) NOT NULL,
+    timeframe_id INTEGER REFERENCES timeframe(id) NOT NULL,
+    status_id INTEGER REFERENCES status(id) NOT NULL,
+	data_source_id INTEGER REFERENCES data_source(id) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. KONFIGURACJA ZLECENIA
+CREATE TABLE parameter_set (
+    training_job_uuid UUID PRIMARY KEY REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    samples_limit INTEGER NOT NULL,
+    train_ratio REAL NOT NULL,
+    seed INTEGER NOT NULL,
+    epochs INTEGER NOT NULL,
+    train_noise REAL NOT NULL,
+    learning_rate REAL NOT NULL
+);
+
+CREATE TABLE target_def (
+    id SERIAL PRIMARY KEY,
+    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    target_type_id INTEGER REFERENCES target_type(id) NOT NULL,
+    shift INTEGER NOT NULL
+);
+
+CREATE TABLE feature_def (
+    id SERIAL PRIMARY KEY,
+    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    feature_type_id INTEGER REFERENCES feature_type(id) NOT NULL,
+    start_from INTEGER NOT NULL,
+    stop_at INTEGER NOT NULL,
+    step INTEGER NOT NULL,
+    shift INTEGER NOT NULL
+);
+
+-- 4. WYBRANE ARCHITEKTURY
+CREATE TABLE training_job_architecture (
+    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    architecture_id INTEGER REFERENCES architecture(id),
+    PRIMARY KEY (training_job_uuid, architecture_id)
+);
+
+-- 5. WYNIKI
+CREATE TABLE experiment (
+    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    architecture_id INTEGER REFERENCES architecture(id),
+    file_path TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (training_job_uuid, architecture_id) -- Para kolumn staje się identyfikatorem i wymusza unikalność
+);
+
+-- 6. INDEKSY
+CREATE INDEX idx_target_def_job_uuid ON target_def(training_job_uuid);
+CREATE INDEX idx_feature_def_job_uuid ON feature_def(training_job_uuid);
+CREATE INDEX idx_experiment_job_uuid ON experiment(training_job_uuid);
+CREATE INDEX idx_tj_arch_job_uuid ON training_job_architecture(training_job_uuid);
+
+-- ZASILENIE SŁOWNIKÓW
+INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
+INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
+INSERT INTO target_type (name) VALUES ('close'), ('high'), ('low'), ('open');
+INSERT INTO feature_type (name) VALUES ('sma'), ('med');
+INSERT INTO architecture (name) VALUES ('MLP_Base'), ('MLP_Extended');
+INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
+INSERT INTO data_source (name) VALUES ('YF'), ('CSV');
