@@ -1,5 +1,4 @@
 import psycopg2
-import uuid
 
 class DatabaseManager:
     def __init__(self, db_config):
@@ -62,7 +61,7 @@ class DatabaseManager:
                         'instrument': {},
                         'timeframe': {},
                         'parameter_set': {},
-                        'target_types': [],
+                        'base_columns': [],
                         'targets': [],
                         'features': [],
                         'architectures': [],
@@ -125,40 +124,42 @@ class DatabaseManager:
                             'learning_rate': parameter_set[5]
                         }
 
-                    cur.execute("""
-                        SELECT target_type.name FROM target_type
-                    """)
-                    target_types = cur.fetchall()
-                    config['target_types'] = [target_type[0] for target_type in target_types]
+                    cur.execute("SELECT base_column.name FROM base_column")
+                    base_columns = cur.fetchall()
+                    config['base_columns'] = [base_column[0] for base_column in base_columns]
 
                     cur.execute("""
-                        SELECT target_type.name, target_def.shift 
+                        SELECT base_column.name, target_def.shift 
                         FROM target_def
-                        JOIN target_type ON target_def.target_type_id = target_type.id
+                        JOIN base_column ON target_def.base_column_id = base_column.id
                         WHERE target_def.training_job_uuid = %s
                     """, (job_uuid,))
                     targets = cur.fetchall()
-                    config['targets'] = [{'type': target[0], 'shift': target[1]} for target in targets]
+                    config['targets'] = [
+                        {
+                            'base_column': target[0], 
+                            'shift': target[1]
+                        } for target in targets
+                    ]
 
                     cur.execute("""
                         SELECT 
                             feature_type.name, 
-                            feature_def.start_from, 
-                            feature_def.stop_at, 
-                            feature_def.step, 
+                            base_column.name,
+                            feature_def.feature_period, 
                             feature_def.shift
                         FROM feature_def
                         JOIN feature_type ON feature_def.feature_type_id = feature_type.id
+                        JOIN base_column ON feature_def.base_column_id = base_column.id
                         WHERE feature_def.training_job_uuid = %s
                     """, (job_uuid,))
                     features = cur.fetchall()
                     config['features'] = [
                         {
-                            'type': feature[0], 
-                            'start_from': feature[1], 
-                            'stop_at': feature[2], 
-                            'step': feature[3], 
-                            'shift': feature[4]
+                            'feature_type': feature[0], 
+                            'base_column': feature[1],
+                            'feature_period': feature[2], 
+                            'shift': feature[3]
                         } for feature in features
                     ]
 
@@ -219,20 +220,19 @@ class DatabaseManager:
 
                     for target in config['targets']:
                         cur.execute("""
-                            INSERT INTO target_def (training_job_uuid, target_type_id, shift) 
-                            VALUES (%s, (SELECT id FROM target_type WHERE name = %s), %s)
-                        """, (job_uuid, target['type'], target['shift']))
+                            INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
+                            VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
+                        """, (job_uuid, target['base_column'], target['shift']))
 
                     for feature in config['features']:
                         cur.execute("""
-                            INSERT INTO feature_def (training_job_uuid, feature_type_id, start_from, stop_at, step, shift) 
-                            VALUES (%s, (SELECT id FROM feature_type WHERE name = %s), %s, %s, %s, %s)
+                            INSERT INTO feature_def (training_job_uuid, feature_type_id, base_column_id, feature_period, shift) 
+                            VALUES (%s, (SELECT id FROM feature_type WHERE name = %s), (SELECT id FROM base_column WHERE name = %s), %s, %s)
                         """, (
                             job_uuid, 
-                            feature['type'], 
-                            feature['start_from'], 
-                            feature['stop_at'], 
-                            feature['step'], 
+                            feature['feature_type'], 
+                            feature['base_column'],
+                            feature['feature_period'], 
                             feature['shift']
                         ))
 
@@ -265,7 +265,7 @@ class DatabaseManager:
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    # 1. Aktualizacja głównych parametrów w training_job
+
                     cur.execute("""
                         UPDATE training_job 
                         SET instrument_id = (SELECT id FROM instrument WHERE name = %s),
@@ -279,7 +279,6 @@ class DatabaseManager:
                         job_uuid
                     ))
 
-                    # 2. Aktualizacja parameter_set
                     cur.execute("""
                         UPDATE parameter_set 
                         SET samples_limit = %s, train_ratio = %s, seed = %s, 
@@ -295,30 +294,26 @@ class DatabaseManager:
                         job_uuid
                     ))
 
-                    # 3. Odświeżenie target_def (usuń i wstaw)
                     cur.execute("DELETE FROM target_def WHERE training_job_uuid = %s", (job_uuid,))
                     for target in config['targets']:
                         cur.execute("""
-                            INSERT INTO target_def (training_job_uuid, target_type_id, shift) 
-                            VALUES (%s, (SELECT id FROM target_type WHERE name = %s), %s)
-                        """, (job_uuid, target['type'], target['shift']))
+                            INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
+                            VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
+                        """, (job_uuid, target['base_column'], target['shift']))
 
-                    # 4. Odświeżenie feature_def (usuń i wstaw)
                     cur.execute("DELETE FROM feature_def WHERE training_job_uuid = %s", (job_uuid,))
                     for feature in config['features']:
                         cur.execute("""
-                            INSERT INTO feature_def (training_job_uuid, feature_type_id, start_from, stop_at, step, shift) 
-                            VALUES (%s, (SELECT id FROM feature_type WHERE name = %s), %s, %s, %s, %s)
+                            INSERT INTO feature_def (training_job_uuid, feature_type_id, base_column_id, feature_period, shift) 
+                            VALUES (%s, (SELECT id FROM feature_type WHERE name = %s), (SELECT id FROM base_column WHERE name = %s), %s, %s)
                         """, (
                             job_uuid, 
-                            feature['type'], 
-                            feature['start_from'], 
-                            feature['stop_at'], 
-                            feature['step'], 
+                            feature['feature_type'], 
+                            feature['base_column'],
+                            feature['feature_period'], 
                             feature['shift']
                         ))
 
-                    # 5. Odświeżenie architektur (usuń i wstaw)
                     cur.execute("DELETE FROM training_job_architecture WHERE training_job_uuid = %s", (job_uuid,))
                     for architecture in config['architectures']:
                         cur.execute("""

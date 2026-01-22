@@ -18,7 +18,7 @@ CREATE TABLE architecture (
     name TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE target_type (
+CREATE TABLE base_column (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
 );
@@ -62,18 +62,20 @@ CREATE TABLE parameter_set (
 CREATE TABLE target_def (
     id SERIAL PRIMARY KEY,
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
-    target_type_id INTEGER REFERENCES target_type(id) NOT NULL,
-    shift INTEGER NOT NULL
+    base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
+    shift INTEGER NOT NULL,
+    CONSTRAINT uq_target_def UNIQUE (training_job_uuid, base_column_id, shift)
+    
 );
 
 CREATE TABLE feature_def (
     id SERIAL PRIMARY KEY,
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     feature_type_id INTEGER REFERENCES feature_type(id) NOT NULL,
-    start_from INTEGER NOT NULL,
-    stop_at INTEGER NOT NULL,
-    step INTEGER NOT NULL,
-    shift INTEGER NOT NULL
+    base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
+    feature_period INTEGER NOT NULL,
+    shift INTEGER NOT NULL,
+    CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, base_column_id, feature_period, shift)
 );
 
 -- 4. WYBRANE ARCHITEKTURY
@@ -101,8 +103,8 @@ CREATE INDEX idx_tj_arch_job_uuid ON training_job_architecture(training_job_uuid
 -- ZASILENIE SŁOWNIKÓW
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
-INSERT INTO target_type (name) VALUES ('close'), ('high'), ('low'), ('open');
-INSERT INTO feature_type (name) VALUES ('sma'), ('med');
+INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open'), ('volume');
+INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
 INSERT INTO architecture (name) VALUES ('MLP_Base'), ('MLP_Extended');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO data_source (name) VALUES ('YF'), ('CSV');
