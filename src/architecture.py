@@ -1,9 +1,9 @@
 import torch.nn as nn
 
 
-class ModelV1(nn.Module):
+class Model_Base(nn.Module):
     def __init__(self, x_num, y_num):
-        super(ModelV1, self).__init__()
+        super().__init__()
         self.net = nn.Sequential(
             nn.Linear(x_num, 16),
             nn.ReLU(),
@@ -15,8 +15,7 @@ class ModelV1(nn.Module):
     def forward(self, x):
         return self.net(x)
     
-class ModelV2(nn.Module):
-    """Głębsza sieć z większą liczbą warstw."""
+class Model_Extended(nn.Module):
     def __init__(self, x_num, y_num):
         super().__init__()
         self.net = nn.Sequential(

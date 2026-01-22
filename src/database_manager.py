@@ -1,4 +1,5 @@
 import psycopg2
+import uuid
 
 class DatabaseManager:
     def __init__(self, db_config):
@@ -186,7 +187,6 @@ class DatabaseManager:
             return None
 
     def add_training_job(self, config):
-        import uuid
         job_uuid = str(uuid.uuid4())
         try:
             with psycopg2.connect(**self.config) as conn:
