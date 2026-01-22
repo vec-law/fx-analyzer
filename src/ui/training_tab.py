@@ -314,7 +314,6 @@ class TrainingTab(QWidget):
                 self.worker = self.thread = None
 
     def set_running_ui(self, running: bool):
-        # /* Dodano self.update_params_btn do listy blokowanych przycisków */
         for btn in [self.load_tasks_btn, self.add_task_btn, self.remove_task_btn, 
                     self.load_params_btn, self.update_params_btn, self.run_task_btn]:
             btn.setEnabled(not running)
