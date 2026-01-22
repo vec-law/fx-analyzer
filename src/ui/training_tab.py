@@ -310,7 +310,6 @@ class TrainingTab(QWidget):
             try:
                 self.set_running_ui(False)
                 self.worker.stop()
-                self.console.append("Zatrzymywanie...")
             except RuntimeError:
                 self.worker = self.thread = None
 
