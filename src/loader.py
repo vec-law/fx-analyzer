@@ -1,23 +1,39 @@
+import inspect
+import yfinance as yf
+
 class Loader:
     def __init__(self, config: dict, log_callback=None):
-        """
-        config: Konfiguracja (np. parametry ścieżki do danych, itp.)
-        log_callback: Funkcja do logowania
-        """
         self.config = config
-        self.log = log_callback or (lambda msg: None)  # Logowanie jeśli nie przekazano sygnału
+        self.log = log_callback or (lambda msg: None)
 
     def load_data(self):
-        """Ładuje dane na podstawie configu"""
+        f_name = inspect.currentframe().f_code.co_name
         try:
-            self.log("Rozpoczynanie ładowania danych...")
+            if self.config['data_source'] == 'YF':
+                self.log(f"[{f_name}] Rozpoczynanie ładowania danych z YF")
 
-            # Przykładowe ładowanie danych na podstawie konfiguracji
-            raw_data = ['przykładowe', 'dane']  # Możesz dodać logikę ładowania danych
+                df = yf.download(
+                    tickers=self.config['instrument']['ticker'], 
+                    period=self.config['timeframe']['range'], 
+                    interval=self.config['timeframe']['name'], 
+                    auto_adjust=False,
+                    progress=False,
+                    multi_level_index=False
+                )
 
-            self.log(f"Załadowano {len(raw_data)} rekordów danych.")
-            return raw_data  # Zwracamy dane, które trafią do pipeline.raw
+                if df is not None and not df.empty:
+                    df.columns = [col.lower() for col in df.columns]
+                    df = df.reset_index()
+                    df.rename(columns={df.columns[0]: 'datetime'}, inplace=True)
+                    selected_columns = ['datetime'] + self.config['target_types']
+                    df = df[selected_columns]
+
+                self.log(f"[{f_name}] Załadowano {len(df)} rekordów")
+                return df
+            else:
+                self.log(f"[{f_name}] Nieobsługiwane źródło danych: {self.config['data_source']}")
+                return None
 
         except Exception as e:
-            self.log(f"Błąd przy ładowaniu danych: {e}")
+            self.log(f"[{f_name}] Błąd: {e}")
             return None

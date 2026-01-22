@@ -1,48 +1,49 @@
+import inspect
 from src.utils import save_df
 
-
 class Cleaner:
-    @staticmethod
-    def clean_data(container):
-        try:
-            params = container.params_set['p']['params']
-            repair_gaps = params.get('repair_gaps')
-            if container.df is None or container.df.empty:
-                return False
-            
-            container.df = container.df.dropna().copy()
-            container.df = container.df[container.df['datetime'].dt.dayofweek < 5]
-            
-            if container.df.empty:
-                print("  [clean_data] Brak danych po usunięciu weekendów")
-                return False
+    def __init__(self, config: dict, log_callback=None):
+        self.config = config
+        self.log = log_callback or (lambda msg: None)
 
-            if repair_gaps:
-                periods = container.df['datetime'].dt.to_period(container.instrument.check_period)
+    def clean_data(self, df):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log(f"[{f_name}] Brak danych w df")
+                return None
+            
+            df = df.dropna().copy()
+            df = df[df['datetime'].dt.dayofweek < 5]
+            
+            if df.empty:
+                print(f"[{f_name}] Brak danych po usunięciu weekendów")
+                return None
+
+            if self.config['timeframe_check_period'] is not None and self.config['timeframe_min_count'] is not None:
+                periods = df['datetime'].dt.to_period(self.config['timeframe_check_period'])
                 counts = periods.value_counts()
                 current_period = periods.iloc[-1]
 
                 invalid_periods = counts[
-                    (counts < container.instrument.min_count) & (counts.index != current_period)
+                    (counts < self.config['timeframe_min_count']) & (counts.index != current_period)
                 ].index
 
                 if not invalid_periods.empty:
                     is_invalid = periods.isin(invalid_periods)
-                    last_invalid_date = container.df[is_invalid]['datetime'].iloc[-1]
-                    last_invalid_idx = container.df[is_invalid].index[-1]
+                    last_invalid_date = df[is_invalid]['datetime'].iloc[-1]
+                    last_invalid_idx = df[is_invalid].index[-1]
                     
-                    container.df = container.df.loc[last_invalid_idx:].iloc[1:].copy()
-                    print(f"  [clean_data] Odcięto historię do {last_invalid_date}")
+                    df = df.loc[last_invalid_idx:].iloc[1:].copy()
+                    print(f"[{f_name}] Odcięto historię do {last_invalid_date} do indeksu {last_invalid_idx}")
 
-            if container.df.empty:
-                print("  [clean_data] Brak danych po usunięciu luk")
-                return False
+            if df.empty:
+                print(f"[{f_name}] Brak danych po usunięciu luk")
+                return None
 
-            save_df(container, 'raw', 'crd')
-            print(f"  [clean_data] Pozostawiono {container.df.shape[0]} rekordów")
-            
-            return True
+            print(f"[{f_name}] Pozostawiono {df.shape[0]} rekordów")            
+            return df
 
         except Exception as e:
-            print(f"  [clean_data] Nieoczekiwany błąd: {e}")
-            return False
+            print(f"[{f_name}] Błąd: {e}")
+            return None

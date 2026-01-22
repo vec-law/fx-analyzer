@@ -1,40 +1,37 @@
+import inspect
+
 from src.loader import Loader
+from src.preprocessor import Preprocessor
 
 class TrainingPipeline:
-    def __init__(self, config: dict, log_signal=None):
-        """
-        config: Parametry treningu (np. epoki, dane, model itp.)
-        log_signal: Sygnał do logowania (np. worker.log)
-        """
+    def __init__(self, config: dict, log_signal, db_manager, job_uuid):
         self.config = config
-        self.log_signal = log_signal  # Przyjmujemy już sygnał, a nie funkcję
-        self.raw = None  # To tutaj trafią dane po załadowaniu
+        self.log_signal = log_signal
+        self.db_manager = db_manager
+        self.job_uuid = job_uuid
+        self.df = None
 
     def run(self):
-        """Uruchamia cały pipeline"""
+        f_name = inspect.currentframe().f_code.co_name
         try:
-            self.log_signal.emit("Start pipeline treningowego")
+            self.db_manager.update_training_status(self.job_uuid, 'running')
+            self.log_signal.emit(f"[{f_name}] Rozpoczynanie treningu")
 
-            # Loader - wczytaj dane na podstawie configu
-            loader = Loader(self.config, log_callback=self.log_signal.emit)  # Przekazujemy sygnał logowania
-            self.raw = loader.load_data()  # Dane zostaną zapisane w raw
+            loader = Loader(self.config, log_callback=self.log_signal.emit)
 
-            # Jeśli dane zostały wczytane, kontynuujemy
-            if self.raw:
-                self.log_signal.emit("Dane zostały wczytane poprawnie.")
-            else:
-                self.log_signal.emit("Błąd przy ładowaniu danych.")
+            self.df = loader.load_data()
+            if self.df is None or self.df.empty:
+                self.db_manager.update_training_status(self.job_uuid, "failed")
+                self.stop()
                 return
 
-            # Kolejne etapy pipeline: preprocess, model itd. (jeśli będą)
-            # np. self.preprocess()
-            # np. self.train_model()
-
-            self.log_signal.emit("Pipeline zakończony pomyślnie")
+            self.db_manager.update_training_status(self.job_uuid, "completed")
+            self.log_signal.emit(f"[{f_name}] Koniec treningu")
 
         except Exception as e:
-            self.log_signal.emit(f"Błąd w pipeline: {e}")
+            self.db_manager.update_training_status(self.job_uuid, 'failed')
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
 
     def stop(self):
-        """Sygnalizuje pipeline, żeby się zatrzymał"""
-        self.log_signal.emit("Pipeline zatrzymany.")
+        f_name = inspect.currentframe().f_code.co_name
+        self.log_signal.emit(f"[{f_name}] Zatrzymano trening")
