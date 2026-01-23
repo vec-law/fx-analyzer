@@ -6,11 +6,10 @@ class DatabaseManager:
         self.config = db_config
 
     def add_training_job(self, config):
-        import uuid
         job_uuid = str(uuid.uuid4())
 
         try:
-            if not config.get('targets') or not config.get('features') or not config.get('architectures'):
+            if not config.get('features') or not config.get('targets') or not config.get('architectures'):
                 raise ValueError("Błąd walidacji: Brak Targetów, Featurów lub Architektury.")
 
             with psycopg2.connect(**self.config) as conn:
@@ -42,12 +41,6 @@ class DatabaseManager:
                         config['parameter_set']['learning_rate']
                     ))
 
-                    for target in config['targets']:
-                        cur.execute("""
-                            INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
-                            VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
-                        """, (job_uuid, target['base_column'], target['shift']))
-
                     for feature in config['features']:
                         cur.execute("""
                             INSERT INTO feature_def (training_job_uuid, feature_type_id, base_column_id, feature_period, shift) 
@@ -62,6 +55,12 @@ class DatabaseManager:
                             feature['feature_period'], 
                             feature['shift']
                         ))
+
+                    for target in config['targets']:
+                        cur.execute("""
+                            INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
+                            VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
+                        """, (job_uuid, target['base_column'], target['shift']))
 
                     for architecture in config['architectures']:
                         cur.execute("""
@@ -85,8 +84,8 @@ class DatabaseManager:
                         'timeframe': {},
                         'parameter_set': {},
                         'base_columns': [],
-                        'targets': [],
                         'features': [],
+                        'targets': [],
                         'architectures': [],
                         'data_source': None
                     }
@@ -152,20 +151,6 @@ class DatabaseManager:
                     config['base_columns'] = [base_column[0] for base_column in base_columns]
 
                     cur.execute("""
-                        SELECT base_column.name, target_def.shift 
-                        FROM target_def
-                        JOIN base_column ON target_def.base_column_id = base_column.id
-                        WHERE target_def.training_job_uuid = %s
-                    """, (job_uuid,))
-                    targets = cur.fetchall()
-                    config['targets'] = [
-                        {
-                            'base_column': target[0], 
-                            'shift': target[1]
-                        } for target in targets
-                    ]
-
-                    cur.execute("""
                         SELECT 
                             feature_type.name, 
                             base_column.name,
@@ -184,6 +169,20 @@ class DatabaseManager:
                             'feature_period': feature[2], 
                             'shift': feature[3]
                         } for feature in features
+                    ]
+
+                    cur.execute("""
+                        SELECT base_column.name, target_def.shift 
+                        FROM target_def
+                        JOIN base_column ON target_def.base_column_id = base_column.id
+                        WHERE target_def.training_job_uuid = %s
+                    """, (job_uuid,))
+                    targets = cur.fetchall()
+                    config['targets'] = [
+                        {
+                            'base_column': target[0], 
+                            'shift': target[1]
+                        } for target in targets
                     ]
 
                     cur.execute("""
@@ -214,7 +213,7 @@ class DatabaseManager:
 
     def update_training_config(self, job_uuid, config):
         try:
-            if not config.get('targets') or not config.get('features') or not config.get('architectures'):
+            if not config.get('features') or not config.get('targets') or not config.get('architectures'):
                 raise ValueError("Błąd walidacji: Konfiguracja musi zawierać targety, feature'y i architektury.")
 
             with psycopg2.connect(**self.config) as conn:
@@ -247,13 +246,6 @@ class DatabaseManager:
                         job_uuid
                     ))
 
-                    cur.execute("DELETE FROM target_def WHERE training_job_uuid = %s", (job_uuid,))
-                    for target in config['targets']:
-                        cur.execute("""
-                            INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
-                            VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
-                        """, (job_uuid, target['base_column'], target['shift']))
-
                     cur.execute("DELETE FROM feature_def WHERE training_job_uuid = %s", (job_uuid,))
                     for feature in config['features']:
                         cur.execute("""
@@ -266,6 +258,13 @@ class DatabaseManager:
                             feature['feature_period'], 
                             feature['shift']
                         ))
+
+                    cur.execute("DELETE FROM target_def WHERE training_job_uuid = %s", (job_uuid,))
+                    for target in config['targets']:
+                        cur.execute("""
+                            INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
+                            VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
+                        """, (job_uuid, target['base_column'], target['shift']))
 
                     cur.execute("DELETE FROM training_job_architecture WHERE training_job_uuid = %s", (job_uuid,))
                     for architecture in config['architectures']:

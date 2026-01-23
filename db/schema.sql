@@ -56,15 +56,6 @@ CREATE TABLE parameter_set (
     learning_rate REAL NOT NULL CHECK (learning_rate > 0 AND learning_rate < 1)
 );
 
-CREATE TABLE target_def (
-    id SERIAL PRIMARY KEY,
-    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
-    base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
-    shift INTEGER NOT NULL,
-    CONSTRAINT uq_target_def UNIQUE (training_job_uuid, base_column_id, shift)
-    
-);
-
 CREATE TABLE feature_def (
     id SERIAL PRIMARY KEY,
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
@@ -73,6 +64,15 @@ CREATE TABLE feature_def (
     feature_period INTEGER NOT NULL CHECK (feature_period > 0),
     shift INTEGER NOT NULL,
     CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, base_column_id, feature_period, shift)
+);
+
+CREATE TABLE target_def (
+    id SERIAL PRIMARY KEY,
+    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
+    shift INTEGER NOT NULL,
+    CONSTRAINT uq_target_def UNIQUE (training_job_uuid, base_column_id, shift)
+    
 );
 
 CREATE TABLE training_job_architecture (

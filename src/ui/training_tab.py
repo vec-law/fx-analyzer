@@ -12,8 +12,8 @@ class TrainingTab(QWidget):
         "Źródło danych": "data_source", "Limit próbek": "samples_limit",
         "Współczynnik podziału": "train_ratio", "Losowość": "seed",
         "Liczba epok": "epochs", "Współczynnik szumu": "train_noise",
-        "Współczynnik uczenia": "learning_rate", "Wartości docelowe": "targets",
-        "Cechy": "features", "Architektury modeli": "architectures"
+        "Współczynnik uczenia": "learning_rate", "Cechy": "features",
+        "Wartości docelowe": "targets", "Architektury modeli": "architectures"
     }
 
     def log_to_console(self, message: str):
@@ -160,7 +160,7 @@ class TrainingTab(QWidget):
             required_fields = [
                 "instrument_name", "timeframe_name", "data_source",
                 "samples_limit", "train_ratio", "seed", "epochs",
-                "train_noise", "learning_rate", "targets", "features", "architectures"
+                "train_noise", "learning_rate", "features", "targets", "architectures"
             ]
             for field in required_fields:
                 if not field_values.get(field):
@@ -178,19 +178,10 @@ class TrainingTab(QWidget):
                     "train_noise": float(field_values["train_noise"]),
                     "learning_rate": float(field_values["learning_rate"]),
                 },
-                "targets": [],
                 "features": [],
+                "targets": [],
                 "architectures": []
             }
-
-            for target in field_values["targets"].split(","):
-                parts = target.strip().split(":")
-                if len(parts) != 2:
-                    raise ValueError(f"Niepoprawny format target: {target}")
-                config["targets"].append({
-                    "base_column": parts[0].strip(),
-                    "shift": int(parts[1].strip())
-                })
 
             for feature in field_values["features"].split(","):
                 parts = feature.strip().split(":")
@@ -201,6 +192,15 @@ class TrainingTab(QWidget):
                     "feature_period": int(parts[1].strip()),
                     "base_column": parts[2].strip(),
                     "shift": int(parts[3].strip())
+                })
+
+            for target in field_values["targets"].split(","):
+                parts = target.strip().split(":")
+                if len(parts) != 2:
+                    raise ValueError(f"Niepoprawny format target: {target}")
+                config["targets"].append({
+                    "base_column": parts[0].strip(),
+                    "shift": int(parts[1].strip())
                 })
 
             for architecture in field_values["architectures"].split(","):
@@ -235,17 +235,17 @@ class TrainingTab(QWidget):
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
             self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
 
-            self.param_fields["targets"].setText(
-                ", ".join(
-                    f"{t['base_column']}:{t['shift']}"
-                    for t in config["targets"]
-                )
-            )
-
             self.param_fields["features"].setText(
                 ", ".join(
                     f"{f['feature_type']}:{f['feature_period']}:{f['base_column']}:{f['shift']}"
                     for f in config["features"]
+                )
+            )
+
+            self.param_fields["targets"].setText(
+                ", ".join(
+                    f"{t['base_column']}:{t['shift']}"
+                    for t in config["targets"]
                 )
             )
 
@@ -276,20 +276,10 @@ class TrainingTab(QWidget):
                     "train_noise": float(field_values["train_noise"]),
                     "learning_rate": float(field_values["learning_rate"]),
                 },
-                "targets": [],
                 "features": [],
+                "targets": [],
                 "architectures": []
             }
-
-            if field_values["targets"]:
-                for target in field_values["targets"].split(","):
-                    target_parts = target.strip().split(":")
-                    if len(target_parts) != 2:
-                        raise ValueError(f"Niepoprawny format target: {target}")
-                    config["targets"].append({
-                        "base_column": target_parts[0].strip(),
-                        "shift": int(target_parts[1].strip())
-                    })
 
             if field_values["features"]:
                 for feature in field_values["features"].split(","):
@@ -301,6 +291,16 @@ class TrainingTab(QWidget):
                         "feature_period": int(feature_parts[1].strip()),
                         "base_column": feature_parts[2].strip(),
                         "shift": int(feature_parts[3].strip())
+                    })
+
+            if field_values["targets"]:
+                for target in field_values["targets"].split(","):
+                    target_parts = target.strip().split(":")
+                    if len(target_parts) != 2:
+                        raise ValueError(f"Niepoprawny format target: {target}")
+                    config["targets"].append({
+                        "base_column": target_parts[0].strip(),
+                        "shift": int(target_parts[1].strip())
                     })
 
             if field_values["architectures"]:
