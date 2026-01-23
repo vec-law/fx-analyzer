@@ -251,7 +251,7 @@ class DatabaseManager:
                         """, (
                             job_uuid, 
                             feature['feature_type'], 
-                            feature['feature_periods'], # Lista intów, np. [14] lub [12, 26, 9]
+                            feature['feature_periods'],
                             feature['shift']
                         ))
 
