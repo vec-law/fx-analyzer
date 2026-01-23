@@ -50,3 +50,31 @@ class DataExtractor:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             return None
+        
+    def add_targets(self, df):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            self.log_signal.emit(f"[{f_name}] Rozpoczynanie dodawania wartości docelowych")
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych w df")
+                return None
+            
+            t_cols = []
+            
+            for t in self.config["targets"]:
+                col_name = f"{t['base_column']}:{t['shift']}"
+                series = df[t['base_column']].shift(t['shift'])
+                series.name = col_name
+                t_cols.append(series)
+                
+            if not t_cols:
+                self.log_signal.emit(f"[{f_name}] Brak wartości docelowych do dodania")
+                return None
+            
+            df = pd.concat([df] + t_cols, axis=1).copy()
+            self.log_signal.emit(f"[{f_name}] Dodano wartości docelowe")
+            return df
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            return None

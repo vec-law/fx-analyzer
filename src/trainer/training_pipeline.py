@@ -19,6 +19,7 @@ class TrainingPipeline:
             self.log_signal.emit(f"[{f_name}] Rozpoczynanie treningu")
 
             loader = Loader(self.config, log_signal=self.log_signal)
+
             self.df = loader.load_data()
 
             if self._is_stopped:
@@ -30,6 +31,7 @@ class TrainingPipeline:
                 raise ValueError("Loader nie zwrócił danych")
             
             cleaner = Cleaner(self.config, log_signal=self.log_signal)
+
             self.df = cleaner.clean_data(self.df)
 
             if self._is_stopped:
@@ -41,10 +43,16 @@ class TrainingPipeline:
                 raise ValueError("Cleaner usunął wszystkie dane")
             
             data_extractor = DataExtractor(self.config, log_signal=self.log_signal)
+
             self.df = data_extractor.add_features(self.df)
 
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano cech")
+            
+            self.df = data_extractor.add_targets(self.df)
+
+            if self.df is None or self.df.empty:
+                raise ValueError("Nie dodano wartości docelowych")
             
             print(self.df)
 
