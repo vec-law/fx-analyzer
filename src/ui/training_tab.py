@@ -119,7 +119,8 @@ class TrainingTab(QWidget):
         self.thread = QThread()
 
         # Przekazanie log_to_console do worker'a
-        self.worker = TrainingWorker(self.last_clicked_uuid, self.db_manager, self.log_to_console)  # Zmiana tutaj
+        self.worker = TrainingWorker(self.last_clicked_uuid, self.db_manager)
+        self.worker.log_signal.connect(self.log_to_console)
 
         self.worker.moveToThread(self.thread)
 
