@@ -25,7 +25,7 @@ class Loader:
                     df.columns = [col.lower() for col in df.columns]
                     df = df.reset_index()
                     df.rename(columns={df.columns[0]: 'datetime'}, inplace=True)
-                    selected_columns = ['datetime'] + self.config['target_types']
+                    selected_columns = ['datetime'] + self.config['base_columns']
                     df = df[selected_columns]
 
                 self.log(f"[{f_name}] Załadowano {len(df)} rekordów")
