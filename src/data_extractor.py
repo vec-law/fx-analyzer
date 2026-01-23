@@ -17,17 +17,9 @@ class DataExtractor:
             f_cols = []
             
             for f in self.config["features"]:
-                # Nazwa kolumny w formacie typ:p1-p2:shift
                 periods_str = "-".join(map(str, f["feature_periods"]))
                 col_name = f"{f['feature_type']}:{periods_str}:{f['shift']}"
 
-# Zakomentowany stary kod:
-#                 if f["feature_type"] == 'sma':
-#                     series = df[f["base_column"]].rolling(window=f["feature_period"]).mean().shift(f["shift"])
-#                     series.name = f"{f['feature_type']}:{f['feature_period']}:{f['base_column']}:{f['shift']}"
-#                     f_cols.append(series)
-
-                # Nowa logika - kolumna przypisana jawnie w kodzie (np. 'close'):
                 if f["feature_type"] == 'sma':
                     series = df['close'].rolling(window=f["feature_periods"][0]).mean().shift(f["shift"])
                     series.name = col_name
