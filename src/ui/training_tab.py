@@ -183,7 +183,6 @@ class TrainingTab(QWidget):
                 "architectures": []
             }
 
-            # Nowy blok parsowania features (typ:param-param:shift):
             for feature in field_values["features"].split(","):
                 f_str = feature.strip()
                 if not f_str: continue
@@ -192,7 +191,6 @@ class TrainingTab(QWidget):
                 if len(parts) != 3:
                     raise ValueError(f"Niepoprawny format feature: {f_str}. Oczekiwano typ:parametry:shift")
                 
-                # Rozbicie okresów po myślniku, np. "12-26-9" -> [12, 26, 9]
                 periods = [int(p.strip()) for p in parts[1].split("-") if p.strip()]
                 
                 config["features"].append({
@@ -242,10 +240,8 @@ class TrainingTab(QWidget):
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
             self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
 
-            # Nowy blok renderowania features (typ:p1-p2:shift):
             feature_strings = []
             for f in config["features"]:
-                # Łączymy listę okresów myślnikiem, np. [12, 26, 9] -> "12-26-9"
                 periods_str = "-".join(map(str, f["feature_periods"]))
                 feature_strings.append(f"{f['feature_type']}:{periods_str}:{f['shift']}")
             
@@ -291,7 +287,6 @@ class TrainingTab(QWidget):
             }
 
             if field_values["features"]:
-                # Nowy blok parsowania features (typ:p1-p2:shift):
                 for feature in field_values["features"].split(","):
                     f_str = feature.strip()
                     if not f_str: continue
@@ -300,7 +295,6 @@ class TrainingTab(QWidget):
                     if len(parts) != 3:
                         raise ValueError(f"Niepoprawny format feature: {f_str} (oczekiwano formatu typ:parametry:shift)")
                     
-                    # Konwersja np. "12-26-9" na [12, 26, 9]
                     periods = [int(p.strip()) for p in parts[1].split("-") if p.strip()]
                     
                     config["features"].append({
