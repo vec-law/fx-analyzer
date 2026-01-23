@@ -1,4 +1,3 @@
--- 1. SŁOWNIKI
 CREATE TABLE instrument (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -38,7 +37,6 @@ CREATE TABLE data_source (
     name TEXT UNIQUE NOT NULL
 );
 
--- 2. GŁÓWNE ZLECENIE
 CREATE TABLE training_job (
     job_uuid UUID PRIMARY KEY,
     instrument_id INTEGER REFERENCES instrument(id) NOT NULL,
@@ -48,7 +46,6 @@ CREATE TABLE training_job (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. KONFIGURACJA ZLECENIA
 CREATE TABLE parameter_set (
     training_job_uuid UUID PRIMARY KEY REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     samples_limit INTEGER NOT NULL,
@@ -78,14 +75,12 @@ CREATE TABLE feature_def (
     CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, base_column_id, feature_period, shift)
 );
 
--- 4. WYBRANE ARCHITEKTURY
 CREATE TABLE training_job_architecture (
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     architecture_id INTEGER REFERENCES architecture(id),
     PRIMARY KEY (training_job_uuid, architecture_id)
 );
 
--- 5. WYNIKI
 CREATE TABLE experiment (
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     architecture_id INTEGER REFERENCES architecture(id),
@@ -94,17 +89,15 @@ CREATE TABLE experiment (
     PRIMARY KEY (training_job_uuid, architecture_id) -- Para kolumn staje się identyfikatorem i wymusza unikalność
 );
 
--- 6. INDEKSY
 CREATE INDEX idx_target_def_job_uuid ON target_def(training_job_uuid);
 CREATE INDEX idx_feature_def_job_uuid ON feature_def(training_job_uuid);
 CREATE INDEX idx_experiment_job_uuid ON experiment(training_job_uuid);
 CREATE INDEX idx_tj_arch_job_uuid ON training_job_architecture(training_job_uuid);
 
--- ZASILENIE SŁOWNIKÓW
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
-INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open'), ('volume');
+INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
 INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
 INSERT INTO architecture (name) VALUES ('MLP_Base'), ('MLP_Extended');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
-INSERT INTO data_source (name) VALUES ('YF'), ('CSV');
+INSERT INTO data_source (name) VALUES ('YF');
