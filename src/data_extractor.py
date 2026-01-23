@@ -1,4 +1,5 @@
 import inspect
+import pandas as pd
 
 class DataExtractor:
     def __init__(self, config: dict, log_signal):
@@ -8,40 +9,40 @@ class DataExtractor:
     def add_features(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            self.log_signal.emit(f"[{f_name}] Rozpoczynanie czyszczenia danych")
+            self.log_signal.emit(f"[{f_name}] Rozpoczynanie dodawania cech")
             if df is None or df.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
             
-            df = df.dropna().copy()
-            df = df[df['datetime'].dt.dayofweek < 5]
+            f_cols = []
             
-            if df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych po usunięciu weekendów")
+            for f in self.config["features"]:
+                if f["feature_type"] == 'sma':
+                    series = df[f["base_column"]].rolling(window=f["feature_period"]).mean().shift(f["shift"])
+                    series.name = f"{f['feature_type']}:{f['feature_period']}:{f['base_column']}:{f['shift']}"
+                    f_cols.append(series)
+
+                elif f["feature_type"] == 'ema':
+                    series = df[f["base_column"]].ewm(span=f["feature_period"], adjust=False).mean().shift(f["shift"])
+                    series.name = f"{f['feature_type']}:{f['feature_period']}:{f['base_column']}:{f['shift']}"
+                    f_cols.append(series)
+
+                elif f["feature_type"] == 'rsi':
+                    delta = df[f["base_column"]].diff()
+                    gain = (delta.where(delta > 0, 0)).rolling(window=f["feature_period"]).mean()
+                    loss = (-delta.where(delta < 0, 0)).rolling(window=f["feature_period"]).mean()
+                    rs = gain / loss
+                    series = (100 - (100 / (1 + rs))).shift(f["shift"])
+                    series.name = f"{f['feature_type']}:{f['feature_period']}:{f['base_column']}:{f['shift']}"
+                    f_cols.append(series)
+
+            if not f_cols:
+                self.log_signal.emit(f"[{f_name}] Brak cech do dodania")
                 return None
+            
+            df = pd.concat([df] + f_cols, axis=1).copy()
 
-            if self.config['timeframe']['check_period'] is not None and self.config['timeframe']['min_count'] is not None:
-                periods = df['datetime'].dt.to_period(self.config['timeframe']['check_period'])
-                counts = periods.value_counts()
-                current_period = periods.iloc[-1]
-
-                invalid_periods = counts[
-                    (counts < self.config['timeframe']['min_count']) & (counts.index != current_period)
-                ].index
-
-                if not invalid_periods.empty:
-                    is_invalid = periods.isin(invalid_periods)
-                    last_invalid_date = df[is_invalid]['datetime'].iloc[-1]
-                    last_invalid_idx = df[is_invalid].index[-1]
-                    
-                    df = df.loc[last_invalid_idx:].iloc[1:].copy()
-                    self.log_signal.emit(f"[{f_name}] Odcięto historię do {last_invalid_date} do indeksu {last_invalid_idx}")
-
-            if df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych po usunięciu luk")
-                return None
-
-            self.log_signal.emit(f"[{f_name}] Pozostawiono {df.shape[0]} rekordów")            
+            self.log_signal.emit(f"[{f_name}] Dodano cechy")            
             return df
 
         except Exception as e:

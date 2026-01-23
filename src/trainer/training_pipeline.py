@@ -1,6 +1,7 @@
 import inspect
 from src.loader import Loader
 from src.cleaner import Cleaner
+from src.data_extractor import DataExtractor
 
 class TrainingPipeline:
     def __init__(self, config: dict, log_signal, db_manager, job_uuid):
@@ -38,6 +39,12 @@ class TrainingPipeline:
 
             if self.df is None or self.df.empty:
                 raise ValueError("Cleaner usunął wszystkie dane")
+            
+            data_extractor = DataExtractor(self.config, log_signal=self.log_signal)
+            self.df = data_extractor.add_features(self.df)
+
+            if self.df is None or self.df.empty:
+                raise ValueError("Nie dodano cech")
             
             print(self.df)
 
