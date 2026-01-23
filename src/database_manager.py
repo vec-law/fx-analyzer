@@ -43,16 +43,14 @@ class DatabaseManager:
 
                     for feature in config['features']:
                         cur.execute("""
-                            INSERT INTO feature_def (training_job_uuid, feature_type_id, base_column_id, feature_period, shift) 
+                            INSERT INTO feature_def (training_job_uuid, feature_type_id, feature_periods, shift) 
                             VALUES (%s, 
                                 (SELECT id FROM feature_type WHERE name = %s), 
-                                (SELECT id FROM base_column WHERE name = %s), 
                                 %s, %s)
                         """, (
                             job_uuid, 
                             feature['feature_type'], 
-                            feature['base_column'],
-                            feature['feature_period'], 
+                            feature['feature_periods'],
                             feature['shift']
                         ))
 
@@ -153,21 +151,18 @@ class DatabaseManager:
                     cur.execute("""
                         SELECT 
                             feature_type.name, 
-                            base_column.name,
-                            feature_def.feature_period, 
+                            feature_def.feature_periods, 
                             feature_def.shift
                         FROM feature_def
                         JOIN feature_type ON feature_def.feature_type_id = feature_type.id
-                        JOIN base_column ON feature_def.base_column_id = base_column.id
                         WHERE feature_def.training_job_uuid = %s
                     """, (job_uuid,))
                     features = cur.fetchall()
                     config['features'] = [
                         {
                             'feature_type': feature[0], 
-                            'base_column': feature[1],
-                            'feature_period': feature[2], 
-                            'shift': feature[3]
+                            'feature_periods': feature[1],
+                            'shift': feature[2]
                         } for feature in features
                     ]
 
@@ -249,13 +244,14 @@ class DatabaseManager:
                     cur.execute("DELETE FROM feature_def WHERE training_job_uuid = %s", (job_uuid,))
                     for feature in config['features']:
                         cur.execute("""
-                            INSERT INTO feature_def (training_job_uuid, feature_type_id, base_column_id, feature_period, shift) 
-                            VALUES (%s, (SELECT id FROM feature_type WHERE name = %s), (SELECT id FROM base_column WHERE name = %s), %s, %s)
+                            INSERT INTO feature_def (training_job_uuid, feature_type_id, feature_periods, shift) 
+                            VALUES (%s, 
+                                (SELECT id FROM feature_type WHERE name = %s), 
+                                %s, %s)
                         """, (
                             job_uuid, 
                             feature['feature_type'], 
-                            feature['base_column'],
-                            feature['feature_period'], 
+                            feature['feature_periods'], # Lista intów, np. [14] lub [12, 26, 9]
                             feature['shift']
                         ))
 

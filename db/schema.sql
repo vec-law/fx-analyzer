@@ -60,10 +60,11 @@ CREATE TABLE feature_def (
     id SERIAL PRIMARY KEY,
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     feature_type_id INTEGER REFERENCES feature_type(id) NOT NULL,
-    base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
-    feature_period INTEGER NOT NULL CHECK (feature_period > 0),
+    feature_periods INTEGER[] NOT NULL,
     shift INTEGER NOT NULL,
-    CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, base_column_id, feature_period, shift)
+    CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, feature_periods, shift),
+    CONSTRAINT feature_periods_not_empty CHECK (array_length(feature_periods, 1) > 0),
+    CONSTRAINT feature_periods_positive CHECK (0 < ALL(feature_periods))
 );
 
 CREATE TABLE target_def (
@@ -86,7 +87,7 @@ CREATE TABLE experiment (
     architecture_id INTEGER REFERENCES architecture(id),
     file_path TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (training_job_uuid, architecture_id) -- Para kolumn staje się identyfikatorem i wymusza unikalność
+    PRIMARY KEY (training_job_uuid, architecture_id)
 );
 
 CREATE INDEX idx_target_def_job_uuid ON target_def(training_job_uuid);

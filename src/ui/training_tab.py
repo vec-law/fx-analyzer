@@ -183,15 +183,22 @@ class TrainingTab(QWidget):
                 "architectures": []
             }
 
+            # Nowy blok parsowania features (typ:param-param:shift):
             for feature in field_values["features"].split(","):
-                parts = feature.strip().split(":")
-                if len(parts) != 4:
-                    raise ValueError(f"Niepoprawny format feature: {feature}")
+                f_str = feature.strip()
+                if not f_str: continue
+                
+                parts = f_str.split(":")
+                if len(parts) != 3:
+                    raise ValueError(f"Niepoprawny format feature: {f_str}. Oczekiwano typ:parametry:shift")
+                
+                # Rozbicie okresów po myślniku, np. "12-26-9" -> [12, 26, 9]
+                periods = [int(p.strip()) for p in parts[1].split("-") if p.strip()]
+                
                 config["features"].append({
                     "feature_type": parts[0].strip(),
-                    "feature_period": int(parts[1].strip()),
-                    "base_column": parts[2].strip(),
-                    "shift": int(parts[3].strip())
+                    "feature_periods": periods,
+                    "shift": int(parts[2].strip())
                 })
 
             for target in field_values["targets"].split(","):
@@ -235,12 +242,14 @@ class TrainingTab(QWidget):
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
             self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
 
-            self.param_fields["features"].setText(
-                ", ".join(
-                    f"{f['feature_type']}:{f['feature_period']}:{f['base_column']}:{f['shift']}"
-                    for f in config["features"]
-                )
-            )
+            # Nowy blok renderowania features (typ:p1-p2:shift):
+            feature_strings = []
+            for f in config["features"]:
+                # Łączymy listę okresów myślnikiem, np. [12, 26, 9] -> "12-26-9"
+                periods_str = "-".join(map(str, f["feature_periods"]))
+                feature_strings.append(f"{f['feature_type']}:{periods_str}:{f['shift']}")
+            
+            self.param_fields["features"].setText(", ".join(feature_strings))
 
             self.param_fields["targets"].setText(
                 ", ".join(
@@ -282,15 +291,22 @@ class TrainingTab(QWidget):
             }
 
             if field_values["features"]:
+                # Nowy blok parsowania features (typ:p1-p2:shift):
                 for feature in field_values["features"].split(","):
-                    feature_parts = feature.strip().split(":")
-                    if len(feature_parts) != 4:
-                        raise ValueError(f"Niepoprawny format feature: {feature} (oczekiwano 4 elementów)")
+                    f_str = feature.strip()
+                    if not f_str: continue
+                    
+                    parts = f_str.split(":")
+                    if len(parts) != 3:
+                        raise ValueError(f"Niepoprawny format feature: {f_str} (oczekiwano formatu typ:parametry:shift)")
+                    
+                    # Konwersja np. "12-26-9" na [12, 26, 9]
+                    periods = [int(p.strip()) for p in parts[1].split("-") if p.strip()]
+                    
                     config["features"].append({
-                        "feature_type": feature_parts[0].strip(),
-                        "feature_period": int(feature_parts[1].strip()),
-                        "base_column": feature_parts[2].strip(),
-                        "shift": int(feature_parts[3].strip())
+                        "feature_type": parts[0].strip(),
+                        "feature_periods": periods,
+                        "shift": int(parts[2].strip())
                     })
 
             if field_values["targets"]:
