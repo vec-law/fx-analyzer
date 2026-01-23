@@ -48,12 +48,12 @@ CREATE TABLE training_job (
 
 CREATE TABLE parameter_set (
     training_job_uuid UUID PRIMARY KEY REFERENCES training_job(job_uuid) ON DELETE CASCADE,
-    samples_limit INTEGER NOT NULL,
-    train_ratio REAL NOT NULL,
-    seed INTEGER NOT NULL,
-    epochs INTEGER NOT NULL,
-    train_noise REAL NOT NULL,
-    learning_rate REAL NOT NULL
+    samples_limit INTEGER NOT NULL CHECK (samples_limit > 0),
+    train_ratio REAL NOT NULL CHECK (train_ratio > 0 AND train_ratio <= 1),
+    seed INTEGER NOT NULL CHECK (seed > 0),
+    epochs INTEGER NOT NULL CHECK (epochs > 0),
+    train_noise REAL NOT NULL CHECK (train_noise >= 0 AND train_noise < 1),
+    learning_rate REAL NOT NULL CHECK (learning_rate > 0 AND learning_rate < 1)
 );
 
 CREATE TABLE target_def (
@@ -70,7 +70,7 @@ CREATE TABLE feature_def (
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     feature_type_id INTEGER REFERENCES feature_type(id) NOT NULL,
     base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
-    feature_period INTEGER NOT NULL,
+    feature_period INTEGER NOT NULL CHECK (epochs > 0),
     shift INTEGER NOT NULL,
     CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, base_column_id, feature_period, shift)
 );
