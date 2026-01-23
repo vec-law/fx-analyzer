@@ -70,7 +70,7 @@ CREATE TABLE feature_def (
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     feature_type_id INTEGER REFERENCES feature_type(id) NOT NULL,
     base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
-    feature_period INTEGER NOT NULL CHECK (epochs > 0),
+    feature_period INTEGER NOT NULL CHECK (feature_period > 0),
     shift INTEGER NOT NULL,
     CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, base_column_id, feature_period, shift)
 );
