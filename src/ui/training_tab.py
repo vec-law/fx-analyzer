@@ -350,7 +350,7 @@ class TrainingTab(QWidget):
             if not tasks:
                 self.table.setRowCount(0)
                 if show_log:
-                    self.log_to_console("ℹBrak zadań w bazie danych.")
+                    self.log_to_console("Brak zadań w bazie danych.")
                 return
 
             self.fill_tasks_table(tasks)
