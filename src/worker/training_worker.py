@@ -23,7 +23,19 @@ class TrainingWorker(QObject):
             self.train_pipeline.run()
 
         except Exception as e:
-            self.log_signal.emit(f"Błąd: {e}")  # Używamy self.log_to_console do logowania błędów
+            # --- STARY KOD (ZAKOMENTOWANY) ---
+            # self.log_signal.emit(f"Błąd: {e}")
+
+            # --- NOWY BLOK (ZMODYFIKOWANY) ---
+            error_msg = f"❌ Krytyczny błąd w wątku roboczym: {e}"
+            self.log_signal.emit(error_msg)
+            
+            # Próba ustawienia statusu błędu w bazie, aby zadanie nie wisiało
+            try:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+            except:
+                pass 
+
         finally:
             self.finished.emit()
 

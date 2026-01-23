@@ -10,13 +10,11 @@ class DatabaseManager:
         job_uuid = str(uuid.uuid4())
 
         try:
+            if not config.get('targets') or not config.get('features') or not config.get('architectures'):
+                raise ValueError("Błąd walidacji: Brak Targetów, Featurów lub Architektury.")
+
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    # --- WALIDACJA PUSTYCH LIST ---
-                    if not config.get('targets') or not config.get('features') or not config.get('architectures'):
-                        return None
-
-                    # --- INSERT DO training_job ---
                     cur.execute("""
                         INSERT INTO training_job (job_uuid, instrument_id, timeframe_id, status_id, data_source_id) 
                         VALUES (%s, 
@@ -31,7 +29,6 @@ class DatabaseManager:
                         config['data_source']
                     ))
 
-                    # --- INSERT DO parameter_set ---
                     cur.execute("""
                         INSERT INTO parameter_set (training_job_uuid, samples_limit, train_ratio, seed, epochs, train_noise, learning_rate) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -45,14 +42,12 @@ class DatabaseManager:
                         config['parameter_set']['learning_rate']
                     ))
 
-                    # --- INSERT target_def ---
                     for target in config['targets']:
                         cur.execute("""
                             INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
                             VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
                         """, (job_uuid, target['base_column'], target['shift']))
 
-                    # --- INSERT feature_def ---
                     for feature in config['features']:
                         cur.execute("""
                             INSERT INTO feature_def (training_job_uuid, feature_type_id, base_column_id, feature_period, shift) 
@@ -68,26 +63,23 @@ class DatabaseManager:
                             feature['shift']
                         ))
 
-                    # --- INSERT training_job_architecture ---
                     for architecture in config['architectures']:
                         cur.execute("""
                             INSERT INTO training_job_architecture (training_job_uuid, architecture_id) 
                             VALUES (%s, (SELECT id FROM architecture WHERE name = %s))
                         """, (job_uuid, architecture))
 
-                    # --- KOMIT TRANSAKCJI ---
                     conn.commit()
-                    return job_uuid
-
-        except Exception:
-            # rollback nastąpi automatycznie, bo używamy `with conn:`
-            return None
+                    return job_uuid            
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych przy dodawaniu zadania: {str(e)}")
         
     def get_training_config(self, job_uuid):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    # Inicjalizacja config
                     config = {
                         'instrument': {},
                         'timeframe': {},
@@ -99,7 +91,6 @@ class DatabaseManager:
                         'data_source': None
                     }
                     
-                    # Pobranie instrumentu
                     cur.execute("""
                         SELECT 
                             instrument.name, 
@@ -115,7 +106,6 @@ class DatabaseManager:
                             'ticker': instrument[1]
                         }
 
-                    # Pobranie timeframe
                     cur.execute("""
                         SELECT 
                             timeframe.name, 
@@ -135,7 +125,6 @@ class DatabaseManager:
                             'min_count': timeframe[3]
                         }
 
-                    # Pobranie parameter_set
                     cur.execute("""
                         SELECT 
                             samples_limit, 
@@ -158,12 +147,10 @@ class DatabaseManager:
                             'learning_rate': parameter_set[5]
                         }
 
-                    # Pobranie base_columns
                     cur.execute("SELECT base_column.name FROM base_column")
                     base_columns = cur.fetchall()
                     config['base_columns'] = [base_column[0] for base_column in base_columns]
 
-                    # Pobranie targets
                     cur.execute("""
                         SELECT base_column.name, target_def.shift 
                         FROM target_def
@@ -178,7 +165,6 @@ class DatabaseManager:
                         } for target in targets
                     ]
 
-                    # Pobranie features
                     cur.execute("""
                         SELECT 
                             feature_type.name, 
@@ -200,7 +186,6 @@ class DatabaseManager:
                         } for feature in features
                     ]
 
-                    # Pobranie architectures
                     cur.execute("""
                         SELECT architecture.name
                         FROM architecture
@@ -210,7 +195,6 @@ class DatabaseManager:
                     architectures = cur.fetchall()
                     config['architectures'] = [architecture[0] for architecture in architectures]
 
-                    # Pobranie data_source
                     cur.execute("""
                         SELECT data_source.name
                         FROM data_source
@@ -221,20 +205,20 @@ class DatabaseManager:
                     if data_source:
                         config['data_source'] = data_source[0]
 
-                return config
-        except Exception:
-            return None
+                    if not config['data_source']:
+                        raise ValueError(f"Nie znaleziono danych dla zadania: {job_uuid}")
+
+                    return config
+        except Exception as e:
+            raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
 
     def update_training_config(self, job_uuid, config):
         try:
-            # --- WALIDACJA PUSTYCH LIST ---
             if not config.get('targets') or not config.get('features') or not config.get('architectures'):
-                return None
+                raise ValueError("Błąd walidacji: Konfiguracja musi zawierać targety, feature'y i architektury.")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-
-                    # --- UPDATE DO training_job ---
                     cur.execute("""
                         UPDATE training_job 
                         SET instrument_id = (SELECT id FROM instrument WHERE name = %s),
@@ -248,7 +232,6 @@ class DatabaseManager:
                         job_uuid
                     ))
 
-                    # --- UPDATE DO parameter_set ---
                     cur.execute("""
                         UPDATE parameter_set 
                         SET samples_limit = %s, train_ratio = %s, seed = %s, 
@@ -264,7 +247,6 @@ class DatabaseManager:
                         job_uuid
                     ))
 
-                    # --- USUWANIE I WSTAWIANIE target_def ---
                     cur.execute("DELETE FROM target_def WHERE training_job_uuid = %s", (job_uuid,))
                     for target in config['targets']:
                         cur.execute("""
@@ -272,7 +254,6 @@ class DatabaseManager:
                             VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
                         """, (job_uuid, target['base_column'], target['shift']))
 
-                    # --- USUWANIE I WSTAWIANIE feature_def ---
                     cur.execute("DELETE FROM feature_def WHERE training_job_uuid = %s", (job_uuid,))
                     for feature in config['features']:
                         cur.execute("""
@@ -286,7 +267,6 @@ class DatabaseManager:
                             feature['shift']
                         ))
 
-                    # --- USUWANIE I WSTAWIANIE training_job_architecture ---
                     cur.execute("DELETE FROM training_job_architecture WHERE training_job_uuid = %s", (job_uuid,))
                     for architecture in config['architectures']:
                         cur.execute("""
@@ -294,72 +274,63 @@ class DatabaseManager:
                             VALUES (%s, (SELECT id FROM architecture WHERE name = %s))
                         """, (job_uuid, architecture))
 
-                    # --- KOMIT TRANSAKCJI ---
                     conn.commit()
                     return True
-
-        except Exception:
-            # rollback nastąpi automatycznie, bo używamy `with conn:`
-            return False
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd podczas aktualizacji konfiguracji: {str(e)}")
         
     def update_training_status(self, job_uuid, status_name):
         try:
-            # --- Walidacja danych wejściowych ---
             if not job_uuid or not status_name:
-                raise ValueError("Nie podano prawidłowego job_uuid lub status_name")
+                raise ValueError("Błąd: Brak UUID zadania lub nazwy statusu.")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    # --- Aktualizacja statusu ---
                     cur.execute("""
                         UPDATE training_job 
                         SET status_id = (SELECT id FROM status WHERE name = %s)
                         WHERE job_uuid = %s
                     """, (status_name, job_uuid))
+                    
+                    if cur.rowcount == 0:
+                        raise Exception(f"Nie znaleziono zadania o UUID: {job_uuid}")
 
-                    conn.commit()  # --- Zatwierdzamy transakcję ---
-
+                    conn.commit()
                     return True
-
-        except (ValueError, Exception) as e:
-            # Jeśli wystąpił błąd, zwracamy False
-            return False
+        except Exception as e:
+            raise Exception(f"Nie udało się zaktualizować statusu: {str(e)}")
 
 
     def del_training_job(self, job_uuid):
         try:
-            # --- Walidacja danych wejściowych ---
             if not job_uuid:
-                raise ValueError("Nie podano prawidłowego job_uuid")
+                raise ValueError("Błąd: Nie podano UUID do usunięcia.")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    # --- Usuwanie zadania ---
                     cur.execute("DELETE FROM training_job WHERE job_uuid = %s", (job_uuid,))
 
-                    # --- Sprawdzanie, czy rekord został usunięty ---
-                    if cur.rowcount > 0:
-                        conn.commit()  # --- Zatwierdzenie transakcji ---
-                        return True
-                    else:
-                        return False
-
-        except (ValueError, Exception) as e:
-            # Obsługa błędów, rollback automatyczny
-            return False
+                    if cur.rowcount == 0:
+                        raise Exception(f"Zadanie {job_uuid} nie istnieje w bazie danych.")
+                    
+                    conn.commit()
+                    return True
+        except Exception as e:
+            raise Exception(f"Błąd podczas usuwania zadania: {str(e)}")
 
     def get_training_jobs(self):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    # --- Pobranie danych z bazy ---
                     cur.execute("""
                         SELECT 
-                            training_job.job_uuid,
-                            instrument.name,
-                            timeframe.name,
-                            data_source.name,
-                            status.name,
+                            training_job.job_uuid, 
+                            instrument.name, 
+                            timeframe.name, 
+                            data_source.name, 
+                            status.name, 
                             training_job.created_at
                         FROM training_job
                         JOIN instrument ON training_job.instrument_id = instrument.id
@@ -368,25 +339,17 @@ class DatabaseManager:
                         JOIN status ON training_job.status_id = status.id
                         ORDER BY training_job.created_at DESC
                     """)
-
-                    # --- Pobranie wyników z zapytania ---
                     rows = cur.fetchall()
-                    results = []
-
-                    # --- Przekształcenie wyników na format słownika ---
-                    for r in rows:
-                        results.append({
-                            'job_uuid': r[0],
-                            'instrument': r[1],
-                            'timeframe_name': r[2],
-                            'data_source': r[3],
-                            'status': r[4],
-                            'created_at': r[5]
-                        })
                     
-                    # --- Zwrócenie wyników ---
-                    return results
-
+                    return [
+                        {
+                            'job_uuid': r[0], 
+                            'instrument': r[1], 
+                            'timeframe_name': r[2], 
+                            'data_source': r[3], 
+                            'status': r[4], 
+                            'created_at': r[5]
+                        } for r in rows
+                    ]
         except Exception as e:
-            # --- Obsługa błędów ---
-            return []
+            raise Exception(f"Błąd podczas pobierania listy zadań: {str(e)}")

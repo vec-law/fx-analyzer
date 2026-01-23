@@ -105,26 +105,21 @@ class TrainingTab(QWidget):
         self.console.clear()
 
     def on_run_task(self):
-        # --- Sprawdzanie, czy wybrane zostało zadanie ---
         if not self.last_clicked_uuid:
             self.log_to_console("Nie zaznaczono zadania")
             return
 
-        # --- Sprawdzanie, czy zadanie już działa ---
         if self.thread and self.thread.isRunning():
             self.log_to_console("Zadanie już działa")
             return
 
-        # --- Utworzenie nowego wątku i przypisanie worker'a ---
         self.thread = QThread()
 
-        # Przekazanie log_to_console do worker'a
         self.worker = TrainingWorker(self.last_clicked_uuid, self.db_manager)
         self.worker.log_signal.connect(self.log_to_console)
 
         self.worker.moveToThread(self.thread)
 
-        # --- Połączenie sygnałów i slotów ---
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
@@ -132,21 +127,16 @@ class TrainingTab(QWidget):
         self.thread.destroyed.connect(lambda: setattr(self, 'thread', None))
         self.thread.destroyed.connect(lambda: setattr(self, 'worker', None))
 
-        # --- Zarządzanie interfejsem użytkownika ---
         self.thread.finished.connect(lambda: (self.set_running_ui(False)))
         self.thread.finished.connect(lambda: self.on_load_tasks(show_log=False))
 
-        # --- Aktualizacja statusu zadania w bazie ---
         self.db_manager.update_training_status(self.last_clicked_uuid, 'running')
 
-        # --- Odświeżenie zadań ---
         self.on_load_tasks(show_log=False)
 
-        # --- Ustawienie przycisku w tryb oczekiwania ---
         self.load_tasks_btn.setFocus()
         self.set_running_ui(True)
 
-        # --- Rozpoczęcie wątku ---
         self.thread.start()
 
 
@@ -193,7 +183,6 @@ class TrainingTab(QWidget):
                 "architectures": []
             }
 
-            # --- Walidacja targets ---
             for target in field_values["targets"].split(","):
                 parts = target.strip().split(":")
                 if len(parts) != 2:
@@ -203,7 +192,6 @@ class TrainingTab(QWidget):
                     "shift": int(parts[1].strip())
                 })
 
-            # --- Walidacja features ---
             for feature in field_values["features"].split(","):
                 parts = feature.strip().split(":")
                 if len(parts) != 4:
@@ -215,36 +203,26 @@ class TrainingTab(QWidget):
                     "shift": int(parts[3].strip())
                 })
 
-            # --- Walidacja architectures ---
             for architecture in field_values["architectures"].split(","):
                 config["architectures"].append(architecture.strip())
 
-            # --- Dodanie zadania do bazy ---
             new_uuid = self.db_manager.add_training_job(config)
-
-            # --- Komunikaty logowania ---
-            if new_uuid:
-                self.log_to_console(f"Dodano zadanie: {new_uuid}")
-                self.on_load_tasks(show_log=False)
-            else:
-                self.log_to_console("Podano nieprawidłowe parametry")
+            self.log_to_console(f"Dodano zadanie: {new_uuid}")
+            self.on_load_tasks(show_log=False)
 
         except (ValueError, IndexError, KeyError) as e:
-            self.log_to_console(f"Błąd: {e}")
+            self.log_to_console(f"Błąd danych: {e}")
+        except Exception as e:
+            self.log_to_console(f"{e}")
 
 
     def on_load_params(self):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie wybrano zadania")
             return
-
-        config = self.db_manager.get_training_config(self.last_clicked_uuid)
-        if not config:
-            self.log_to_console("Brak parametrów")
-            return
-
         try:
-            # --- proste pola ---
+            config = self.db_manager.get_training_config(self.last_clicked_uuid)
+
             self.param_fields["instrument_name"].setText(config["instrument"]["name"])
             self.param_fields["timeframe_name"].setText(config["timeframe"]["name"])
             self.param_fields["data_source"].setText(config["data_source"])
@@ -257,7 +235,6 @@ class TrainingTab(QWidget):
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
             self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
 
-            # --- targets: base_column:shift ---
             self.param_fields["targets"].setText(
                 ", ".join(
                     f"{t['base_column']}:{t['shift']}"
@@ -265,7 +242,6 @@ class TrainingTab(QWidget):
                 )
             )
 
-            # --- features: feature_type:feature_period:base_column:shift ---
             self.param_fields["features"].setText(
                 ", ".join(
                     f"{f['feature_type']}:{f['feature_period']}:{f['base_column']}:{f['shift']}"
@@ -273,93 +249,21 @@ class TrainingTab(QWidget):
                 )
             )
 
-            # --- architectures ---
             self.param_fields["architectures"].setText(
                 ", ".join(config["architectures"])
             )
 
             self.log_to_console(f"Wczytano parametry zadania: {self.last_clicked_uuid}")
-
         except Exception as e:
-            self.log_to_console(f"Błąd mapowania parametrów: {e}")
+            self.log_to_console(f"Błąd wczytywania parametrów: {e}")
 
     def on_update_params(self):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie wybrano zadania do modyfikacji")
             return
-
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
 
-            config = {
-                "instrument": {"name": field_values["instrument_name"]},
-                "timeframe": {"name": field_values["timeframe_name"]},
-                "data_source": field_values["data_source"],
-                "parameter_set": {
-                    "samples_limit": int(field_values["samples_limit"]),
-                    "train_ratio":   float(field_values["train_ratio"]),
-                    "seed":          int(field_values["seed"]),
-                    "epochs":        int(field_values["epochs"]),
-                    "train_noise":   float(field_values["train_noise"]),
-                    "learning_rate": float(field_values["learning_rate"]),
-                },
-                "targets": [],
-                "features": [],
-                "architectures": []
-            }
-
-            if field_values["targets"]:
-                for target in field_values["targets"].split(","):
-                    target_parts = target.strip().split(":")
-                    config["targets"].append({
-                        "type":  target_parts[0].strip(),
-                        "shift": int(target_parts[1].strip())
-                    })
-
-            if field_values["features"]:
-                for feature in field_values["features"].split(","):
-                    feature_parts = feature.strip().split(":")
-                    config["features"].append({
-                        "type":       feature_parts[0].strip(),
-                        "start_from": int(feature_parts[1].strip()),
-                        "stop_at":    int(feature_parts[2].strip()),
-                        "step":       int(feature_parts[3].strip()),
-                        "shift":      int(feature_parts[4].strip())
-                    })
-
-            if field_values["architectures"]:
-                config["architectures"] = [
-                    a.strip() for a in field_values["architectures"].split(",") if a.strip()
-                ]
-
-            if self.db_manager.update_training_config(self.last_clicked_uuid, config):
-                self.log_to_console(f"Zaktualizowano parametry zadania: {self.last_clicked_uuid}")
-                
-                # Zapamiętujemy UUID przed odświeżeniem
-                current_uuid = self.last_clicked_uuid
-                self.on_load_tasks(show_log=False)
-                
-                # Przywracamy zaznaczenie w tabeli
-                for row in range(self.table.rowCount()):
-                    item = self.table.item(row, 0)
-                    if item and item.text() == current_uuid:
-                        self.table.selectRow(row)
-                        break
-            else:
-                self.log_to_console(f"Błąd aktualizacji zadania: {self.last_clicked_uuid}")
-
-        except (ValueError, IndexError, KeyError):
-            self.log_to_console("Podano nieprawidłowe parametry")
-
-    def on_update_params(self):
-        if not self.last_clicked_uuid:
-            self.log_to_console("Nie wybrano zadania do modyfikacji")
-            return
-
-        try:
-            field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
-
-            # Przygotowanie config
             config = {
                 "instrument": {"name": field_values["instrument_name"]},
                 "timeframe": {"name": field_values["timeframe_name"]},
@@ -377,103 +281,81 @@ class TrainingTab(QWidget):
                 "architectures": []
             }
 
-            # Wypełnianie targets
             if field_values["targets"]:
                 for target in field_values["targets"].split(","):
                     target_parts = target.strip().split(":")
                     if len(target_parts) != 2:
                         raise ValueError(f"Niepoprawny format target: {target}")
                     config["targets"].append({
-                        "type": target_parts[0].strip(),
+                        "base_column": target_parts[0].strip(),
                         "shift": int(target_parts[1].strip())
                     })
 
-            # Wypełnianie features
             if field_values["features"]:
                 for feature in field_values["features"].split(","):
                     feature_parts = feature.strip().split(":")
-                    if len(feature_parts) != 5:  # Jeśli to 5, czyli feature_type, start_from, stop_at, step, shift
-                        raise ValueError(f"Niepoprawny format feature: {feature}")
+                    if len(feature_parts) != 4:
+                        raise ValueError(f"Niepoprawny format feature: {feature} (oczekiwano 4 elementów)")
                     config["features"].append({
-                        "type": feature_parts[0].strip(),
-                        "start_from": int(feature_parts[1].strip()),
-                        "stop_at": int(feature_parts[2].strip()),
-                        "step": int(feature_parts[3].strip()),
-                        "shift": int(feature_parts[4].strip())
+                        "feature_type": feature_parts[0].strip(),
+                        "feature_period": int(feature_parts[1].strip()),
+                        "base_column": feature_parts[2].strip(),
+                        "shift": int(feature_parts[3].strip())
                     })
 
-            # Wypełnianie architectures
             if field_values["architectures"]:
                 config["architectures"] = [
                     a.strip() for a in field_values["architectures"].split(",") if a.strip()
                 ]
 
-            # Aktualizacja danych w bazie
-            if self.db_manager.update_training_config(self.last_clicked_uuid, config):
-                self.log_to_console(f"Zaktualizowano parametry zadania: {self.last_clicked_uuid}")
-                
-                # Zapamiętanie UUID przed odświeżeniem
-                current_uuid = self.last_clicked_uuid
-                self.on_load_tasks(show_log=False)
-                
-                # Przywrócenie zaznaczenia w tabeli
-                for row in range(self.table.rowCount()):
-                    item = self.table.item(row, 0)
-                    if item and item.text() == current_uuid:
-                        self.table.selectRow(row)
-                        break
-            else:
-                self.log_to_console(f"Błąd aktualizacji zadania: {self.last_clicked_uuid}")
+            self.db_manager.update_training_config(self.last_clicked_uuid, config)
+            self.log_to_console(f"Zaktualizowano parametry: {self.last_clicked_uuid}")
+            
+            current_uuid = self.last_clicked_uuid
+            self.on_load_tasks(show_log=False)
+            
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, 0)
+                if item and item.text() == current_uuid:
+                    self.table.selectRow(row)
+                    break
 
         except ValueError as e:
             self.log_to_console(f"Błąd walidacji: {e}")
-        except (IndexError, KeyError) as e:
-            self.log_to_console(f"Błąd danych: {e}")
         except Exception as e:
-            self.log_to_console(f"Błąd: {e}")
+            self.log_to_console(f"{e}")
 
     def on_remove_task(self):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie wybrano zadania do usunięcia")
             return
-
         try:
-            # --- Usunięcie zadania z bazy ---
-            if self.db_manager.del_training_job(self.last_clicked_uuid):
-                self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
+            self.db_manager.del_training_job(self.last_clicked_uuid)
+            self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
 
-                # --- Odświeżenie listy zadań ---
-                self.on_load_tasks(show_log=False)
+            self.on_load_tasks(show_log=False)
 
-                # --- Przywracanie zaznaczenia w tabeli ---
-                if self.table.rowCount() > 0:
-                    self.table.selectRow(0)
-                    self.last_clicked_uuid = self.table.item(0, 0).text()
-                else:
-                    self.last_clicked_uuid = None
-
+            if self.table.rowCount() > 0:
+                self.table.selectRow(0)
+                self.last_clicked_uuid = self.table.item(0, 0).text()
             else:
-                self.log_to_console(f"Błąd usuwania zadania: {self.last_clicked_uuid}")
-
+                self.last_clicked_uuid = None
         except Exception as e:
-            self.log_to_console(f"Błąd: {e}")
+            self.log_to_console(f"{e}")
 
     def on_load_tasks(self, show_log=True):
         try:
-            # --- Pobranie zadań z bazy ---
             tasks = self.db_manager.get_training_jobs()
 
             if not tasks:
-                self.log_to_console("Brak zadań w bazie")
-                return  # Zakończenie funkcji, jeśli brak zadań w bazie
+                self.table.setRowCount(0)
+                if show_log:
+                    self.log_to_console("ℹBrak zadań w bazie danych.")
+                return
 
-            # --- Wypełnienie tabeli danymi ---
             self.fill_tasks_table(tasks)
 
-            # --- Komunikat w konsoli ---
             if show_log:
-                self.log_to_console("Wczytano zadania")
-
+                self.log_to_console("Wczytano listę zadań.")
         except Exception as e:
-            # --- Obsługa błędów ---
             self.log_to_console(f"Błąd wczytywania zadań: {e}")

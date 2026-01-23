@@ -26,9 +26,13 @@ class TrainingPipeline:
                 return
 
             if self.df is None or self.df.empty:
-                self.db_manager.update_training_status(self.job_uuid, "failed")
-                self.log_signal.emit(f"[{f_name}] Przerwano: Loader nie zwrócił danych")
-                return
+                # --- STARY KOD (ZAKOMENTOWANY) ---
+                # self.db_manager.update_training_status(self.job_uuid, "failed")
+                # self.log_signal.emit(f"[{f_name}] Przerwano: Loader nie zwrócił danych")
+                # return
+
+                # --- NOWY BLOK (ZMIANA NA WYJĄTEK) ---
+                raise ValueError("Loader nie zwrócił danych")
             
             cleaner = Cleaner(self.config, log_signal=self.log_signal)
             self.df = cleaner.clean_data(self.df)
@@ -39,16 +43,30 @@ class TrainingPipeline:
                 return
 
             if self.df is None or self.df.empty:
-                self.db_manager.update_training_status(self.job_uuid, "failed")
-                self.log_signal.emit(f"[{f_name}] Przerwano: Cleaner usunął wszystkie dane")
-                return
+                # --- STARY KOD (ZAKOMENTOWANY) ---
+                # self.db_manager.update_training_status(self.job_uuid, "failed")
+                # self.log_signal.emit(f"[{f_name}] Przerwano: Cleaner usunął wszystkie dane")
+                # return
+
+                # --- NOWY BLOK (ZMIANA NA WYJĄTEK) ---
+                raise ValueError("Cleaner usunął wszystkie dane")
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")
 
         except Exception as e:
-            self.db_manager.update_training_status(self.job_uuid, 'failed')
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            # --- STARY KOD (ZAKOMENTOWANY) ---
+            # self.db_manager.update_training_status(self.job_uuid, 'failed')
+            # self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+
+            # --- NOWY BLOK (ZMODYFIKOWANY) ---
+            # Każdy błąd (z DB, Loadera czy Cleanera) trafia tutaj
+            try:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+            except:
+                pass # Jeśli padła baza, statusu i tak nie zmienimy
+            
+            self.log_signal.emit(f"[{f_name}] ❌ Przerwano z powodu błędu: {e}")
 
     def stop(self):
         f_name = inspect.currentframe().f_code.co_name
