@@ -28,21 +28,6 @@ class DatabaseManager:
                         config['data_source']
                     ))
 
-                    # ZAKOMENTOWANY STARY BLOK:
-                    # cur.execute("""
-                    #     INSERT INTO parameter_set (training_job_uuid, samples_limit, train_ratio, seed, epochs, train_noise, learning_rate) 
-                    #     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    # """, (
-                    #     job_uuid, 
-                    #     config['parameter_set']['samples_limit'], 
-                    #     config['parameter_set']['train_ratio'], 
-                    #     config['parameter_set']['seed'], 
-                    #     config['parameter_set']['epochs'], 
-                    #     config['parameter_set']['train_noise'], 
-                    #     config['parameter_set']['learning_rate']
-                    # ))
-
-                    # NOWY BLOK KODU:
                     cur.execute("""
                         INSERT INTO parameter_set (training_job_uuid, samples_limit, test_samples, seed, epochs, train_noise, learning_rate) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
@@ -137,30 +122,6 @@ class DatabaseManager:
                             'min_count': timeframe[3]
                         }
 
-                    # ZAKOMENTOWANY STARY BLOK:
-                    # cur.execute("""
-                    #     SELECT 
-                    #         samples_limit, 
-                    #         train_ratio, 
-                    #         seed, 
-                    #         epochs, 
-                    #         train_noise, 
-                    #         learning_rate
-                    #     FROM parameter_set
-                    #     WHERE training_job_uuid = %s
-                    # """, (job_uuid,))
-                    # parameter_set = cur.fetchone()
-                    # if parameter_set:
-                    #     config['parameter_set'] = {
-                    #         'samples_limit': parameter_set[0],
-                    #         'train_ratio': parameter_set[1],
-                    #         'seed': parameter_set[2],
-                    #         'epochs': parameter_set[3],
-                    #         'train_noise': parameter_set[4],
-                    #         'learning_rate': parameter_set[5]
-                    #     }
-
-                    # NOWY BLOK KODU:
                     cur.execute("""
                         SELECT 
                             samples_limit, 
@@ -265,23 +226,6 @@ class DatabaseManager:
                         job_uuid
                     ))
 
-                    # ZAKOMENTOWANY STARY BLOK:
-                    # cur.execute("""
-                    #     UPDATE parameter_set 
-                    #     SET samples_limit = %s, train_ratio = %s, seed = %s, 
-                    #         epochs = %s, train_noise = %s, learning_rate = %s
-                    #     WHERE training_job_uuid = %s
-                    # """, (
-                    #     config['parameter_set']['samples_limit'], 
-                    #     config['parameter_set']['train_ratio'], 
-                    #     config['parameter_set']['seed'], 
-                    #     config['parameter_set']['epochs'], 
-                    #     config['parameter_set']['train_noise'], 
-                    #     config['parameter_set']['learning_rate'], 
-                    #     job_uuid
-                    # ))
-
-                    # NOWY BLOK KODU:
                     cur.execute("""
                         UPDATE parameter_set 
                         SET samples_limit = %s, test_samples = %s, seed = %s, 
