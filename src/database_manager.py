@@ -144,7 +144,7 @@ class DatabaseManager:
                             'learning_rate': parameter_set[5]
                         }
 
-                    cur.execute("SELECT base_column.name FROM base_column")
+                    cur.execute("SELECT base_column.name FROM base_column ORDER BY id")
                     base_columns = cur.fetchall()
                     config['base_columns'] = [base_column[0] for base_column in base_columns]
 
@@ -156,6 +156,7 @@ class DatabaseManager:
                         FROM feature_def
                         JOIN feature_type ON feature_def.feature_type_id = feature_type.id
                         WHERE feature_def.training_job_uuid = %s
+                        ORDER BY feature_def.id
                     """, (job_uuid,))
                     features = cur.fetchall()
                     config['features'] = [
@@ -171,6 +172,7 @@ class DatabaseManager:
                         FROM target_def
                         JOIN base_column ON target_def.base_column_id = base_column.id
                         WHERE target_def.training_job_uuid = %s
+                        ORDER BY target_def.id
                     """, (job_uuid,))
                     targets = cur.fetchall()
                     config['targets'] = [
@@ -185,6 +187,7 @@ class DatabaseManager:
                         FROM architecture
                         JOIN training_job_architecture ON training_job_architecture.architecture_id = architecture.id
                         WHERE training_job_architecture.training_job_uuid = %s
+                        ORDER BY architecture_id
                     """, (job_uuid,))
                     architectures = cur.fetchall()
                     config['architectures'] = [architecture[0] for architecture in architectures]
