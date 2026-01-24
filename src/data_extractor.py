@@ -83,7 +83,7 @@ class DataExtractor:
             if df is None or df.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
-            
+
             res_df = df.dropna()
 
             if res_df.empty:
@@ -91,9 +91,15 @@ class DataExtractor:
                 return None
             
             if limit:
-                res_df = res_df.tail(limit)
+                res_df = res_df.tail(limit).reset_index(drop=True)
+            
+            len_res_df = len(res_df)
 
-            self.log_signal.emit(f"[{f_name}] Usunięto NaN i ucięto df, len(df) = {len(res_df)}")
+            if limit and len_res_df != limit:
+                self.log_signal.emit(f"[{f_name}] Zbyt mało rekordów do ucięcia, len(df) = {len_res_df}")
+                return None
+
+            self.log_signal.emit(f"[{f_name}] Usunięto NaN i ucięto df, len(df) = {len_res_df}")
             return res_df
 
         except Exception as e:
