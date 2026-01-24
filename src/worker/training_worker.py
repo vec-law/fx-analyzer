@@ -27,7 +27,7 @@ class TrainingWorker(QObject):
             # self.log_signal.emit(f"Błąd: {e}")
 
             # --- NOWY BLOK (ZMODYFIKOWANY) ---
-            error_msg = f"❌ Krytyczny błąd w wątku roboczym: {e}"
+            error_msg = f"Błąd w wątku roboczym: {e}"
             self.log_signal.emit(error_msg)
             
             # Próba ustawienia statusu błędu w bazie, aby zadanie nie wisiało

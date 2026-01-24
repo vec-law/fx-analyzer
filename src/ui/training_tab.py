@@ -9,8 +9,8 @@ from src.worker.training_worker import TrainingWorker
 class TrainingTab(QWidget):
     PARAM_MAP = {
         "Instrument": "instrument_name", "Interwał": "timeframe_name",
-        "Źródło danych": "data_source", "Limit próbek": "samples_limit",
-        "Współczynnik podziału": "train_ratio", "Losowość": "seed",
+        "Źródło danych": "data_source", "Liczba próbek": "samples_limit",
+        "Liczba próbek testowych": "test_samples", "Losowość": "seed",
         "Liczba epok": "epochs", "Współczynnik szumu": "train_noise",
         "Współczynnik uczenia": "learning_rate", "Cechy": "features",
         "Wartości docelowe": "targets", "Architektury modeli": "architectures"
@@ -157,22 +157,50 @@ class TrainingTab(QWidget):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
 
+            # ZAKOMENTOWANY STARY BLOK:
+            # required_fields = [
+            #     "instrument_name", "timeframe_name", "data_source",
+            #     "samples_limit", "train_ratio", "seed", "epochs",
+            #     "train_noise", "learning_rate", "features", "targets", "architectures"
+            # ]
+            
+            # NOWY BLOK KODU:
             required_fields = [
                 "instrument_name", "timeframe_name", "data_source",
-                "samples_limit", "train_ratio", "seed", "epochs",
+                "samples_limit", "test_samples", "seed", "epochs",
                 "train_noise", "learning_rate", "features", "targets", "architectures"
             ]
+
             for field in required_fields:
                 if not field_values.get(field):
                     raise ValueError(f"Pole '{field}' nie może być puste")
 
+            # ZAKOMENTOWANY STARY BLOK:
+            # config = {
+            #     "instrument": {"name": field_values["instrument_name"]},
+            #     "timeframe": {"name": field_values["timeframe_name"]},
+            #     "data_source": field_values["data_source"],
+            #     "parameter_set": {
+            #         "samples_limit": int(field_values["samples_limit"]),
+            #         "train_ratio": float(field_values["train_ratio"]),
+            #         "seed": int(field_values["seed"]),
+            #         "epochs": int(field_values["epochs"]),
+            #         "train_noise": float(field_values["train_noise"]),
+            #         "learning_rate": float(field_values["learning_rate"]),
+            #     },
+            #     "features": [],
+            #     "targets": [],
+            #     "architectures": []
+            # }
+
+            # NOWY BLOK KODU:
             config = {
                 "instrument": {"name": field_values["instrument_name"]},
                 "timeframe": {"name": field_values["timeframe_name"]},
                 "data_source": field_values["data_source"],
                 "parameter_set": {
                     "samples_limit": int(field_values["samples_limit"]),
-                    "train_ratio": float(field_values["train_ratio"]),
+                    "test_samples": int(field_values["test_samples"]),
                     "seed": int(field_values["seed"]),
                     "epochs": int(field_values["epochs"]),
                     "train_noise": float(field_values["train_noise"]),
@@ -233,8 +261,15 @@ class TrainingTab(QWidget):
             self.param_fields["data_source"].setText(config["data_source"])
 
             ps = config["parameter_set"]
+            
+            # ZAKOMENTOWANY STARY BLOK:
+            # self.param_fields["samples_limit"].setText(str(ps["samples_limit"]))
+            # self.param_fields["train_ratio"].setText(str(ps["train_ratio"]))
+            
+            # NOWY BLOK KODU:
             self.param_fields["samples_limit"].setText(str(ps["samples_limit"]))
-            self.param_fields["train_ratio"].setText(str(ps["train_ratio"]))
+            self.param_fields["test_samples"].setText(str(ps["test_samples"]))
+            
             self.param_fields["seed"].setText(str(ps["seed"]))
             self.param_fields["epochs"].setText(str(ps["epochs"]))
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
@@ -269,13 +304,32 @@ class TrainingTab(QWidget):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
 
+            # ZAKOMENTOWANY STARY BLOK:
+            # config = {
+            #     "instrument": {"name": field_values["instrument_name"]},
+            #     "timeframe": {"name": field_values["timeframe_name"]},
+            #     "data_source": field_values["data_source"],
+            #     "parameter_set": {
+            #         "samples_limit": int(field_values["samples_limit"]),
+            #         "train_ratio": float(field_values["train_ratio"]),
+            #         "seed": int(field_values["seed"]),
+            #         "epochs": int(field_values["epochs"]),
+            #         "train_noise": float(field_values["train_noise"]),
+            #         "learning_rate": float(field_values["learning_rate"]),
+            #     },
+            #     "features": [],
+            #     "targets": [],
+            #     "architectures": []
+            # }
+
+            # NOWY BLOK KODU:
             config = {
                 "instrument": {"name": field_values["instrument_name"]},
                 "timeframe": {"name": field_values["timeframe_name"]},
                 "data_source": field_values["data_source"],
                 "parameter_set": {
                     "samples_limit": int(field_values["samples_limit"]),
-                    "train_ratio": float(field_values["train_ratio"]),
+                    "test_samples": int(field_values["test_samples"]),
                     "seed": int(field_values["seed"]),
                     "epochs": int(field_values["epochs"]),
                     "train_noise": float(field_values["train_noise"]),

@@ -49,7 +49,7 @@ CREATE TABLE training_job (
 CREATE TABLE parameter_set (
     training_job_uuid UUID PRIMARY KEY REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     samples_limit INTEGER NOT NULL CHECK (samples_limit > 0),
-    train_ratio REAL NOT NULL CHECK (train_ratio > 0 AND train_ratio <= 1),
+    test_samples INTEGER NOT NULL CHECK (test_samples >= 0 AND test_samples < samples_limit),
     seed INTEGER NOT NULL CHECK (seed > 0),
     epochs INTEGER NOT NULL CHECK (epochs > 0),
     train_noise REAL NOT NULL CHECK (train_noise >= 0 AND train_noise < 1),
