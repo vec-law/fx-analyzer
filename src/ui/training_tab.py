@@ -35,14 +35,13 @@ class TrainingTab(QWidget):
         self.add_task_btn = QPushButton("Dodaj zadanie")
         self.remove_task_btn = QPushButton("Usuń zadanie")
         self.load_params_btn = QPushButton("Wczytaj parametry")
-        self.update_params_btn = QPushButton("Zmień parametry")
         self.clear_console_btn = QPushButton("Wyczyść konsolę")
         self.run_task_btn = QPushButton("Uruchom zadanie")
         self.stop_task_btn = QPushButton("Zatrzymaj zadanie")
 
         self.buttons = [
             self.load_tasks_btn, self.add_task_btn, self.remove_task_btn,
-            self.load_params_btn, self.update_params_btn, self.clear_console_btn,
+            self.load_params_btn, self.clear_console_btn,
             self.run_task_btn, self.stop_task_btn
         ]
         for btn in self.buttons: left_layout.addWidget(btn)
@@ -80,7 +79,6 @@ class TrainingTab(QWidget):
         self.load_tasks_btn.clicked.connect(lambda: self.on_load_tasks(show_log=True))
         self.remove_task_btn.clicked.connect(self.on_remove_task)
         self.load_params_btn.clicked.connect(self.on_load_params)
-        self.update_params_btn.clicked.connect(self.on_update_params)
         self.clear_console_btn.clicked.connect(self.on_clear_console)
         self.add_task_btn.clicked.connect(self.on_add_task)
         self.run_task_btn.clicked.connect(self.on_run_task)
@@ -150,7 +148,7 @@ class TrainingTab(QWidget):
 
     def set_running_ui(self, running: bool):
         for btn in [self.load_tasks_btn, self.add_task_btn, self.remove_task_btn, 
-                    self.load_params_btn, self.update_params_btn, self.run_task_btn]:
+                    self.load_params_btn, self.run_task_btn]:
             btn.setEnabled(not running)
 
     def on_add_task(self):
@@ -274,79 +272,6 @@ class TrainingTab(QWidget):
             self.log_to_console(f"Wczytano parametry zadania: {self.last_clicked_uuid}")
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania parametrów: {e}")
-
-    def on_update_params(self):
-        if not self.last_clicked_uuid:
-            self.log_to_console("Nie wybrano zadania do modyfikacji")
-            return
-        try:
-            field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
-
-            config = {
-                "instrument": {"name": field_values["instrument_name"]},
-                "timeframe": {"name": field_values["timeframe_name"]},
-                "data_source": field_values["data_source"],
-                "parameter_set": {
-                    "samples_limit": int(field_values["samples_limit"]),
-                    "test_samples": int(field_values["test_samples"]),
-                    "seed": int(field_values["seed"]),
-                    "epochs": int(field_values["epochs"]),
-                    "train_noise": float(field_values["train_noise"]),
-                    "learning_rate": float(field_values["learning_rate"]),
-                },
-                "features": [],
-                "targets": [],
-                "architectures": []
-            }
-
-            if field_values["features"]:
-                for feature in field_values["features"].split(","):
-                    f_str = feature.strip()
-                    if not f_str: continue
-                    
-                    parts = f_str.split(":")
-                    if len(parts) != 3:
-                        raise ValueError(f"Niepoprawny format feature: {f_str} (oczekiwano formatu typ:parametry:shift)")
-                    
-                    periods = [int(p.strip()) for p in parts[1].split("-") if p.strip()]
-                    
-                    config["features"].append({
-                        "feature_type": parts[0].strip(),
-                        "feature_periods": periods,
-                        "shift": int(parts[2].strip())
-                    })
-
-            if field_values["targets"]:
-                for target in field_values["targets"].split(","):
-                    target_parts = target.strip().split(":")
-                    if len(target_parts) != 2:
-                        raise ValueError(f"Niepoprawny format target: {target}")
-                    config["targets"].append({
-                        "base_column": target_parts[0].strip(),
-                        "shift": int(target_parts[1].strip())
-                    })
-
-            if field_values["architectures"]:
-                config["architectures"] = [
-                    a.strip() for a in field_values["architectures"].split(",") if a.strip()
-                ]
-
-            self.db_manager.update_training_config(self.last_clicked_uuid, config)
-            self.log_to_console(f"Zaktualizowano parametry: {self.last_clicked_uuid}")
-            
-            current_uuid = self.last_clicked_uuid
-            self.on_load_tasks(show_log=False)
-            
-            for row in range(self.table.rowCount()):
-                item = self.table.item(row, 0)
-                if item and item.text() == current_uuid:
-                    self.table.selectRow(row)
-                    break
-
-        except ValueError as e:
-            self.log_to_console(f"Błąd walidacji: {e}")
-        except Exception as e:
-            self.log_to_console(f"{e}")
 
     def on_remove_task(self):
         if not self.last_clicked_uuid:
