@@ -110,6 +110,18 @@ class TrainingTab(QWidget):
         if self.thread and self.thread.isRunning():
             self.log_to_console("Zadanie już działa")
             return
+        
+        try:
+            current_status = self.db_manager.get_training_status(self.last_clicked_uuid)
+            if current_status == 'completed':
+                self.log_to_console(f"Zadanie {self.last_clicked_uuid} jest już ukończone. Nie można go uruchomić ponownie.")
+                return
+            if current_status == 'running':
+                self.log_to_console(f"Zadanie {self.last_clicked_uuid} jest już w trakcie wykonywania.")
+                return
+        except Exception as e:
+            self.log_to_console(f"Błąd sprawdzania statusu: {e}")
+            return
 
         self.thread = QThread()
 

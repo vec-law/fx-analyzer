@@ -46,6 +46,17 @@ CREATE TABLE training_job (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- CREATE TABLE training_simulation (
+--     id SERIAL PRIMARY KEY,
+--     job_uuid UUID NOT NULL,
+--     simulation_data JSONB,
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+--     CONSTRAINT fk_training_job 
+--         FOREIGN KEY (job_uuid) 
+--         REFERENCES training_job(job_uuid) 
+--         ON DELETE CASCADE
+-- );
+
 CREATE TABLE parameter_set (
     training_job_uuid UUID PRIMARY KEY REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     samples_limit INTEGER NOT NULL CHECK (samples_limit > 0),

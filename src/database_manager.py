@@ -206,6 +206,21 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
         
+    def get_training_status(self, job_uuid):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT s.name 
+                        FROM training_job tj
+                        JOIN status s ON tj.status_id = s.id
+                        WHERE tj.job_uuid = %s
+                    """, (job_uuid,))
+                    result = cur.fetchone()
+                    return result[0] if result else None
+        except Exception as e:
+            raise Exception(f"Błąd pobierania statusu: {str(e)}")
+        
     def update_training_status(self, job_uuid, status_name):
         try:
             if not job_uuid or not status_name:
