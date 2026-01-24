@@ -263,19 +263,8 @@ class TrainingTab(QWidget):
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
             self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
 
-            feature_strings = []
-            for f in config["features"]:
-                periods_str = "-".join(map(str, f["feature_periods"]))
-                feature_strings.append(f"{f['feature_type']}:{periods_str}:{f['shift']}")
-            
-            self.param_fields["features"].setText(", ".join(feature_strings))
-
-            self.param_fields["targets"].setText(
-                ", ".join(
-                    f"{t['base_column']}:{t['shift']}"
-                    for t in config["targets"]
-                )
-            )
+            self.param_fields["features"].setText(", ".join(config["feature_names"]))
+            self.param_fields["targets"].setText(", ".join(config["target_names"]))
 
             self.param_fields["architectures"].setText(
                 ", ".join(config["architectures"])

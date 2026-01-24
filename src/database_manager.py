@@ -85,7 +85,9 @@ class DatabaseManager:
                         'features': [],
                         'targets': [],
                         'architectures': [],
-                        'data_source': None
+                        'data_source': None,
+                        'feature_names': [],
+                        'target_names': []
                     }
                     
                     cur.execute("""
@@ -159,13 +161,15 @@ class DatabaseManager:
                         ORDER BY feature_def.id
                     """, (job_uuid,))
                     features = cur.fetchall()
-                    config['features'] = [
-                        {
-                            'feature_type': feature[0], 
-                            'feature_periods': feature[1],
-                            'shift': feature[2]
-                        } for feature in features
-                    ]
+                    for f_type, f_periods, f_shift in features:
+                        config['features'].append({
+                            'feature_type': f_type, 
+                            'feature_periods': f_periods,
+                            'shift': f_shift
+                        })
+                        # NOWY BLOK: Odtwarzanie oryginalnego formatu typ:p1-p2:shift
+                        periods_str = "-".join(map(str, f_periods))
+                        config['feature_names'].append(f"{f_type}:{periods_str}:{f_shift}")
 
                     cur.execute("""
                         SELECT base_column.name, target_def.shift 
@@ -175,12 +179,13 @@ class DatabaseManager:
                         ORDER BY target_def.id
                     """, (job_uuid,))
                     targets = cur.fetchall()
-                    config['targets'] = [
-                        {
-                            'base_column': target[0], 
-                            'shift': target[1]
-                        } for target in targets
-                    ]
+                    for t_name, t_shift in targets:
+                        config['targets'].append({
+                            'base_column': t_name, 
+                            'shift': t_shift
+                        })
+                        # NOWY BLOK: Odtwarzanie oryginalnego formatu kolumna:shift
+                        config['target_names'].append(f"{t_name}:{t_shift}")
 
                     cur.execute("""
                         SELECT architecture.name
