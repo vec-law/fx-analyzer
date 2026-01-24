@@ -16,26 +16,27 @@ class DataExtractor:
             
             f_cols = []
             
-            for f in self.config["features"]:
-                periods_str = "-".join(map(str, f["feature_periods"]))
-                col_name = f"{f['feature_type']}:{periods_str}:{f['shift']}"
+            for f, col_name in zip(self.config["features"], self.config["feature_names"]):
+                f_type = f["feature_type"]
+                periods = f["feature_periods"]
+                shift = f["shift"]
 
-                if f["feature_type"] == 'sma':
-                    series = df['close'].rolling(window=f["feature_periods"][0]).mean().shift(f["shift"])
+                if f_type == 'sma':
+                    series = df['close'].rolling(window=periods[0]).mean().shift(shift)
                     series.name = col_name
                     f_cols.append(series)
 
-                elif f["feature_type"] == 'ema':
-                    series = df['close'].ewm(span=f["feature_periods"][0], adjust=False).mean().shift(f["shift"])
+                elif f_type == 'ema':
+                    series = df['close'].ewm(span=periods[0], adjust=False).mean().shift(shift)
                     series.name = col_name
                     f_cols.append(series)
 
-                elif f["feature_type"] == 'rsi':
+                elif f_type == 'rsi':
                     delta = df['close'].diff()
-                    gain = (delta.where(delta > 0, 0)).rolling(window=f["feature_periods"][0]).mean()
-                    loss = (-delta.where(delta < 0, 0)).rolling(window=f["feature_periods"][0]).mean()
+                    gain = (delta.where(delta > 0, 0)).rolling(window=periods[0]).mean()
+                    loss = (-delta.where(delta < 0, 0)).rolling(window=periods[0]).mean()
                     rs = gain / loss
-                    series = (100 - (100 / (1 + rs))).shift(f["shift"])
+                    series = (100 - (100 / (1 + rs))).shift(shift)
                     series.name = col_name
                     f_cols.append(series)
 
@@ -60,9 +61,8 @@ class DataExtractor:
                 return None
             
             t_cols = []
-            
-            for t in self.config["targets"]:
-                col_name = f"{t['base_column']}:{t['shift']}"
+
+            for t, col_name in zip(self.config["targets"], self.config["target_names"]):
                 series = df[t['base_column']].shift(t['shift'])
                 series.name = col_name
                 t_cols.append(series)
