@@ -157,14 +157,6 @@ class TrainingTab(QWidget):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
 
-            # ZAKOMENTOWANY STARY BLOK:
-            # required_fields = [
-            #     "instrument_name", "timeframe_name", "data_source",
-            #     "samples_limit", "train_ratio", "seed", "epochs",
-            #     "train_noise", "learning_rate", "features", "targets", "architectures"
-            # ]
-            
-            # NOWY BLOK KODU:
             required_fields = [
                 "instrument_name", "timeframe_name", "data_source",
                 "samples_limit", "test_samples", "seed", "epochs",
@@ -174,26 +166,7 @@ class TrainingTab(QWidget):
             for field in required_fields:
                 if not field_values.get(field):
                     raise ValueError(f"Pole '{field}' nie może być puste")
-
-            # ZAKOMENTOWANY STARY BLOK:
-            # config = {
-            #     "instrument": {"name": field_values["instrument_name"]},
-            #     "timeframe": {"name": field_values["timeframe_name"]},
-            #     "data_source": field_values["data_source"],
-            #     "parameter_set": {
-            #         "samples_limit": int(field_values["samples_limit"]),
-            #         "train_ratio": float(field_values["train_ratio"]),
-            #         "seed": int(field_values["seed"]),
-            #         "epochs": int(field_values["epochs"]),
-            #         "train_noise": float(field_values["train_noise"]),
-            #         "learning_rate": float(field_values["learning_rate"]),
-            #     },
-            #     "features": [],
-            #     "targets": [],
-            #     "architectures": []
-            # }
-
-            # NOWY BLOK KODU:
+                
             config = {
                 "instrument": {"name": field_values["instrument_name"]},
                 "timeframe": {"name": field_values["timeframe_name"]},
@@ -240,8 +213,18 @@ class TrainingTab(QWidget):
                 config["architectures"].append(architecture.strip())
 
             new_uuid = self.db_manager.add_training_job(config)
-            self.log_to_console(f"Dodano zadanie: {new_uuid}")
+            self.table.clearSelection()
+            self.last_clicked_uuid = new_uuid
             self.on_load_tasks(show_log=False)
+            
+            for row in range(self.table.rowCount()):
+                item = self.table.item(row, 0)
+                if item and item.text() == new_uuid:
+                    self.table.selectRow(row)
+                    self.table.setCurrentItem(item)
+                    break
+
+            self.log_to_console(f"Dodano i zaznaczono zadanie: {new_uuid}")
 
         except (ValueError, IndexError, KeyError) as e:
             self.log_to_console(f"Błąd danych: {e}")
@@ -261,12 +244,7 @@ class TrainingTab(QWidget):
             self.param_fields["data_source"].setText(config["data_source"])
 
             ps = config["parameter_set"]
-            
-            # ZAKOMENTOWANY STARY BLOK:
-            # self.param_fields["samples_limit"].setText(str(ps["samples_limit"]))
-            # self.param_fields["train_ratio"].setText(str(ps["train_ratio"]))
-            
-            # NOWY BLOK KODU:
+
             self.param_fields["samples_limit"].setText(str(ps["samples_limit"]))
             self.param_fields["test_samples"].setText(str(ps["test_samples"]))
             
@@ -304,25 +282,6 @@ class TrainingTab(QWidget):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
 
-            # ZAKOMENTOWANY STARY BLOK:
-            # config = {
-            #     "instrument": {"name": field_values["instrument_name"]},
-            #     "timeframe": {"name": field_values["timeframe_name"]},
-            #     "data_source": field_values["data_source"],
-            #     "parameter_set": {
-            #         "samples_limit": int(field_values["samples_limit"]),
-            #         "train_ratio": float(field_values["train_ratio"]),
-            #         "seed": int(field_values["seed"]),
-            #         "epochs": int(field_values["epochs"]),
-            #         "train_noise": float(field_values["train_noise"]),
-            #         "learning_rate": float(field_values["learning_rate"]),
-            #     },
-            #     "features": [],
-            #     "targets": [],
-            #     "architectures": []
-            # }
-
-            # NOWY BLOK KODU:
             config = {
                 "instrument": {"name": field_values["instrument_name"]},
                 "timeframe": {"name": field_values["timeframe_name"]},
