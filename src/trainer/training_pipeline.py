@@ -54,6 +54,11 @@ class TrainingPipeline:
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano wartości docelowych")
             
+            self.df = data_extractor.dropna_and_cut(self.df, self.config['parameter_set']['samples_limit'])
+
+            if self.df is None or self.df.empty:
+                raise ValueError("Nie ucięto df")
+            
             print(self.df)
 
             self.db_manager.update_training_status(self.job_uuid, "completed")

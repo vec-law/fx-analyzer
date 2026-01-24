@@ -9,7 +9,6 @@ class DataExtractor:
     def add_features(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            self.log_signal.emit(f"[{f_name}] Rozpoczynanie dodawania cech")
             if df is None or df.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
@@ -55,7 +54,6 @@ class DataExtractor:
     def add_targets(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            self.log_signal.emit(f"[{f_name}] Rozpoczynanie dodawania wartości docelowych")
             if df is None or df.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
@@ -74,6 +72,29 @@ class DataExtractor:
             df = pd.concat([df] + t_cols, axis=1).copy()
             self.log_signal.emit(f"[{f_name}] Dodano wartości docelowe")
             return df
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            return None
+
+    def dropna_and_cut(self, df, limit):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych w df")
+                return None
+            
+            res_df = df.dropna()
+
+            if res_df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych w df po dropna")
+                return None
+            
+            if limit:
+                res_df = res_df.tail(limit)
+
+            self.log_signal.emit(f"[{f_name}] Usunięto NaN i ucięto df, len(df) = {len(res_df)}")
+            return res_df
 
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
