@@ -72,7 +72,7 @@ CREATE TABLE feature_def (
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     feature_type_id INTEGER REFERENCES feature_type(id) NOT NULL,
     feature_periods INTEGER[] NOT NULL,
-    shift INTEGER NOT NULL,
+    shift INTEGER NOT NULL CHECK (shift > 0),
     CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, feature_periods, shift),
     CONSTRAINT feature_periods_not_empty CHECK (array_length(feature_periods, 1) > 0),
     CONSTRAINT feature_periods_positive CHECK (0 < ALL(feature_periods))
@@ -82,7 +82,7 @@ CREATE TABLE target_def (
     id SERIAL PRIMARY KEY,
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
     base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
-    shift INTEGER NOT NULL,
+    shift INTEGER NOT NULL CHECK (shift < 0),
     CONSTRAINT uq_target_def UNIQUE (training_job_uuid, base_column_id, shift)
     
 );
