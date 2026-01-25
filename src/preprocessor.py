@@ -63,47 +63,46 @@ class Preprocessor:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None, None
-
-
-#     @staticmethod
-#     def scale_data(container: Container):
-#         try:
-#             if not Preprocessor.create_stats(container.df_dict):
-#                 return False
-#             if not Preprocessor.scale_with_stats(container):
-#                 return False
-
-#             print("  [scale_data] Utworzono zbiory znormalizowane (_norm)")
-#             return True
-
-#         except Exception as e:
-#             print(f"  [scale_data] Błąd skalowania: {e}")
-#             return False
         
-#     @staticmethod
-#     def create_stats(df_dict):
-#         try:
-#             if 'train' not in df_dict:
-#                 print(f"  [create_stats] Błąd: Brak klucza 'train' w df_dict")
-#                 return False
+    def scale_data(self, df, df_mean, df_std, selected_cols):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych df")  
+                return None
+            if df_mean is None or df_mean.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych df_mean")  
+                return None
+            if df_std is None or df_std.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych df_std")  
+                return None
+            
+            if selected_cols:
+                if not all(col in df.columns for col in selected_cols):
+                    self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df")  
+                    return None
+                if not all(col in df_mean.index for col in selected_cols):
+                    self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df_mean")  
+                    return None
+                if not all(col in df_std.index for col in selected_cols):
+                    self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df_std")  
+                    return None
 
-#             cols_to_norm = [
-#                 col for col in df_dict['train'].columns
-#                 if col.startswith(('feature_', 'target_'))
-#             ]
+                df_selected = df[selected_cols].copy()
+                df_norm = (df_selected - df_mean) / df_std
+                df_norm = df_norm.fillna(0.0)
 
-#             train_df = df_dict['train']
-#             train_mean = train_df[cols_to_norm].mean()
-#             train_std = train_df[cols_to_norm].std().replace(0, 1e-9)
+                self.log_signal.emit(f"[{f_name}] Obliczono wartości znormalizowane")            
+                return df_norm
+            else:
+                self.log_signal.emit(f"[{f_name}] Nie określono kolumn")  
+                return None
 
-#             df_dict['stats'] = {'mean': train_mean, 'std': train_std}
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Error: {e}")
+            return None
 
-#             print("  [create_stats] Utworzono statystyki")
-#             return True
 
-#         except Exception as e:
-#             print(f"  [create_stats] Błąd: {e}")
-#             return False
 
 #     @staticmethod
 #     def scale_with_stats(container: Container, col_names=('feature_', 'target_')):

@@ -13,7 +13,9 @@ class TrainingPipeline:
         self._is_stopped = False
         self.df = None
         self.df_train = None
+        self.df_train_norm = None
         self.df_test = None
+        self.df_test_norm = None
         self.df_mean = None
         self.df_std = None
 
@@ -85,16 +87,36 @@ class TrainingPipeline:
             
             self.db_manager.save_training_stats(self.job_uuid, self.df_mean, self.df_std)
 
+            self.df_train_norm = preprocessor.scale_data(
+                self.df_train,
+                self.df_mean,
+                self.df_std,
+                self.config['feature_names'] + self.config['target_names']
+            )
+
+            if self.df_train_norm is None or self.df_train_norm.empty:
+                raise ValueError("Nie znormalizowano df_train")
+            
+            if self.df_test is not None and not self.df_test.empty:
+                self.df_test_norm = preprocessor.scale_data(
+                    self.df_test,
+                    self.df_mean,
+                    self.df_std,
+                    self.config['feature_names'] + self.config['target_names']
+                )
+
+                if self.df_test_norm is None or self.df_test_norm.empty:
+                    raise ValueError("Nie znormalizowano df_test")
+
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")
 
         except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Przerwano z powodu błędu: {e}")
             try:
                 self.db_manager.update_training_status(self.job_uuid, 'failed')
-            except:
-                pass
-            
-            self.log_signal.emit(f"[{f_name}] Przerwano z powodu błędu: {e}")
+            except Exception as db_err:
+                self.log_signal.emit(f"[{f_name}] Błąd bazy danych: {db_err}")
 
     def stop(self):
         f_name = inspect.currentframe().f_code.co_name

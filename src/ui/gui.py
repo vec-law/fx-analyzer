@@ -12,7 +12,6 @@ class GUI(QWidget):
     def init_ui(self):
         tabs = QTabWidget()
 
-        # przekazujemy db_manager dalej, GUI nic z nim nie robi
         tabs.addTab(TrainingTab(self.db_manager), "Trening")
         tabs.addTab(SimulationTab(self.db_manager), "Symulacja")
 
