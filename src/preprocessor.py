@@ -1,4 +1,5 @@
 import inspect
+import torch
 
 class Preprocessor:
     def __init__(self, config: dict, log_signal):
@@ -101,52 +102,40 @@ class Preprocessor:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None
-
-
-#     @staticmethod
-#     def create_tensors(container, col_names=('feature_', 'target_')):
-#         try:
-#             df_norm = container.df_dict.get('norm', {})
-#             subsets = ['train', 'test']
+        
+    def create_tensors(self, df, selected_cols):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych df")  
+                return None
             
-#             if not all(s in df_norm for s in subsets):
-#                 print("  [create_tensors] Błąd: Brak danych w norm")
-#                 return False
+            if selected_cols:
+                if not all(col in df.columns for col in selected_cols):
+                    self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df")  
+                    return None
+                
+                df_selected = df[selected_cols].copy()
 
-#             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#             container.ten_dict['device'] = device
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-#             all_cols = df_norm['train'].columns
-#             selected_cols = [c for c in all_cols if c.startswith(col_names)]
-            
-#             x_cols = sorted([c for c in selected_cols if c.startswith('feature_')])
-#             y_cols = sorted([c for c in selected_cols if c.startswith('target_')])
+                ten_dict = {}
+                
+                for col in selected_cols:
+                    ten_dict[col] = torch.as_tensor(df_selected[col].to_numpy(), dtype=torch.float32).to(device)
+                
+                ten_dict['device'] = device
 
-#             cols_map = {}
-#             if x_cols:
-#                 cols_map['x'] = x_cols
-#             if y_cols:
-#                 cols_map['y'] = y_cols
-            
-#             if not any(cols_map.values()):
-#                 print(f"  [create_tensors] Błąd: Nie znaleziono kolumn dla: {col_names}")
-#                 return False
-            
-#             container.ten_dict['norm'] = {subset: {} for subset in subsets}
-#             ten_norm = container.ten_dict['norm']
+                self.log_signal.emit(f"[{f_name}] Utworzono tensory")
+                return ten_dict
+            else:
+                self.log_signal.emit(f"[{f_name}] Nie określono kolumn")  
+                return None
 
-#             for subset in subsets:
-#                 for key, columns in cols_map.items():
-#                     if columns:
-#                         ten_norm_np = df_norm[subset][columns].to_numpy()
-#                         ten_norm[subset][key] = torch.as_tensor(ten_norm_np, dtype=torch.float32).to(device)
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Error: {e}")
+            return None
 
-#             print(f"  [create_tensors] Utworzono tensory na {device}")
-#             return True
-
-#         except Exception as e:
-#             print(f"   [create_tensors] Błąd: {e}")
-#             return False
         
 #     @staticmethod
 #     def descale_preds(container: 'Container'):
