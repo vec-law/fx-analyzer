@@ -82,6 +82,8 @@ class TrainingPipeline:
 
             if self.df_mean is None or self.df_std is None:
                 raise ValueError("Nie obliczono statystyk")
+            
+            self.db_manager.save_training_stats(self.job_uuid, self.df_mean, self.df_std)
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")

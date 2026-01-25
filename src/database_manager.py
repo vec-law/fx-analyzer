@@ -1,5 +1,6 @@
 import psycopg2
 import uuid
+import pandas as pd
 
 class DatabaseManager:
     def __init__(self, db_config):
@@ -301,3 +302,54 @@ class DatabaseManager:
                     ]
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania listy zadań: {str(e)}")
+        
+    def save_training_stats(self, job_uuid, df_mean, df_std):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    data = []
+                    for col in df_mean.index:
+                        data.append((job_uuid, col, 'mean', float(df_mean[col])))
+                        data.append((job_uuid, col, 'std', float(df_std[col])))
+
+                    if data:
+                        cur.executemany("""
+                            INSERT INTO statistic (training_job_uuid, column_name, stat_name, stat_value)
+                            VALUES (%s, %s, %s, %s)
+                        """, data)
+                    
+                    conn.commit()
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych przy zapisywaniu statystyk: {str(e)}")
+
+    def load_training_stats(self, job_uuid):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT column_name, stat_name, stat_value 
+                        FROM statistic 
+                        WHERE training_job_uuid = %s
+                    """, (job_uuid,))
+                    
+                    rows = cur.fetchall()
+                    
+                    if not rows:
+                        return None, None
+
+                    means = {}
+                    stds = {}
+                    
+                    for col_name, stat_name, value in rows:
+                        if stat_name == 'mean':
+                            means[col_name] = value
+                        elif stat_name == 'std':
+                            stds[col_name] = value
+
+                    df_mean = pd.Series(means)
+                    df_std = pd.Series(stds)
+
+                    return df_mean, df_std
+
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych przy odczycie statystyk: {str(e)}")

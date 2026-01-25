@@ -82,17 +82,18 @@ CREATE TABLE training_job_architecture (
     PRIMARY KEY (training_job_uuid, architecture_id)
 );
 
-CREATE TABLE experiment (
-    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
-    architecture_id INTEGER REFERENCES architecture(id),
-    file_path TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (training_job_uuid, architecture_id)
+CREATE TABLE statistic (
+    id SERIAL PRIMARY KEY,
+    training_job_uuid UUID NOT NULL REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    column_name TEXT NOT NULL,
+    stat_name TEXT NOT NULL,
+    stat_value REAL NOT NULL,
+    CONSTRAINT uq_stat_entry UNIQUE (training_job_uuid, column_name, stat_name)
 );
 
+CREATE INDEX idx_statistic_job_uuid ON statistic(training_job_uuid);
 CREATE INDEX idx_target_def_job_uuid ON target_def(training_job_uuid);
 CREATE INDEX idx_feature_def_job_uuid ON feature_def(training_job_uuid);
-CREATE INDEX idx_experiment_job_uuid ON experiment(training_job_uuid);
 CREATE INDEX idx_tj_arch_job_uuid ON training_job_architecture(training_job_uuid);
 
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
