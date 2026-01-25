@@ -5,66 +5,6 @@ class Preprocessor:
         self.config = config
         self.log_signal = log_signal
 
-    # def split_data(self, df, test_samples):
-    #     f_name = inspect.currentframe().f_code.co_name
-    #     try:
-    #         if df is None or df.empty:
-    #             return None
-            
-    #         len_df = len(df)
-    #         if test_samples >= len_df:
-    #             return None
-
-    #         split_idx = len_df - test_samples
-
-    #         df_dict = {}
-    #         df_dict['train'] = df.iloc[:split_idx].copy().reset_index(drop=True)
-            
-    #         if test_samples > 0:
-    #             df_dict['test'] = df.iloc[split_idx:].copy().reset_index(drop=True)
-    #         else:
-    #             df_dict['test'] = None
-            
-    #         self.log_signal.emit(f"[{f_name}] Wykonano split: len(train) = {len(df_dict['train'])}, len(test) = {test_samples}")            
-    #         return df_dict
-
-    #     except Exception as e:
-    #         self.log_signal.emit(f"[{f_name}] Error: {e}")
-    #         return None
-
-
-
-# STARA WERSJA (do zakomentowania):
-#     def split_data(self, df, test_samples, cols):
-#         try:
-#             if df is None or df.empty:
-#                 return None
-#
-#             # Jeśli cols są podane, sprawdzamy ich obecność. Jak brak którejkolwiek - koniec.
-#             if cols:
-#                 if not all(c in df.columns for c in cols):
-#                     return None
-#                 # Zostawiamy tylko wybrane kolumny
-#                 data = df[cols]
-#             else:
-#                 data = df
-#
-#             split_idx = len(data) - test_samples
-#             if split_idx <= 0:
-#                 return None
-#
-#             df_dict = {
-#                 'train': data.iloc[:split_idx].copy().reset_index(drop=True),
-#                 'test': data.iloc[split_idx:].copy().reset_index(drop=True) if test_samples > 0 else None
-#             }
-#             
-#             self.log_signal.emit(f"[split_data] Split: {len(df_dict['train'])} / {test_samples}")            
-#             return df_dict
-#
-#         except:
-#             return None
-
-# NOWA PROPOZYCJA:
     def split_data(self, df, test_samples, cols):
         f_name = inspect.currentframe().f_code.co_name
         try:
@@ -98,7 +38,6 @@ class Preprocessor:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None
-
 
 # import pandas as pd
 # import torch
