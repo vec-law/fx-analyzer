@@ -316,6 +316,8 @@ class DatabaseManager:
                         cur.executemany("""
                             INSERT INTO statistic (training_job_uuid, column_name, stat_name, stat_value)
                             VALUES (%s, %s, %s, %s)
+                            ON CONFLICT (training_job_uuid, column_name, stat_name) 
+                            DO UPDATE SET stat_value = EXCLUDED.stat_value
                         """, data)
                     
                     conn.commit()
