@@ -303,14 +303,14 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania listy zadań: {str(e)}")
         
-    def save_training_stats(self, job_uuid, df_mean, df_std):
+    def save_training_stats(self, job_uuid, ser_mean, ser_std):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     data = []
-                    for col in df_mean.index:
-                        data.append((job_uuid, col, 'mean', float(df_mean[col])))
-                        data.append((job_uuid, col, 'std', float(df_std[col])))
+                    for col in ser_mean.index:
+                        data.append((job_uuid, col, 'mean', float(ser_mean[col])))
+                        data.append((job_uuid, col, 'std', float(ser_std[col])))
 
                     if data:
                         cur.executemany("""
@@ -348,10 +348,10 @@ class DatabaseManager:
                         elif stat_name == 'std':
                             stds[col_name] = value
 
-                    df_mean = pd.Series(means)
-                    df_std = pd.Series(stds)
+                    ser_mean = pd.Series(means)
+                    ser_std = pd.Series(stds)
 
-                    return df_mean, df_std
+                    return ser_mean, ser_std
 
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie statystyk: {str(e)}")

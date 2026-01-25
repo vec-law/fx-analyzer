@@ -16,8 +16,8 @@ class TrainingPipeline:
         self.df_train_norm = None
         self.df_test = None
         self.df_test_norm = None
-        self.df_mean = None
-        self.df_std = None
+        self.ser_mean = None
+        self.ser_std = None
 
     def run(self):
         f_name = inspect.currentframe().f_code.co_name
@@ -29,26 +29,26 @@ class TrainingPipeline:
 
             self.df = loader.load_data()
 
+            if self.df is None or self.df.empty:
+                raise ValueError("Loader nie zwrócił danych")
+
             if self._is_stopped:
                 self.db_manager.update_training_status(self.job_uuid, 'failed')
                 self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
                 return
-
-            if self.df is None or self.df.empty:
-                raise ValueError("Loader nie zwrócił danych")
             
             cleaner = Cleaner(self.config, log_signal=self.log_signal)
 
             self.df = cleaner.clean_data(self.df)
 
+            if self.df is None or self.df.empty:
+                raise ValueError("Cleaner usunął wszystkie dane")
+
             if self._is_stopped:
                 self.db_manager.update_training_status(self.job_uuid, 'failed')
                 self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
                 return
 
-            if self.df is None or self.df.empty:
-                raise ValueError("Cleaner usunął wszystkie dane")
-            
             data_extractor = DataExtractor(self.config, log_signal=self.log_signal)
 
             self.df = data_extractor.add_features(self.df)
@@ -56,15 +56,30 @@ class TrainingPipeline:
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano cech")
             
+            if self._is_stopped:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                return
+            
             self.df = data_extractor.add_targets(self.df)
 
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano wartości docelowych")
             
+            if self._is_stopped:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                return
+            
             self.df = data_extractor.dropna_and_cut(self.df, self.config['parameter_set']['samples_limit'])
 
             if self.df is None or self.df.empty:
                 raise ValueError("Nie ucięto df")
+            
+            if self._is_stopped:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                return
             
             preprocessor = Preprocessor(self.config, self.log_signal)
 
@@ -77,36 +92,61 @@ class TrainingPipeline:
             if self.df_train is None:
                 raise ValueError("Nie wykonano splitu")
             
-            self.df_mean, self.df_std = preprocessor.calculate_stats(
+            if self._is_stopped:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                return
+            
+            self.ser_mean, self.ser_std = preprocessor.calculate_stats(
                 self.df_train,
                 self.config['feature_names'] + self.config['target_names']
             )
 
-            if self.df_mean is None or self.df_std is None:
+            if self.ser_mean is None or self.ser_std is None:
                 raise ValueError("Nie obliczono statystyk")
             
-            self.db_manager.save_training_stats(self.job_uuid, self.df_mean, self.df_std)
+            if self._is_stopped:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                return
+            
+            self.db_manager.save_training_stats(self.job_uuid, self.ser_mean, self.ser_std)
+
+            if self._is_stopped:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                return
 
             self.df_train_norm = preprocessor.scale_data(
                 self.df_train,
-                self.df_mean,
-                self.df_std,
+                self.ser_mean,
+                self.ser_std,
                 self.config['feature_names'] + self.config['target_names']
             )
 
             if self.df_train_norm is None or self.df_train_norm.empty:
                 raise ValueError("Nie znormalizowano df_train")
             
+            if self._is_stopped:
+                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                return
+            
             if self.df_test is not None and not self.df_test.empty:
                 self.df_test_norm = preprocessor.scale_data(
                     self.df_test,
-                    self.df_mean,
-                    self.df_std,
+                    self.ser_mean,
+                    self.ser_std,
                     self.config['feature_names'] + self.config['target_names']
                 )
 
                 if self.df_test_norm is None or self.df_test_norm.empty:
                     raise ValueError("Nie znormalizowano df_test")
+                
+                if self._is_stopped:
+                    self.db_manager.update_training_status(self.job_uuid, 'failed')
+                    self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
+                    return
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")

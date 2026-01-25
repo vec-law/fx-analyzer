@@ -54,26 +54,26 @@ class Preprocessor:
                 self.log_signal.emit(f"[{f_name}] Nie określono kolumn w df")  
                 return None, None
             
-            df_mean = df_selected.mean()
-            df_std = df_selected.std().replace(0, 1e-9)
+            ser_mean = df_selected.mean()
+            ser_std = df_selected.std().replace(0, 1e-9)
             
             self.log_signal.emit(f"[{f_name}] Obliczono statystyki")            
-            return df_mean, df_std
+            return ser_mean, ser_std
 
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None, None
         
-    def scale_data(self, df, df_mean, df_std, selected_cols):
+    def scale_data(self, df, ser_mean, ser_std, selected_cols):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych df")  
                 return None
-            if df_mean is None or df_mean.empty:
+            if ser_mean is None or ser_mean.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych df_mean")  
                 return None
-            if df_std is None or df_std.empty:
+            if ser_std is None or ser_std.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych df_std")  
                 return None
             
@@ -81,15 +81,15 @@ class Preprocessor:
                 if not all(col in df.columns for col in selected_cols):
                     self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df")  
                     return None
-                if not all(col in df_mean.index for col in selected_cols):
+                if not all(col in ser_mean.index for col in selected_cols):
                     self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df_mean")  
                     return None
-                if not all(col in df_std.index for col in selected_cols):
+                if not all(col in ser_std.index for col in selected_cols):
                     self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df_std")  
                     return None
 
                 df_selected = df[selected_cols].copy()
-                df_norm = (df_selected - df_mean) / df_std
+                df_norm = (df_selected - ser_mean) / ser_std
                 df_norm = df_norm.fillna(0.0)
 
                 self.log_signal.emit(f"[{f_name}] Obliczono wartości znormalizowane")            
@@ -102,45 +102,6 @@ class Preprocessor:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None
 
-
-
-#     @staticmethod
-#     def scale_with_stats(container: Container, col_names=('feature_', 'target_')):
-#         try:
-#             df_dict = container.df_dict
-            
-#             if 'stats' not in df_dict:
-#                 print("  [scale_with_stats] Błąd: Brak klucza 'stats'")
-#                 return False
-
-#             stats = df_dict['stats']
-            
-#             df_dict['norm'] = {}         
-#             subsets = ['train', 'test']
-
-#             for subset in subsets:
-#                 if subset not in df_dict:
-#                     continue
-#                 df_subset = df_dict[subset]
-#                 cols_to_scale = [col for col in df_subset.columns if col.startswith(col_names)]
-                
-#                 if not cols_to_scale:
-#                     continue
-                
-#                 df_norm = df_subset[cols_to_scale].copy()
-#                 current_mean = stats['mean'][cols_to_scale]
-#                 current_std = stats['std'][cols_to_scale]
-#                 df_norm = (df_norm - current_mean) / current_std
-#                 df_norm = df_norm.fillna(0.0)
-                
-#                 df_dict['norm'][subset] = df_norm
-
-#             print("  [scale_with_stats] Pomyślnie utworzono zbiory znormalizowane")
-#             return True
-
-#         except Exception as e:
-#             print(f"  [scale_with_stats] Błąd: {e}")
-#             return False
 
 #     @staticmethod
 #     def create_tensors(container, col_names=('feature_', 'target_')):
