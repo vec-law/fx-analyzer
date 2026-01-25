@@ -2,6 +2,7 @@ import inspect
 from src.loader import Loader
 from src.cleaner import Cleaner
 from src.data_extractor import DataExtractor
+from src.preprocessor import Preprocessor
 
 class TrainingPipeline:
     def __init__(self, config: dict, log_signal, db_manager, job_uuid):
@@ -11,6 +12,7 @@ class TrainingPipeline:
         self.job_uuid = job_uuid
         self.df = None
         self._is_stopped = False
+        self.df_dict = {}
 
     def run(self):
         f_name = inspect.currentframe().f_code.co_name
@@ -59,7 +61,15 @@ class TrainingPipeline:
             if self.df is None or self.df.empty:
                 raise ValueError("Nie ucięto df")
             
+            preprocessor = Preprocessor(self.config, self.log_signal)
+
+            self.df_dict = preprocessor.split_data(self.df, self.config['parameter_set']['test_samples'])
+
+            if self.df_dict is None or self.df.empty:
+                raise ValueError("Nie wykonano splitu")
+            
             print(self.df)
+            print(self.df_dict)
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")

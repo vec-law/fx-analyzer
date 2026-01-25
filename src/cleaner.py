@@ -8,7 +8,6 @@ class Cleaner:
     def clean_data(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            self.log_signal.emit(f"[{f_name}] Rozpoczynanie czyszczenia danych")
             if df is None or df.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
