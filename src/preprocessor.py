@@ -36,130 +36,34 @@ class Preprocessor:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None, None
-
-# import pandas as pd
-# import torch
-# from src.container import Container
-
-# class Preprocessor:
-
-#     @staticmethod
-#     def create_features(container):
-#         try:
-#             f_config = container.params_set['f']['features']
-#             feature_cols = []
-#             n = 0
-            
-#             for item in f_config:
-#                 if item['feature'] == 'sma':
-#                     periods = list(range(
-#                         int(item['params']['start']),
-#                         int(item['params']['stop']),
-#                         int(item['params']['step'])
-#                     ))
-#                     for period in periods:
-#                         series = container.df[item['params']['source_column']].rolling(window=period).mean().shift(1)
-#                         series.name = 'feature_' + str(n)
-#                         feature_cols.append(series)
-#                         n += 1
-            
-#             if n == 0:
-#                 print("  [create_features] Błąd: Wygenerowano 0 cech. Sprawdź konfigurację")
-#                 return False
-
-#             container.df = pd.concat([container.df] + feature_cols, axis=1).copy()
-
-#             print(f"  [create_features] Dodano {n} cech(-y)")
-#             return True
-
-#         except KeyError as e:
-#             print(f"  [create_features] Błąd: brak klucza/kolumny {e}")
-#             return False
-#         except Exception as e:
-#             print(f"  [create_features] Nieoczekiwany błąd: {e}")
-#             return False
-
-#     @staticmethod
-#     def create_targets(container):
-#         try:
-#             t_config = container.params_set['t']['targets']
-#             target_cols = []
-#             n = 0
-            
-#             for item in t_config:
-#                 series = container.df[str(item['params']['price'])].shift(int(item['params']['day'])) 
-#                 series.name = 'target_' + str(n)
-#                 target_cols.append(series)
-#                 n += 1
-
-#             if n == 0:
-#                 print("  [create_targets] Błąd: Nie zdefiniowano żadnych wartości docelowych")
-#                 return False
-                    
-#             container.df = pd.concat([container.df] + target_cols, axis=1).copy()
-
-#             print(f"  [create_targets] Dodano {n} wartość(-i) docelową(-e)")
-#             return True
-
-#         except Exception as e:
-#             print(f"  [create_targets] Nieoczekiwany błąd: {e}")
-#             return False
-
-#     @staticmethod
-#     def cut_and_split_data(container):
-#         try:
-#             if not container.df.empty:
-#                 if not container.save_df_to_parquet():
-#                     return False
-#             else:
-#                 print("  [cut_and_split_data] Błąd: Brak danych w df")
-#                 return False
-                
-#             cols_to_keep = [col for col in container.df.columns 
-#                             if col == 'datetime' 
-#                             or col.startswith('feature_') 
-#                             or col.startswith('target_')]
-            
-#             container.df = container.df[cols_to_keep]
-
-#             container.df.dropna(inplace=True)
-#             if container.df.empty:
-#                 print("  [split_data] Błąd: Brak danych po usunięciu wartości NaN")
-#                 return False
-
-#             if not Preprocessor.split_data(container):
-#                 return False
-            
-#             container.df = None
-
-#             return True
-
-#         except Exception as e:
-#             print(f"  [cut_and_split_data] Nieoczekiwany błąd: {e}")
-#             return False
         
-#     @staticmethod
-#     def split_data(container):
-#         try:
-#             params = container.params_set['p']['params']
-#             samples_limit = params.get('samples_limit', 0)
-#             train_ratio = params.get('train_ratio', 0.875)
-            
-#             limit = int(samples_limit)
-#             if limit > 0 and len(container.df) > limit:
-#                 container.df = container.df.tail(limit)
+    def calculate_stats(self, df, selected_cols):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych df")  
+                return None, None
 
-#             split_idx = int(len(container.df) * float(train_ratio))
+            if selected_cols:
+                if not all(col in df.columns for col in selected_cols):
+                    self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df")  
+                    return None, None
+                
+                df_selected = df[selected_cols]
+            else:
+                self.log_signal.emit(f"[{f_name}] Nie określono kolumn w df")  
+                return None, None
             
-#             container.df_dict['train'] = container.df.iloc[:split_idx].copy().reset_index(drop=True)
-#             container.df_dict['test'] = container.df.iloc[split_idx:].copy().reset_index(drop=True)
+            df_mean = df_selected.mean()
+            df_std = df_selected.std().replace(0, 1e-9)
             
-#             print("  [split_data] Utworzono zbiory _train i _test")
-#             return True
+            self.log_signal.emit(f"[{f_name}] Obliczono statystyki")            
+            return df_mean, df_std
 
-#         except Exception as e:
-#             print(f"  [split_data] Nieoczekiwany błąd: {e}")
-#             return False
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Error: {e}")
+            return None, None
+
 
 #     @staticmethod
 #     def scale_data(container: Container):
