@@ -12,7 +12,8 @@ class TrainingPipeline:
         self.job_uuid = job_uuid
         self.df = None
         self._is_stopped = False
-        self.df_dict = {}
+        self.df_train = None
+        self.df_test = None
 
     def run(self):
         f_name = inspect.currentframe().f_code.co_name
@@ -63,16 +64,15 @@ class TrainingPipeline:
             
             preprocessor = Preprocessor(self.config, self.log_signal)
 
-            self.df_dict = preprocessor.split_data(
+            self.df_train, self.df_test = preprocessor.split_data(
                 self.df,
                 self.config['parameter_set']['test_samples'],
                 self.config['feature_names'] + self.config['target_names']
             )
 
-            if self.df_dict is None:
+            if self.df_train is None:
                 raise ValueError("Nie wykonano splitu")
             
-            print(self.df_dict)
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")
