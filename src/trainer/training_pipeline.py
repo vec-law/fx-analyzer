@@ -63,12 +63,15 @@ class TrainingPipeline:
             
             preprocessor = Preprocessor(self.config, self.log_signal)
 
-            self.df_dict = preprocessor.split_data(self.df, self.config['parameter_set']['test_samples'])
+            self.df_dict = preprocessor.split_data(
+                self.df,
+                self.config['parameter_set']['test_samples'],
+                self.config['feature_names'] + self.config['target_names']
+            )
 
-            if self.df_dict is None or self.df.empty:
+            if self.df_dict is None:
                 raise ValueError("Nie wykonano splitu")
             
-            print(self.df)
             print(self.df_dict)
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
