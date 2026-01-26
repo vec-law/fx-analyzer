@@ -3,6 +3,8 @@ from src.loader import Loader
 from src.cleaner import Cleaner
 from src.data_extractor import DataExtractor
 from src.preprocessor import Preprocessor
+import torch
+from src.model_manager import ModelManager
 
 class TrainingPipeline:
     def __init__(self, config: dict, log_signal, db_manager, job_uuid):
@@ -18,8 +20,11 @@ class TrainingPipeline:
         self.df_test_norm = None
         self.ser_mean = None
         self.ser_std = None
-        self.ten_dict_train_norm = {}
-        self.ten_dict_test_norm = {}
+        self.ten_train_norm_x = None
+        self.ten_train_norm_y = None
+        self.ten_test_norm_x = None
+        self.ten_test_norm_y = None
+        self.device = None
 
     def run(self):
         f_name = inspect.currentframe().f_code.co_name
@@ -119,27 +124,47 @@ class TrainingPipeline:
                     raise ValueError("Nie znormalizowano df_test")
                 
                 if self._handle_stop(f_name): return
+
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.device = device
                 
-            self.ten_dict_train_norm = preprocessor.create_tensors(
+            self.ten_train_norm_x = preprocessor.create_tensors(
                 self.df_train_norm,
-                self.config['feature_names'] + self.config['target_names']
+                self.config['feature_names'],
+                self.device
             )
 
-            if not self.ten_dict_train_norm:
-                raise ValueError("Nie utworzono ten_dict_train_norm")
+            self.ten_train_norm_y = preprocessor.create_tensors(
+                self.df_train_norm,
+                self.config['target_names'],
+                self.device
+            )
+
+            if self.ten_train_norm_x is None or self.ten_train_norm_y is None:
+                raise ValueError("Nie utworzono ten_train_norm")
             
             if self._handle_stop(f_name): return
             
             if self.df_test_norm is not None and not self.df_test_norm.empty:
-                self.ten_dict_test_norm = preprocessor.create_tensors(
+                self.ten_test_norm_x = preprocessor.create_tensors(
                     self.df_test_norm,
-                    self.config['feature_names'] + self.config['target_names']
+                    self.config['feature_names'],
+                    self.device
                 )
 
-                if not self.ten_dict_test_norm:
-                    raise ValueError("Nie utworzono ten_dict_test_norm")
+                self.ten_test_norm_y = preprocessor.create_tensors(
+                    self.df_test_norm,
+                    self.config['target_names'],
+                    self.device
+                )
+
+                if self.ten_test_norm_x is None or self.ten_test_norm_y is None:
+                    raise ValueError("Nie utworzono ten_test_norm")
                 
                 if self._handle_stop(f_name): return
+
+            # for architecture in self.config['architectures']:
+            #     print(architecture)
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")

@@ -103,11 +103,15 @@ class Preprocessor:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None
         
-    def create_tensors(self, df, selected_cols):
+    def create_tensors(self, df, selected_cols, device):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 self.log_signal.emit(f"[{f_name}] Brak danych df")  
+                return None
+            
+            if not device:
+                self.log_signal.emit(f"[{f_name}] Nie określono urządzenia")  
                 return None
             
             if selected_cols:
@@ -115,21 +119,13 @@ class Preprocessor:
                     self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w df")  
                     return None
                 
-                df_selected = df[selected_cols].copy()
-
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-                ten_dict = {}
-                
-                for col in selected_cols:
-                    ten_dict[col] = torch.as_tensor(df_selected[col].to_numpy(), dtype=torch.float32).to(device)
-                
-                ten_dict['device'] = device
+                np_selected = df[selected_cols].to_numpy()
+                ten = torch.as_tensor(np_selected, dtype=torch.float32, device=device)
 
                 self.log_signal.emit(f"[{f_name}] Utworzono tensory")
-                return ten_dict
+                return ten
             else:
-                self.log_signal.emit(f"[{f_name}] Nie określono kolumn")  
+                self.log_signal.emit(f"[{f_name}] Nie określono kolumn")
                 return None
 
         except Exception as e:
