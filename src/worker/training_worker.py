@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QObject, pyqtSignal
-from src.trainer.training_pipeline import TrainingPipeline
+from src.pipeline.training_pipeline import TrainingPipeline
 
 class TrainingWorker(QObject):
     finished = pyqtSignal()
@@ -23,14 +23,9 @@ class TrainingWorker(QObject):
             self.train_pipeline.run()
 
         except Exception as e:
-            # --- STARY KOD (ZAKOMENTOWANY) ---
-            # self.log_signal.emit(f"Błąd: {e}")
-
-            # --- NOWY BLOK (ZMODYFIKOWANY) ---
             error_msg = f"Błąd w wątku roboczym: {e}"
             self.log_signal.emit(error_msg)
-            
-            # Próba ustawienia statusu błędu w bazie, aby zadanie nie wisiało
+
             try:
                 self.db_manager.update_training_status(self.job_uuid, 'failed')
             except:
