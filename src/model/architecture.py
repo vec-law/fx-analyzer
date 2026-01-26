@@ -1,7 +1,6 @@
 import torch.nn as nn
 
-
-class Model_Base(nn.Module):
+class MLP_Base(nn.Module):
     def __init__(self, x_num, y_num):
         super().__init__()
         self.net = nn.Sequential(
@@ -15,7 +14,7 @@ class Model_Base(nn.Module):
     def forward(self, x):
         return self.net(x)
     
-class Model_Extended(nn.Module):
+class MLP_Extended(nn.Module):
     def __init__(self, x_num, y_num):
         super().__init__()
         self.net = nn.Sequential(

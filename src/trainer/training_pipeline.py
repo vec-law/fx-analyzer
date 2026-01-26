@@ -4,7 +4,7 @@ from src.cleaner import Cleaner
 from src.data_extractor import DataExtractor
 from src.preprocessor import Preprocessor
 import torch
-from src.model_manager import ModelManager
+from src.model.model_manager import ModelManager
 
 class TrainingPipeline:
     def __init__(self, config: dict, log_signal, db_manager, job_uuid):
@@ -163,8 +163,34 @@ class TrainingPipeline:
                 
                 if self._handle_stop(f_name): return
 
-            # for architecture in self.config['architectures']:
-            #     print(architecture)
+            model_manager = ModelManager(self.config, self.log_signal)
+
+            for arch in self.config['architectures']:
+                if self._handle_stop(f_name): return
+
+                model, optimizer, loss_function = model_manager.create_model(
+                    len(self.config['feature_names']),
+                    len(self.config['target_names']),
+                    self.config['parameter_set'],
+                    arch,
+                    self.device
+                )
+
+                if model is None or optimizer is None or loss_function is None:
+                    raise ValueError("Nie utworzono modelu")
+                
+                model = model_manager.train_model(
+                    model,
+                    optimizer,
+                    loss_function,
+                    self.ten_train_norm_x,
+                    self.ten_train_norm_y,
+                    self.config['parameter_set'],
+                    self.device
+                )
+
+                if model is None:
+                    raise ValueError("Nie wykonano uczenia modelu")
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")
