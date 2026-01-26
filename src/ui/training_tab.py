@@ -31,13 +31,13 @@ class TrainingTab(QWidget):
     def init_ui(self):
         left_layout = QVBoxLayout()
 
-        self.load_tasks_btn = QPushButton("Wczytaj zadania")
-        self.add_task_btn = QPushButton("Dodaj zadanie")
-        self.remove_task_btn = QPushButton("Usuń zadanie")
+        self.load_tasks_btn = QPushButton("Wczytaj treningi")
+        self.add_task_btn = QPushButton("Dodaj trening")
+        self.remove_task_btn = QPushButton("Usuń trening")
         self.load_params_btn = QPushButton("Wczytaj parametry")
         self.clear_console_btn = QPushButton("Wyczyść konsolę")
-        self.run_task_btn = QPushButton("Uruchom zadanie")
-        self.stop_task_btn = QPushButton("Zatrzymaj zadanie")
+        self.run_task_btn = QPushButton("Uruchom trening")
+        self.stop_task_btn = QPushButton("Zatrzymaj trening")
 
         self.buttons = [
             self.load_tasks_btn, self.add_task_btn, self.remove_task_btn,
