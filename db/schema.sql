@@ -91,6 +91,18 @@ CREATE TABLE statistic (
     CONSTRAINT uq_stat_entry UNIQUE (training_job_uuid, column_name, stat_name)
 );
 
+CREATE TABLE model (
+    id SERIAL PRIMARY KEY,
+    training_job_uuid UUID NOT NULL REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    architecture_id INTEGER NOT NULL REFERENCES architecture(id),
+    weights BYTEA NOT NULL,
+    mse_loss REAL,
+    mae_loss REAL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_model_job_arch UNIQUE (training_job_uuid, architecture_id)
+);
+
+CREATE INDEX idx_model_job_uuid ON model(training_job_uuid);
 CREATE INDEX idx_statistic_job_uuid ON statistic(training_job_uuid);
 CREATE INDEX idx_target_def_job_uuid ON target_def(training_job_uuid);
 CREATE INDEX idx_feature_def_job_uuid ON feature_def(training_job_uuid);
