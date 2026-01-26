@@ -102,6 +102,29 @@ CREATE TABLE model (
     CONSTRAINT uq_model_job_arch UNIQUE (training_job_uuid, architecture_id)
 );
 
+CREATE TABLE simulation (
+    sim_uuid UUID PRIMARY KEY,
+    training_job_uuid UUID NOT NULL REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    status_id INTEGER NOT NULL REFERENCES status(id),
+    samples_simulation INTEGER NOT NULL CHECK (samples_simulation > 0),
+    predicted_samples INTEGER NOT NULL CHECK (predicted_samples > 0),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_predicted_samples_limit CHECK (predicted_samples <= samples_simulation)
+);
+
+CREATE TABLE strategy (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE simulation_strategy (
+    simulation_uuid UUID REFERENCES simulation(sim_uuid) ON DELETE CASCADE,
+    strategy_id INTEGER REFERENCES strategy(id) ON DELETE CASCADE,
+    PRIMARY KEY (simulation_uuid, strategy_id)
+);
+
+CREATE INDEX idx_simulation_training_uuid ON simulation(training_job_uuid);
+CREATE INDEX idx_sim_strat_sim_uuid ON simulation_strategy(simulation_uuid);
 CREATE INDEX idx_model_job_uuid ON model(training_job_uuid);
 CREATE INDEX idx_statistic_job_uuid ON statistic(training_job_uuid);
 CREATE INDEX idx_target_def_job_uuid ON target_def(training_job_uuid);
@@ -115,3 +138,4 @@ INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
 INSERT INTO architecture (name) VALUES ('MLP_Base'), ('MLP_Extended');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO data_source (name) VALUES ('YF');
+INSERT INTO strategy (name) VALUES ('delta_change');

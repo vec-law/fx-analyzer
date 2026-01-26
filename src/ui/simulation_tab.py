@@ -73,9 +73,11 @@ class SimulationTab(QWidget):
 
         # Tabela 2: Zadania symulacji
         self.sim_table = QTableWidget()
-        self.sim_table.setColumnCount(5)
+        # /* self.sim_table.setColumnCount(5) */
+        self.sim_table.setColumnCount(4)
+        # /* self.sim_table.setHorizontalHeaderLabels(["UUID Symulacji", "UUID Treningu", "Status", "Wynik", "Utworzono"]) */
         self.sim_table.setHorizontalHeaderLabels([
-            "UUID Symulacji", "UUID Treningu", "Status", "Wynik", "Utworzono"
+            "UUID Symulacji", "UUID Treningu", "Status", "Utworzono"
         ])
         self.sim_table.setSelectionBehavior(self.sim_table.SelectionBehavior.SelectRows)
         self.sim_table.setSelectionMode(self.sim_table.SelectionMode.SingleSelection)
