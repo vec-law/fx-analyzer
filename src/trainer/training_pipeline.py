@@ -191,6 +191,17 @@ class TrainingPipeline:
 
                 if model is None:
                     raise ValueError("Nie wykonano uczenia modelu")
+                
+                if self.ten_test_norm_x is not None or self.ten_test_norm_y is not None:
+                    mse_loss, mae_loss = model_manager.evaluate_model(
+                        model,
+                        loss_function,
+                        self.ten_test_norm_x,
+                        self.ten_test_norm_y,
+                    )
+
+                    if mse_loss is None or mae_loss is None:
+                        raise ValueError("Nie wykonano ewaluacji modelu")
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")

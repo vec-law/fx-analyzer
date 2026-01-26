@@ -2,6 +2,7 @@ import inspect
 import torch
 import torch.optim as optim
 import torch.nn as nn
+import torch.nn.functional as F
 import src.model.architecture as archs
 
 class ModelManager:
@@ -47,7 +48,8 @@ class ModelManager:
             return None
         
     def train_model(
-            self, model,
+            self,
+            model,
             optimizer,
             loss_function,
             ten_train_norm_x,
@@ -94,3 +96,57 @@ class ModelManager:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             return None
+        
+    def predict(
+            self,
+            model,
+            ten_norm_x,
+        ):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if model is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu")
+                return None
+            if ten_norm_x is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: brak tensorów")
+                return None
+            
+            model.eval()
+            with torch.no_grad():
+                ten_norm_p = model(ten_norm_x)
+                self.log_signal.emit(f"[{f_name}] Obliczono predykcję")
+                return ten_norm_p
+            
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            return None
+        
+    def evaluate_model(
+            self,
+            model,
+            loss_function,
+            ten_test_norm_x,
+            ten_test_norm_y,
+        ):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if model is None or loss_function is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu lub funkcji kosztu")
+                return None, None
+            if ten_test_norm_x is None or ten_test_norm_y is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: brak tensorów")
+                return None, None
+
+            ten_test_norm_p = self.predict(model, ten_test_norm_x)
+
+            mse_loss = loss_function(ten_test_norm_p, ten_test_norm_y)
+            mae_loss = F.l1_loss(ten_test_norm_p, ten_test_norm_y)
+
+            self.log_signal.emit(f"[{f_name}] Obliczono błąd MSE: {mse_loss.item():.6f}")
+            self.log_signal.emit(f"[{f_name}] Obliczono błąd MAE: {mae_loss.item():.6f}")
+            
+            return mse_loss, mae_loss
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            return None, None
