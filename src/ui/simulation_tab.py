@@ -6,12 +6,11 @@ from PyQt6.QtWidgets import (
 )
 
 class SimulationTab(QWidget):
+    # Aktualizacja mapowania parametrów formularza
     PARAM_MAP = {
-        "Data początkowa": "start_date",
-        "Data końcowa": "end_date",
-        "Interwał symulacji": "sim_interval",
-        "Początkowy kapitał": "initial_balance",
-        "Typ zlecenia": "order_type"
+        "Liczba próbek": "sample_count",
+        "Liczba próbek przewidywanych": "predicted_samples",
+        "Strategie": "strategies"
     }
 
     def __init__(self, db_manager):
@@ -23,7 +22,7 @@ class SimulationTab(QWidget):
         self.worker = None
         self.init_ui()
         self.init_actions()
-        # Wstępne ładowanie przy starcie
+        # Wstępne ładowanie danych przy starcie
         self.on_load_completed_trainings()
 
     def init_ui(self):
@@ -103,10 +102,12 @@ class SimulationTab(QWidget):
         self.sim_table.cellClicked.connect(self.on_sim_table_clicked)
 
     def showEvent(self, event):
+        """Automatyczne odświeżanie przy wejściu w zakładkę."""
         super().showEvent(event)
         self.on_load_completed_trainings()
 
     def on_load_completed_trainings(self):
+        """Pobiera zadania i filtruje zakończone."""
         try:
             all_tasks = self.db_manager.get_training_jobs()
             completed_tasks = [t for t in all_tasks if str(t.get("status")).lower() == 'completed']
@@ -118,13 +119,10 @@ class SimulationTab(QWidget):
         self.source_table.setRowCount(0)
         self.source_table.setRowCount(len(tasks))
         for row, t in enumerate(tasks):
-            # UUID Treningu
             self.source_table.setItem(row, 0, QTableWidgetItem(str(t.get("job_uuid", ""))))
-            # Instrument
             self.source_table.setItem(row, 1, QTableWidgetItem(str(t.get("instrument", ""))))
-            # Interwał
             self.source_table.setItem(row, 2, QTableWidgetItem(str(t.get("timeframe_name", ""))))
-            # Utworzono
+            
             created_at = t.get("created_at")
             created_str = created_at.strftime("%Y-%m-%d %H:%M:%S") if created_at else ""
             self.source_table.setItem(row, 3, QTableWidgetItem(created_str))

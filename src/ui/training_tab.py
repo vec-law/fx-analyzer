@@ -61,7 +61,7 @@ class TrainingTab(QWidget):
         right_layout = QVBoxLayout()
         self.table = QTableWidget()
         self.table.setColumnCount(5)
-        self.table.setHorizontalHeaderLabels(["UUID", "Instrument", "Interwał", "Status", "Utworzono"])
+        self.table.setHorizontalHeaderLabels(["UUID Treningu", "Instrument", "Interwał", "Status", "Utworzono"])
         self.table.setSelectionBehavior(self.table.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(self.table.SelectionMode.SingleSelection)
         self.console = QTextEdit()
@@ -72,7 +72,7 @@ class TrainingTab(QWidget):
 
         main_layout = QHBoxLayout()
         main_layout.addLayout(left_layout, 1)
-        main_layout.addLayout(right_layout, 3)
+        main_layout.addLayout(right_layout, 2)
         self.setLayout(main_layout)
 
     def init_actions(self):
