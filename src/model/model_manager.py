@@ -3,6 +3,8 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+from safetensors.torch import load_model
+from safetensors.torch import save
 import src.model.architecture as archs
 
 class ModelManager:
@@ -139,14 +141,49 @@ class ModelManager:
 
             ten_test_norm_p = self.predict(model, ten_test_norm_x)
 
-            mse_loss = loss_function(ten_test_norm_p, ten_test_norm_y)
-            mae_loss = F.l1_loss(ten_test_norm_p, ten_test_norm_y)
+            mse_loss = loss_function(ten_test_norm_p, ten_test_norm_y).item()
+            mae_loss = F.l1_loss(ten_test_norm_p, ten_test_norm_y).item()
 
-            self.log_signal.emit(f"[{f_name}] Obliczono błąd MSE: {mse_loss.item():.6f}")
-            self.log_signal.emit(f"[{f_name}] Obliczono błąd MAE: {mae_loss.item():.6f}")
+            self.log_signal.emit(f"[{f_name}] Obliczono błąd MSE: {mse_loss:.6f}")
+            self.log_signal.emit(f"[{f_name}] Obliczono błąd MAE: {mae_loss:.6f}")
             
             return mse_loss, mae_loss
 
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             return None, None
+
+    def get_model_weights(self, model):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if model is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu")
+                return None
+            
+            state_dict = model.state_dict()
+            cpu_state_dict = {}
+            
+            for key, value in state_dict.items():
+                cpu_state_dict[key] = value.cpu()
+            
+            weights = save(cpu_state_dict)
+            return weights
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            return None
+        
+    def set_model_weights(self, model, weights_bytes):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if model is None or weights_bytes is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu lub danych wag")
+                return False
+
+            load_model(model, weights_bytes)
+            
+            self.log_signal.emit(f"[{f_name}] Poprawnie załadowano wagi modelu")
+            return True
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd podczas ładowania wag: {e}")
+            return False

@@ -175,7 +175,6 @@ class TrainingPipeline:
                     arch,
                     self.device
                 )
-
                 if model is None or optimizer is None or loss_function is None:
                     raise ValueError("Nie utworzono modelu")
                 
@@ -188,20 +187,33 @@ class TrainingPipeline:
                     self.config['parameter_set'],
                     self.device
                 )
-
                 if model is None:
                     raise ValueError("Nie wykonano uczenia modelu")
+
+                mae_loss = None
+                mse_loss = None
                 
-                if self.ten_test_norm_x is not None or self.ten_test_norm_y is not None:
+                if self.ten_test_norm_x is not None and self.ten_test_norm_y is not None:
                     mse_loss, mae_loss = model_manager.evaluate_model(
                         model,
                         loss_function,
                         self.ten_test_norm_x,
                         self.ten_test_norm_y,
                     )
-
                     if mse_loss is None or mae_loss is None:
                         raise ValueError("Nie wykonano ewaluacji modelu")
+                    
+                weights = model_manager.get_model_weights(model)
+                if weights is None:
+                    raise ValueError("Nie odczytano wag modelu")
+                
+                if not self.db_manager.save_model_weights(
+                    self.job_uuid,
+                    arch,
+                    weights,
+                    mse_loss,
+                    mae_loss
+                ): raise ValueError("Nie zapisano wag modelu")
 
             self.db_manager.update_training_status(self.job_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")
