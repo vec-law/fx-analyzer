@@ -3,13 +3,12 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
-from safetensors.torch import load_model
 from safetensors.torch import save
+from safetensors.torch import load
 import src.model.architecture as archs
 
 class ModelManager:
-    def __init__(self, config: dict, log_signal):
-        self.config = config
+    def __init__(self, log_signal):
         self.log_signal = log_signal
 
     def create_model(self, x_num, y_num, params, arch, device):
@@ -172,16 +171,17 @@ class ModelManager:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             return None
         
-    def set_model_weights(self, model, weights_bytes):
+    def set_model_weights(self, model, weights):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            if model is None or weights_bytes is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu lub danych wag")
+            if model is None or weights is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu lub wag")
                 return False
 
-            load_model(model, weights_bytes)
+            state_dict = load(weights)
+            model.load_state_dict(state_dict)
             
-            self.log_signal.emit(f"[{f_name}] Poprawnie załadowano wagi modelu")
+            self.log_signal.emit(f"[{f_name}] Załadowano wagi modelu")
             return True
 
         except Exception as e:

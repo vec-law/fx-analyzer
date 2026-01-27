@@ -1,9 +1,9 @@
 import inspect
 import torch
+import pandas as pd
 
 class Preprocessor:
-    def __init__(self, config: dict, log_signal):
-        self.config = config
+    def __init__(self, log_signal):
         self.log_signal = log_signal
 
     def split_data(self, df, samples_subset_2, selected_cols):
@@ -24,11 +24,13 @@ class Preprocessor:
                 return None, None
 
             split_idx = len(df_selected) - samples_subset_2
-            if split_idx <= 0:
+            if split_idx < 0:
                 self.log_signal.emit(f"[{f_name}] Za mało rekordów w df")  
                 return None, None
-
-            df_subset_1 = df_selected.iloc[:split_idx].reset_index(drop=True)
+            elif split_idx == 0:
+                df_subset_1 = None
+            else:
+                df_subset_1 = df_selected.iloc[:split_idx].reset_index(drop=True)
             df_subset_2 = df_selected.iloc[split_idx:].reset_index(drop=True) if samples_subset_2 > 0 else None
             
             self.log_signal.emit(f"[{f_name}] Wykonano split: {split_idx} | {samples_subset_2}")            
@@ -132,26 +134,41 @@ class Preprocessor:
             self.log_signal.emit(f"[{f_name}] Error: {e}")
             return None
 
-        
-#     @staticmethod
-#     def descale_preds(container: 'Container'):
-#         try:
-#             stats = container.df_dict.get('stats')
-#             target_cols = sorted([k for k in stats['mean'].index if k.startswith('target_')])
-            
-#             mean_p = stats['mean'][target_cols].values
-#             std_p = stats['std'][target_cols].values
+    def descale_data(self, ten_norm, ser_mean, ser_std, selected_cols):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if ten_norm is None:
+                self.log_signal.emit(f"[{f_name}] Brak danych ten_norm")
+                return None
+            if ser_mean is None or ser_mean.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych ser_mean")
+                return None
+            if ser_std is None or ser_std.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych ser_std")
+                return None
+            if not selected_cols:
+                self.log_signal.emit(f"[{f_name}] Nie określono kolumn")
+                return None
 
-#             for split in ['train', 'test']:
-#                 if 'p' in container.ten_dict['norm'][split] and split in container.df_dict:
-#                     p_norm = container.ten_dict['norm'][split]['p']
-#                     p_orig = p_norm.detach().cpu().numpy() * std_p + mean_p
-                    
-#                     pred_names = [f"pred_{i}" for i in range(len(target_cols))]
-#                     container.df_dict[split][pred_names] = p_orig
+            if not all(col in ser_mean.index for col in selected_cols) or \
+               not all(col in ser_std.index for col in selected_cols):
+                self.log_signal.emit(f"[{f_name}] Brak wybranych kolumn w statystykach")
+                return None
 
-#             print("  [descale_preds] Dopisano pred_x do df_dict")
-#             return True
-#         except Exception as e:
-#             print(f"  [descale_preds] Błąd: {e}")
-#             return False
+            device = ten_norm.device
+            ten_mean = torch.tensor(ser_mean[selected_cols].values, dtype=torch.float32).to(device)
+            ten_std = torch.tensor(ser_std[selected_cols].values, dtype=torch.float32).to(device)
+
+            ten_denorm = ten_norm * ten_std + ten_mean
+
+            df_denorm = pd.DataFrame(
+                ten_denorm.detach().cpu().numpy(), 
+                columns=selected_cols
+            )
+
+            self.log_signal.emit(f"[{f_name}] Wykonano denormalizację")
+            return df_denorm
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Error: {e}")
+            return None

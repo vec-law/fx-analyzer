@@ -533,7 +533,7 @@ class DatabaseManager:
                             "samples_simulation": row[0],
                             "predicted_samples": row[1],
                             "strategies": row[2],
-                            "training_job_uuid": row[3]
+                            "train_uuid": row[3]
                         }
                         
                     return config

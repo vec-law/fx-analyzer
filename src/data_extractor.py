@@ -105,3 +105,26 @@ class DataExtractor:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             return None
+
+    def join_at_end(self, df, df_append):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df_append is None:
+                self.log_signal.emit(f"[{f_name}] Błąd: Brak danych wejściowych")
+                return None
+
+            if len(df) < len(df_append):
+                self.log_signal.emit(f"[{f_name}] Błąd: df jest krótszy niż dane do dołączenia")
+                return None
+
+            df_aligned = df_append.copy()
+            df_aligned.index = df.index[-len(df_append):]
+
+            df_result = df.join(df_aligned)
+
+            self.log_signal.emit(f"[{f_name}] Pomyślnie dołączono kolumny (wyrównanie do końca)")
+            return df_result
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd podczas operacji join_at_end: {e}")
+            return None

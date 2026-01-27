@@ -123,6 +123,14 @@ CREATE TABLE simulation_strategy (
     PRIMARY KEY (simulation_uuid, strategy_id)
 );
 
+CREATE TABLE result (
+    sim_uuid UUID NOT NULL REFERENCES simulation(sim_uuid) ON DELETE CASCADE,
+    strategy_id INTEGER NOT NULL REFERENCES strategy(id),
+    architecture_id INTEGER NOT NULL REFERENCES architecture(id),
+    data BYTEA NOT NULL,
+    PRIMARY KEY (sim_uuid, strategy_id, architecture_id)
+);
+
 CREATE INDEX idx_simulation_training_uuid ON simulation(training_job_uuid);
 CREATE INDEX idx_sim_strat_sim_uuid ON simulation_strategy(simulation_uuid);
 CREATE INDEX idx_model_job_uuid ON model(training_job_uuid);
@@ -138,4 +146,4 @@ INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
 INSERT INTO architecture (name) VALUES ('MLP_Base'), ('MLP_Extended');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO data_source (name) VALUES ('YF');
-INSERT INTO strategy (name) VALUES ('delta_change');
+INSERT INTO strategy (name) VALUES ('only_predict');

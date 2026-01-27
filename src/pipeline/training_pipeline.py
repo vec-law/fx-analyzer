@@ -63,7 +63,7 @@ class TrainingPipeline:
                 raise ValueError("Nie ucięto df")
             if self._handle_stop(f_name): return
             
-            preprocessor = Preprocessor(self.config, self.log_signal)
+            preprocessor = Preprocessor(self.log_signal)
 
             self.df_train, self.df_test = preprocessor.split_data(
                 self.df,
@@ -108,12 +108,13 @@ class TrainingPipeline:
 
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self.device = device
+            if self._handle_stop(f_name): return
+
             self.ten_train_norm_x = preprocessor.create_tensors(
                 self.df_train_norm,
                 self.config['feature_names'],
                 self.device
             )
-
             self.ten_train_norm_y = preprocessor.create_tensors(
                 self.df_train_norm,
                 self.config['target_names'],
@@ -138,7 +139,7 @@ class TrainingPipeline:
                     raise ValueError("Nie utworzono ten_test_norm")
                 if self._handle_stop(f_name): return
 
-            model_manager = ModelManager(self.config, self.log_signal)
+            model_manager = ModelManager(self.log_signal)
 
             for arch in self.config['architectures']:
                 if self._handle_stop(f_name): return
