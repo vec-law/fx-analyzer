@@ -120,7 +120,7 @@ class SimulationTab(QWidget):
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
-        self.worker.progress.connect(self.log_to_console)
+        self.worker.log_signal.connect(self.log_to_console)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         

@@ -514,14 +514,15 @@ class DatabaseManager:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT 
-                            s.samples_simulation, 
-                            s.predicted_samples,
-                            ARRAY_AGG(st.name) as strategies
-                        FROM simulation s
-                        JOIN simulation_strategy ss ON s.sim_uuid = ss.simulation_uuid
-                        JOIN strategy st ON ss.strategy_id = st.id
-                        WHERE s.sim_uuid = %s
-                        GROUP BY s.sim_uuid
+                            simulation.samples_simulation, 
+                            simulation.predicted_samples,
+                            ARRAY_AGG(strategy.name) as strategies,
+                            simulation.training_job_uuid
+                        FROM simulation
+                        JOIN simulation_strategy ON simulation.sim_uuid = simulation_strategy.simulation_uuid
+                        JOIN strategy ON simulation_strategy.strategy_id = strategy.id
+                        WHERE simulation.sim_uuid = %s
+                        GROUP BY simulation.sim_uuid, simulation.training_job_uuid
                     """, (sim_uuid,))
                     
                     row = cur.fetchone()
@@ -531,7 +532,8 @@ class DatabaseManager:
                         config = {
                             "samples_simulation": row[0],
                             "predicted_samples": row[1],
-                            "strategies": row[2]
+                            "strategies": row[2],
+                            "training_job_uuid": row[3]
                         }
                         
                     return config
