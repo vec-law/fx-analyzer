@@ -4,6 +4,7 @@ from src.cleaner import Cleaner
 from src.data_extractor import DataExtractor
 from src.preprocessor import Preprocessor
 import torch
+import io
 from src.model.model_manager import ModelManager
 
 class SimulationPipeline:
@@ -140,6 +141,17 @@ class SimulationPipeline:
                     if self._handle_stop(f_name): return
 
                     df = data_extractor.join_at_end(self.df, df_pred)
+                    
+                    df_buffer = io.BytesIO()
+                    df.to_parquet(df_buffer, engine='pyarrow', index=True)
+                    df_parquet = df_buffer.getvalue()
+                    if not self.db_manager.save_simulation_result(
+                        self.sim_uuid,
+                        strategy,
+                        arch,
+                        df_parquet
+                        ):
+                        raise ValueError("Nie zapisano wyników do db")
 
             self.db_manager.update_simulation_status(self.sim_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec symulacji")

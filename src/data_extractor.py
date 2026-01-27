@@ -122,7 +122,7 @@ class DataExtractor:
 
             df_result = df.join(df_aligned)
 
-            self.log_signal.emit(f"[{f_name}] Pomyślnie dołączono kolumny (wyrównanie do końca)")
+            self.log_signal.emit(f"[{f_name}] Dołączono kolumny")
             return df_result
 
         except Exception as e:

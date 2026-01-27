@@ -539,3 +539,24 @@ class DatabaseManager:
                     return config
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji symulacji: {str(e)}")
+        
+    def save_simulation_result(self, sim_uuid, strategy_name, arch_name, data_bytes):
+        query = """
+            INSERT INTO result (sim_uuid, strategy_id, architecture_id, data)
+            VALUES (
+                %s, 
+                (SELECT id FROM strategy WHERE name = %s), 
+                (SELECT id FROM architecture WHERE name = %s), 
+                %s
+            )
+            ON CONFLICT (sim_uuid, strategy_id, architecture_id) 
+            DO UPDATE SET data = EXCLUDED.data
+        """
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (sim_uuid, strategy_name, arch_name, psycopg2.Binary(data_bytes)))
+                    conn.commit()
+                    return True
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych przy zapisywaniu wyniku: {str(e)}")
