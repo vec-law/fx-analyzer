@@ -1,5 +1,5 @@
-import time
 from PyQt6.QtCore import QObject, pyqtSignal
+from src.pipeline.simulation_pipeline import SimulationPipeline
 
 class SimulationWorker(QObject):
     finished = pyqtSignal()
@@ -9,35 +9,31 @@ class SimulationWorker(QObject):
         super().__init__()
         self.db_manager = db_manager
         self.sim_uuid = sim_uuid
-        self._is_running = True
+        self.sim_pipeline = None
 
     def run(self):
         try:
-            # Poprawne: 'running' istnieje w bazie
-            self.db_manager.update_simulation_status(self.sim_uuid, 'running')
-            self.log_signal.emit(f"Starting simulation: {self.sim_uuid}")
-            
-            for i in range(10):
-                if not self._is_running:
-                    # Jeśli nie masz 'cancelled', użyj 'failed' lub dodaj go do bazy
-                    self.db_manager.update_simulation_status(self.sim_uuid, 'failed')
-                    self.log_signal.emit("Simulation stopped by user.")
-                    break
-                
-                time.sleep(1)
-                self.log_signal.emit(f"Simulation {self.sim_uuid}: Step {i+1}/10...")
-
-            if self._is_running:
-                # Poprawne: 'completed' istnieje w bazie
-                self.db_manager.update_simulation_status(self.sim_uuid, 'completed')
-                self.log_signal.emit("Simulation completed successfully.")
+            sim_config = self.db_manager.get_simulation_config(self.sim_uuid)
+            self.sim_pipeline = SimulationPipeline(
+                sim_config=sim_config, 
+                log_signal=self.log_signal,
+                db_manager=self.db_manager, 
+                sim_uuid=self.sim_uuid
+            )
+            self.sim_pipeline.run()
 
         except Exception as e:
-            # ZMIANA: 'error' zamieniony na 'failed', bo tak masz w tabeli status
-            self.db_manager.update_simulation_status(self.sim_uuid, 'failed')
-            self.log_signal.emit(f"Critical error in worker: {e}")
+            error_msg = f"Błąd w wątku roboczym: {e}"
+            self.log_signal.emit(error_msg)
+
+            try:
+                self.db_manager.update_simulation_status(self.sim_uuid, 'failed')
+            except:
+                pass
+
         finally:
             self.finished.emit()
 
     def stop(self):
-        self._is_running = False
+        if self.sim_pipeline:
+            self.sim_pipeline.stop()
