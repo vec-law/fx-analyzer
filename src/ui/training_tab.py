@@ -30,13 +30,11 @@ class TrainingTab(QWidget):
         self.init_ui()
         self.init_actions()
 
-    # /* Zmiana: Usunięto load_tasks_btn, dodano automatyczne odświeżanie w showEvent */
     def showEvent(self, event):
         super().showEvent(event)
         try:
             self.on_load_tasks(show_log=False)
             
-            # Przywrócenie zaznaczenia wiersza po odświeżeniu
             if self.last_clicked_uuid:
                 for row in range(self.table.rowCount()):
                     item = self.table.item(row, 0)
@@ -48,8 +46,6 @@ class TrainingTab(QWidget):
 
     def init_ui(self):
         left_layout = QVBoxLayout()
-
-        # // USUNIĘTO: self.load_tasks_btn = QPushButton("Wczytaj treningi")
         self.add_task_btn = QPushButton("Dodaj trening")
         self.remove_task_btn = QPushButton("Usuń trening")
         self.load_params_btn = QPushButton("Wczytaj parametry")
@@ -57,7 +53,6 @@ class TrainingTab(QWidget):
         self.run_task_btn = QPushButton("Uruchom trening")
         self.stop_task_btn = QPushButton("Zatrzymaj trening")
 
-        # /* Zmiana: Lista przycisków bez load_tasks_btn */
         self.buttons = [
             self.add_task_btn, self.remove_task_btn,
             self.load_params_btn, self.clear_console_btn,
@@ -96,7 +91,6 @@ class TrainingTab(QWidget):
         self.setLayout(main_layout)
 
     def init_actions(self):
-        # // USUNIĘTO: self.load_tasks_btn.clicked.connect(...)
         self.remove_task_btn.clicked.connect(self.on_remove_task)
         self.load_params_btn.clicked.connect(self.on_load_params)
         self.clear_console_btn.clicked.connect(self.on_clear_console)
@@ -162,7 +156,6 @@ class TrainingTab(QWidget):
         self.db_manager.update_training_status(self.last_clicked_uuid, 'running')
         self.on_load_tasks(show_log=False)
 
-        # // ZMIANA: Usunięto setFocus na nieistniejący przycisk
         self.set_running_ui(True)
         self.thread.start()
 
@@ -175,7 +168,6 @@ class TrainingTab(QWidget):
                 self.worker = self.thread = None
 
     def set_running_ui(self, running: bool):
-        # /* Zmiana: Lista przycisków bez load_tasks_btn */
         for btn in [self.add_task_btn, self.remove_task_btn, 
                     self.load_params_btn, self.run_task_btn]:
             btn.setEnabled(not running)

@@ -168,7 +168,6 @@ class DatabaseManager:
                             'feature_periods': f_periods,
                             'shift': f_shift
                         })
-                        # NOWY BLOK: Odtwarzanie oryginalnego formatu typ:p1-p2:shift
                         periods_str = "-".join(map(str, f_periods))
                         config['feature_names'].append(f"{f_type}:{periods_str}:{f_shift}")
 
@@ -185,7 +184,6 @@ class DatabaseManager:
                             'base_column': t_name, 
                             'shift': t_shift
                         })
-                        # NOWY BLOK: Odtwarzanie oryginalnego formatu kolumna:shift
                         config['target_names'].append(f"{t_name}:{t_shift}")
 
                     cur.execute("""
@@ -406,7 +404,6 @@ class DatabaseManager:
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    # 1. Weryfikacja obecności strategii w bazie
                     strategy_ids = []
                     for strategy_name in strategies:
                         cur.execute("SELECT id FROM strategy WHERE name = %s", (strategy_name,))
@@ -415,7 +412,6 @@ class DatabaseManager:
                             raise ValueError(f"Błąd: Strategia '{strategy_name}' nie istnieje w bazie danych.")
                         strategy_ids.append(result[0])
 
-                    # 2. Wstawienie rekordu symulacji (status_id przez podzapytanie)
                     cur.execute("""
                         INSERT INTO simulation (
                             sim_uuid, training_job_uuid, status_id, 
@@ -424,7 +420,6 @@ class DatabaseManager:
                         VALUES (%s, %s, (SELECT id FROM status WHERE name = 'pending'), %s, %s)
                     """, (sim_uuid, training_uuid, samples_simulation, predicted_samples))
 
-                    # 3. Powiązanie symulacji ze strategiami
                     for strategy_id in strategy_ids:
                         cur.execute("""
                             INSERT INTO simulation_strategy (simulation_uuid, strategy_id)
@@ -509,3 +504,36 @@ class DatabaseManager:
                     return True
         except Exception as e:
             raise Exception(f"Nie udało się zaktualizować statusu symulacji: {str(e)}")
+        
+    def get_simulation_config(self, sim_uuid):
+        """
+        Pobiera konfigurację konkretnej symulacji na podstawie jej UUID.
+        """
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT 
+                            s.samples_simulation, 
+                            s.predicted_samples,
+                            ARRAY_AGG(st.name) as strategies
+                        FROM simulation s
+                        JOIN simulation_strategy ss ON s.sim_uuid = ss.simulation_uuid
+                        JOIN strategy st ON ss.strategy_id = st.id
+                        WHERE s.sim_uuid = %s
+                        GROUP BY s.sim_uuid
+                    """, (sim_uuid,))
+                    
+                    row = cur.fetchone()
+                    config = None
+                    
+                    if row:
+                        config = {
+                            "samples_simulation": row[0],
+                            "predicted_samples": row[1],
+                            "strategies": row[2]
+                        }
+                        
+                    return config
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji symulacji: {str(e)}")

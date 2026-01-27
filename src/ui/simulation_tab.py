@@ -25,7 +25,6 @@ class SimulationTab(QWidget):
         self.init_ui()
         self.init_actions()
 
-    # /* Zmiana: Automatyczne odświeżanie obu tabel przy wejściu w zakładkę */
     def showEvent(self, event):
         super().showEvent(event)
         self.on_load_completed_trainings()
@@ -145,7 +144,6 @@ class SimulationTab(QWidget):
             return
         
         try:
-            # /* Zmiana: Pobieranie parametrów bezpośrednio z bazy dla pewności danych */
             config = self.db_manager.get_simulation_config(self.last_clicked_sim_uuid)
             if config:
                 self.param_fields["samples_simulation"].setText(str(config.get("samples_simulation", "")))
@@ -171,6 +169,13 @@ class SimulationTab(QWidget):
             self.source_table.setItem(row, 2, QTableWidgetItem(str(t.get("timeframe_name", ""))))
             dt = t.get("created_at")
             self.source_table.setItem(row, 3, QTableWidgetItem(dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""))
+        
+        if len(tasks) > 0:
+            self.last_clicked_training_uuid = self.source_table.item(0, 0).text()
+            self.source_table.selectRow(0)
+        else:
+            self.last_clicked_training_uuid = None
+            
         self.source_table.resizeColumnsToContents()
 
     def on_source_table_clicked(self, row, column):
@@ -228,10 +233,13 @@ class SimulationTab(QWidget):
                 self.sim_table.setItem(row, 2, QTableWidgetItem(str(sim.get("status", ""))))
                 dt = sim.get("created_at")
                 self.sim_table.setItem(row, 3, QTableWidgetItem(dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""))
-                
-                # /* Zmiana: Przywrócenie zaznaczenia wiersza */
-                if self.last_clicked_sim_uuid and curr_uuid == self.last_clicked_sim_uuid:
-                    self.sim_table.selectRow(row)
+
+            if simulations and len(simulations) > 0:
+                first_uuid = self.sim_table.item(0, 0).text()
+                self.last_clicked_sim_uuid = first_uuid
+                self.sim_table.selectRow(0)
+            else:
+                self.last_clicked_sim_uuid = None
 
             self.sim_table.resizeColumnsToContents()
         except Exception as e:
