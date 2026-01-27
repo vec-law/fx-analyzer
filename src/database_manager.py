@@ -400,3 +400,112 @@ class DatabaseManager:
                     return None
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie modelu: {str(e)}")
+        
+    def add_simulation_job(self, training_uuid, samples_simulation, predicted_samples, strategies):
+        sim_uuid = str(uuid.uuid4())
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    # 1. Weryfikacja obecności strategii w bazie
+                    strategy_ids = []
+                    for strategy_name in strategies:
+                        cur.execute("SELECT id FROM strategy WHERE name = %s", (strategy_name,))
+                        result = cur.fetchone()
+                        if not result:
+                            raise ValueError(f"Błąd: Strategia '{strategy_name}' nie istnieje w bazie danych.")
+                        strategy_ids.append(result[0])
+
+                    # 2. Wstawienie rekordu symulacji (status_id przez podzapytanie)
+                    cur.execute("""
+                        INSERT INTO simulation (
+                            sim_uuid, training_job_uuid, status_id, 
+                            samples_simulation, predicted_samples
+                        ) 
+                        VALUES (%s, %s, (SELECT id FROM status WHERE name = 'pending'), %s, %s)
+                    """, (sim_uuid, training_uuid, samples_simulation, predicted_samples))
+
+                    # 3. Powiązanie symulacji ze strategiami
+                    for strategy_id in strategy_ids:
+                        cur.execute("""
+                            INSERT INTO simulation_strategy (simulation_uuid, strategy_id)
+                            VALUES (%s, %s)
+                        """, (sim_uuid, strategy_id))
+
+                    conn.commit()
+                    return sim_uuid
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych przy dodawaniu symulacji: {str(e)}")
+        
+    def get_simulations(self):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT 
+                            simulation.sim_uuid, 
+                            simulation.training_job_uuid, 
+                            status.name, 
+                            simulation.samples_simulation, 
+                            simulation.predicted_samples, 
+                            simulation.created_at,
+                            STRING_AGG(strategy.name, ', ')
+                        FROM simulation
+                        JOIN status ON simulation.status_id = status.id
+                        JOIN simulation_strategy ON simulation.sim_uuid = simulation_strategy.simulation_uuid
+                        JOIN strategy ON simulation_strategy.strategy_id = strategy.id
+                        GROUP BY simulation.sim_uuid, status.name
+                        ORDER BY simulation.created_at DESC
+                    """)
+                    rows = cur.fetchall()
+                    
+                    return [
+                        {
+                            'sim_uuid': r[0],
+                            'training_job_uuid': r[1],
+                            'status': r[2],
+                            'samples_simulation': r[3],
+                            'predicted_samples': r[4],
+                            'created_at': r[5],
+                            'strategies': r[6]
+                        } for r in rows
+                    ]
+        except Exception as e:
+            raise Exception(f"Błąd podczas pobierania listy symulacji: {str(e)}")
+        
+    def del_simulation_job(self, sim_uuid):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM simulation WHERE sim_uuid = %s", (sim_uuid,))
+                    if cur.rowcount == 0:
+                        raise Exception(f"Symulacja {sim_uuid} nie istnieje.")
+                    conn.commit()
+            return True
+        except Exception as e:
+            raise Exception(f"Błąd podczas usuwania symulacji: {str(e)}")
+        
+    def update_simulation_status(self, sim_uuid, status_name):
+        """
+        Updates the status of a specific simulation job in the 'simulation' table.
+        """
+        try:
+            if not sim_uuid or not status_name:
+                raise ValueError("Błąd: Brak UUID symulacji lub nazwy statusu.")
+
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE simulation 
+                        SET status_id = (SELECT id FROM status WHERE name = %s)
+                        WHERE sim_uuid = %s
+                    """, (status_name, sim_uuid))
+                    
+                    if cur.rowcount == 0:
+                        raise Exception(f"Nie znaleziono symulacji o UUID: {sim_uuid}")
+
+                    conn.commit()
+                    return True
+        except Exception as e:
+            raise Exception(f"Nie udało się zaktualizować statusu symulacji: {str(e)}")

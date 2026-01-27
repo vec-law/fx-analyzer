@@ -19,9 +19,11 @@ class TrainingTab(QWidget):
     def log_to_console(self, message: str):
         self.console.append(message)
 
-    def __init__(self, db_manager):
+# /* Zmiana: dodano tab_widget, aby móc blokować przełączanie okien */
+    def __init__(self, db_manager, tab_widget=None):
         super().__init__()
         self.db_manager = db_manager
+        self.tab_widget = tab_widget
         self.last_clicked_uuid = None
         self.thread = None
         self.worker = None
@@ -162,6 +164,10 @@ class TrainingTab(QWidget):
         for btn in [self.load_tasks_btn, self.add_task_btn, self.remove_task_btn, 
                     self.load_params_btn, self.run_task_btn]:
             btn.setEnabled(not running)
+            
+        # /* Zmiana: blokowanie paska zakładek w GUI */
+        if self.tab_widget:
+            self.tab_widget.tabBar().setEnabled(not running)
 
     def on_add_task(self):
         try:
