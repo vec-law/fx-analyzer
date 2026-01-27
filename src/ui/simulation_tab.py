@@ -2,8 +2,14 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import (
     QWidget, QPushButton, QTextEdit, QTableWidget,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
-    QTableWidgetItem
+    QTableWidgetItem, QFileDialog
 )
+import pandas as pd
+import io
+import matplotlib.pyplot as plt
+import os
+import numpy as np
+from matplotlib.collections import LineCollection
 from src.worker.simulation_worker import SimulationWorker
 
 
@@ -39,11 +45,12 @@ class SimulationTab(QWidget):
         self.load_params_btn = QPushButton("Wczytaj parametry")
         self.run_sim_btn = QPushButton("Uruchom symulację")
         self.stop_sim_btn = QPushButton("Zatrzymaj symulację")
+        self.download_results_btn = QPushButton("Pobierz wyniki")
         self.clear_console_btn = QPushButton("Wyczyść konsolę")
 
         self.buttons = [
-            self.add_sim_btn, self.remove_sim_btn, self.load_params_btn,
-            self.run_sim_btn, self.stop_sim_btn, self.clear_console_btn
+            self.add_sim_btn, self.remove_sim_btn, self.load_params_btn, self.run_sim_btn,
+            self.stop_sim_btn, self.download_results_btn, self.clear_console_btn
         ]
         for btn in self.buttons:
             left_layout.addWidget(btn)
@@ -96,6 +103,7 @@ class SimulationTab(QWidget):
         self.load_params_btn.clicked.connect(self.on_load_params_to_fields)
         self.run_sim_btn.clicked.connect(self.on_run_simulation)
         self.stop_sim_btn.clicked.connect(self.on_stop_simulation)
+        self.download_results_btn.clicked.connect(self.on_download_results)
 
     def toggle_ui_lock(self, is_running: bool):
         if self.tab_widget:
@@ -247,3 +255,119 @@ class SimulationTab(QWidget):
 
     def log_to_console(self, message: str):
         self.console.append(message)
+
+    # def on_download_results(self):
+    #     try:
+    #         import pandas as pd
+    #         import io
+    #         import matplotlib.pyplot as plt
+    #         import os
+
+    #         if not self.last_clicked_sim_uuid:
+    #             self.log_to_console("Błąd: Nie wybrano symulacji.")
+    #             return
+
+    #         dir_path = QFileDialog.getExistingDirectory(self, "Folder zapisu")
+    #         if not dir_path:
+    #             return
+
+    #         config = self.db_manager.get_simulation_config(self.last_clicked_sim_uuid)
+    #         train_config = self.db_manager.get_training_config(config['train_uuid'])
+    #         targets = train_config.get('target_names', [])
+
+    #         for strategy in config['strategies']:
+    #             for arch in train_config['architectures']:
+    #                 data = self.db_manager.load_simulation_result(self.last_clicked_sim_uuid, strategy, arch)
+    #                 if not data:
+    #                     continue
+
+    #                 df = pd.read_parquet(io.BytesIO(data))
+                    
+    #                 plt.figure(figsize=(16, 8))
+                    
+    #                 # Pełna czarna linia dla ceny - zero tła, zero alpha
+    #                 if 'close' in df.columns:
+    #                     plt.plot(df.index, df['close'], color='black', linewidth=1.0, label='close', zorder=1)
+                    
+    #                 # Pełna czerwona linia dla predykcji
+    #                 for t in targets:
+    #                     if t in df.columns:
+    #                         plt.plot(df.index, df[t], color='red', linewidth=1.2, label=t, zorder=2)
+
+    #                 plt.title(f"{strategy} | {arch}")
+    #                 plt.legend(loc='upper left')
+    #                 plt.grid(True)
+                    
+    #                 full_path = os.path.join(dir_path, f"{strategy}_{arch}.png")
+    #                 plt.savefig(full_path, dpi=150)
+    #                 plt.close()
+                    
+    #                 self.log_to_console(f"Zapisano: {full_path}")
+
+    #     except Exception as e:
+    #         self.log_to_console(f"Błąd: {e}")
+
+    def on_download_results(self):
+        try:
+            if not self.last_clicked_sim_uuid:
+                self.log_to_console("Błąd: Nie wybrano symulacji.")
+                return
+
+            dir_path = QFileDialog.getExistingDirectory(self, "Folder zapisu")
+            if not dir_path:
+                return
+
+            config = self.db_manager.get_simulation_config(self.last_clicked_sim_uuid)
+            train_config = self.db_manager.get_training_config(config['train_uuid'])
+            targets = train_config.get('target_names', [])
+
+            for strategy in config['strategies']:
+                for arch in train_config['architectures']:
+                    data = self.db_manager.load_simulation_result(self.last_clicked_sim_uuid, strategy, arch)
+                    if not data:
+                        continue
+
+                    df = pd.read_parquet(io.BytesIO(data))
+                    plt.figure(figsize=(16, 8))
+                    
+                    # Rysowanie ceny 'close' jako bazowej czarnej linii
+                    if 'close' in df.columns:
+                        plt.plot(df.index, df['close'], color='black', linewidth=1.0, label='close', zorder=1)
+                    
+                    # Rysowanie każdej kolumny target z dynamicznym kolorem
+                    for t in targets:
+                        if t in df.columns:
+                            y = df[t].values
+                            x = np.arange(len(y))
+                            
+                            # Przygotowanie segmentów (x_i, y_i) -> (x_i+1, y_i+1)
+                            points = np.array([x, y]).T.reshape(-1, 1, 2)
+                            segments = np.concatenate([points[:-1], points[1:]], axis=1)
+                            
+                            # Wyznaczenie kolorów: zielony jeśli y[i+1] > y[i], czerwony w przeciwnym razie
+                            colors = ['green' if y[i+1] > y[i] else 'red' for i in range(len(y)-1)]
+                            
+                            lc = LineCollection(segments, colors=colors, linewidths=1.5, zorder=2)
+                            plt.gca().add_collection(lc)
+                            
+                            # Dummy plot dla legendy (LineCollection domyślnie nie dodaje etykiety)
+                            plt.plot([], [], color='green', label=f'{t} (Wzrost)')
+                            plt.plot([], [], color='red', label=f'{t} (Spadek)')
+                        else:
+                            self.log_to_console(f"Brak kolumny {t} w wynikach.")
+
+                    plt.title(f"{strategy} | {arch}")
+                    plt.legend(loc='upper left')
+                    plt.grid(True)
+                    
+                    # Automatyczne skalowanie osi, bo LineCollection ich nie aktualizuje
+                    plt.gca().autoscale()
+                    
+                    full_path = os.path.join(dir_path, f"{strategy}_{arch}.png")
+                    plt.savefig(full_path, dpi=150)
+                    plt.close()
+                    
+                    self.log_to_console(f"Zapisano: {full_path}")
+
+        except Exception as e:
+            self.log_to_console(f"Błąd: {e}")

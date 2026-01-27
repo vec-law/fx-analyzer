@@ -560,3 +560,24 @@ class DatabaseManager:
                     return True
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy zapisywaniu wyniku: {str(e)}")
+
+    def load_simulation_result(self, sim_uuid, strategy_name, arch_name):
+        query = """
+            SELECT data 
+            FROM result 
+            WHERE sim_uuid = %s 
+            AND strategy_id = (SELECT id FROM strategy WHERE name = %s)
+            AND architecture_id = (SELECT id FROM architecture WHERE name = %s)
+        """
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(query, (sim_uuid, strategy_name, arch_name))
+                    result = cur.fetchone()
+                    
+                    if result:
+                        # result[0] zawiera memoryview/bytes z kolumny BYTEA
+                        return bytes(result[0])
+                    return None
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych przy odczycie wyniku: {str(e)}")

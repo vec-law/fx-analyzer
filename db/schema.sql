@@ -143,7 +143,7 @@ INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('fail
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
 INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
-INSERT INTO architecture (name) VALUES ('MLP_Base'), ('ModelV2'), ('ModelV3'), ('ModelV4'), ('ModelV5'), ('ModelV6'), ('ModelV7'), ('ModelV8'), ('ModelV9'), ('ModelV10'), ('ModelV11');
+INSERT INTO architecture (name) VALUES ('ModelV1'), ('ModelV2'), ('ModelV3'), ('ModelV4'), ('ModelV5'), ('ModelV6'), ('ModelV7'), ('ModelV8'), ('ModelV9'), ('ModelV10'), ('ModelV11'), ('ModelV12'), ('ModelV13'), ('ModelV14'), ('ModelV15'), ('ModelV16'), ('ModelV17'), ('ModelV18'), ('ModelV19'), ('ModelV20'), ('ModelV21'), ('ModelV22'), ('ModelV23'), ('ModelV24'), ('ModelV25'), ('ModelV26'), ('ModelV27'), ('ModelV28'), ('ModelV29'), ('ModelV30');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO data_source (name) VALUES ('YF');
 INSERT INTO strategy (name) VALUES ('only_predict');
