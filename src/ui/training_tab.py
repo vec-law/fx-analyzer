@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 )
 from src.worker.training_worker import TrainingWorker
 
+
 class TrainingTab(QWidget):
     PARAM_MAP = {
         "Instrument": "instrument_name", "Interwał": "timeframe_name",
@@ -19,7 +20,6 @@ class TrainingTab(QWidget):
     def log_to_console(self, message: str):
         self.console.append(message)
 
-# /* Zmiana: dodano tab_widget, aby móc blokować przełączanie okien */
     def __init__(self, db_manager, tab_widget=None):
         super().__init__()
         self.db_manager = db_manager
@@ -30,10 +30,26 @@ class TrainingTab(QWidget):
         self.init_ui()
         self.init_actions()
 
+    # /* Zmiana: Usunięto load_tasks_btn, dodano automatyczne odświeżanie w showEvent */
+    def showEvent(self, event):
+        super().showEvent(event)
+        try:
+            self.on_load_tasks(show_log=False)
+            
+            # Przywrócenie zaznaczenia wiersza po odświeżeniu
+            if self.last_clicked_uuid:
+                for row in range(self.table.rowCount()):
+                    item = self.table.item(row, 0)
+                    if item and item.text() == self.last_clicked_uuid:
+                        self.table.selectRow(row)
+                        break
+        except Exception as e:
+            self.log_to_console(f"Błąd auto-odświeżania: {e}")
+
     def init_ui(self):
         left_layout = QVBoxLayout()
 
-        self.load_tasks_btn = QPushButton("Wczytaj treningi")
+        # // USUNIĘTO: self.load_tasks_btn = QPushButton("Wczytaj treningi")
         self.add_task_btn = QPushButton("Dodaj trening")
         self.remove_task_btn = QPushButton("Usuń trening")
         self.load_params_btn = QPushButton("Wczytaj parametry")
@@ -41,12 +57,14 @@ class TrainingTab(QWidget):
         self.run_task_btn = QPushButton("Uruchom trening")
         self.stop_task_btn = QPushButton("Zatrzymaj trening")
 
+        # /* Zmiana: Lista przycisków bez load_tasks_btn */
         self.buttons = [
-            self.load_tasks_btn, self.add_task_btn, self.remove_task_btn,
+            self.add_task_btn, self.remove_task_btn,
             self.load_params_btn, self.clear_console_btn,
             self.run_task_btn, self.stop_task_btn
         ]
-        for btn in self.buttons: left_layout.addWidget(btn)
+        for btn in self.buttons:
+            left_layout.addWidget(btn)
 
         left_layout.addWidget(QLabel("<b>Parametry</b>"))
         self.param_fields = {}
@@ -78,7 +96,7 @@ class TrainingTab(QWidget):
         self.setLayout(main_layout)
 
     def init_actions(self):
-        self.load_tasks_btn.clicked.connect(lambda: self.on_load_tasks(show_log=True))
+        # // USUNIĘTO: self.load_tasks_btn.clicked.connect(...)
         self.remove_task_btn.clicked.connect(self.on_remove_task)
         self.load_params_btn.clicked.connect(self.on_load_params)
         self.clear_console_btn.clicked.connect(self.on_clear_console)
@@ -89,7 +107,8 @@ class TrainingTab(QWidget):
 
     def on_table_cell_clicked(self, row, column):
         item = self.table.item(row, 0)
-        if item: self.last_clicked_uuid = item.text()
+        if item:
+            self.last_clicked_uuid = item.text()
 
     def fill_tasks_table(self, tasks: list[dict]):
         self.table.setRowCount(len(tasks))
@@ -126,10 +145,8 @@ class TrainingTab(QWidget):
             return
 
         self.thread = QThread()
-
         self.worker = TrainingWorker(self.last_clicked_uuid, self.db_manager)
         self.worker.log_signal.connect(self.log_to_console)
-
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -139,18 +156,15 @@ class TrainingTab(QWidget):
         self.thread.destroyed.connect(lambda: setattr(self, 'thread', None))
         self.thread.destroyed.connect(lambda: setattr(self, 'worker', None))
 
-        self.thread.finished.connect(lambda: (self.set_running_ui(False)))
+        self.thread.finished.connect(lambda: self.set_running_ui(False))
         self.thread.finished.connect(lambda: self.on_load_tasks(show_log=False))
 
         self.db_manager.update_training_status(self.last_clicked_uuid, 'running')
-
         self.on_load_tasks(show_log=False)
 
-        self.load_tasks_btn.setFocus()
+        # // ZMIANA: Usunięto setFocus na nieistniejący przycisk
         self.set_running_ui(True)
-
         self.thread.start()
-
 
     def on_stop_task(self):
         if self.worker:
@@ -161,23 +175,18 @@ class TrainingTab(QWidget):
                 self.worker = self.thread = None
 
     def set_running_ui(self, running: bool):
-        for btn in [self.load_tasks_btn, self.add_task_btn, self.remove_task_btn, 
+        # /* Zmiana: Lista przycisków bez load_tasks_btn */
+        for btn in [self.add_task_btn, self.remove_task_btn, 
                     self.load_params_btn, self.run_task_btn]:
             btn.setEnabled(not running)
             
-        # /* Zmiana: blokowanie paska zakładek w GUI */
         if self.tab_widget:
             self.tab_widget.tabBar().setEnabled(not running)
 
     def on_add_task(self):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
-
-            required_fields = [
-                "instrument_name", "timeframe_name", "data_source",
-                "samples_limit", "test_samples", "seed", "epochs",
-                "train_noise", "learning_rate", "features", "targets", "architectures"
-            ]
+            required_fields = list(self.PARAM_MAP.values())
 
             for field in required_fields:
                 if not field_values.get(field):
@@ -202,24 +211,21 @@ class TrainingTab(QWidget):
 
             for feature in field_values["features"].split(","):
                 f_str = feature.strip()
-                if not f_str: continue
-                
+                if not f_str:
+                    continue
                 parts = f_str.split(":")
                 if len(parts) != 3:
-                    raise ValueError(f"Niepoprawny format feature: {f_str}. Oczekiwano typ:parametry:shift")
-                
-                periods = [int(p.strip()) for p in parts[1].split("-") if p.strip()]
-                
+                    raise ValueError(f"Format feature: typ:parametry:shift")
                 config["features"].append({
                     "feature_type": parts[0].strip(),
-                    "feature_periods": periods,
+                    "feature_periods": [int(p.strip()) for p in parts[1].split("-") if p.strip()],
                     "shift": int(parts[2].strip())
                 })
 
             for target in field_values["targets"].split(","):
                 parts = target.strip().split(":")
                 if len(parts) != 2:
-                    raise ValueError(f"Niepoprawny format target: {target}")
+                    raise ValueError(f"Format target: base_column:shift")
                 config["targets"].append({
                     "base_column": parts[0].strip(),
                     "shift": int(parts[1].strip())
@@ -240,13 +246,10 @@ class TrainingTab(QWidget):
                     self.table.setCurrentItem(item)
                     break
 
-            self.log_to_console(f"Dodano i zaznaczono zadanie: {new_uuid}")
+            self.log_to_console(f"Dodano zadanie: {new_uuid}")
 
-        except (ValueError, IndexError, KeyError) as e:
-            self.log_to_console(f"Błąd danych: {e}")
         except Exception as e:
-            self.log_to_console(f"{e}")
-
+            self.log_to_console(f"Błąd dodawania: {e}")
 
     def on_load_params(self):
         if not self.last_clicked_uuid:
@@ -254,31 +257,24 @@ class TrainingTab(QWidget):
             return
         try:
             config = self.db_manager.get_training_config(self.last_clicked_uuid)
-
             self.param_fields["instrument_name"].setText(config["instrument"]["name"])
             self.param_fields["timeframe_name"].setText(config["timeframe"]["name"])
             self.param_fields["data_source"].setText(config["data_source"])
 
             ps = config["parameter_set"]
-
             self.param_fields["samples_limit"].setText(str(ps["samples_limit"]))
             self.param_fields["test_samples"].setText(str(ps["test_samples"]))
-            
             self.param_fields["seed"].setText(str(ps["seed"]))
             self.param_fields["epochs"].setText(str(ps["epochs"]))
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
             self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
-
             self.param_fields["features"].setText(", ".join(config["feature_names"]))
             self.param_fields["targets"].setText(", ".join(config["target_names"]))
+            self.param_fields["architectures"].setText(", ".join(config["architectures"]))
 
-            self.param_fields["architectures"].setText(
-                ", ".join(config["architectures"])
-            )
-
-            self.log_to_console(f"Wczytano parametry zadania: {self.last_clicked_uuid}")
+            self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
         except Exception as e:
-            self.log_to_console(f"Błąd wczytywania parametrów: {e}")
+            self.log_to_console(f"Błąd parametrów: {e}")
 
     def on_remove_task(self):
         if not self.last_clicked_uuid:
@@ -287,30 +283,27 @@ class TrainingTab(QWidget):
         try:
             self.db_manager.del_training_job(self.last_clicked_uuid)
             self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
-
             self.on_load_tasks(show_log=False)
 
             if self.table.rowCount() > 0:
                 self.table.selectRow(0)
-                self.last_clicked_uuid = self.table.item(0, 0).text()
+                item = self.table.item(0, 0)
+                self.last_clicked_uuid = item.text() if item else None
             else:
                 self.last_clicked_uuid = None
         except Exception as e:
-            self.log_to_console(f"{e}")
+            self.log_to_console(f"Błąd usuwania: {e}")
 
     def on_load_tasks(self, show_log=True):
         try:
             tasks = self.db_manager.get_training_jobs()
-
             if not tasks:
                 self.table.setRowCount(0)
                 if show_log:
-                    self.log_to_console("Brak zadań w bazie danych.")
+                    self.log_to_console("Brak zadań w bazie.")
                 return
-
             self.fill_tasks_table(tasks)
-
             if show_log:
-                self.log_to_console("Wczytano listę zadań.")
+                self.log_to_console("Zaktualizowano listę zadań.")
         except Exception as e:
-            self.log_to_console(f"Błąd wczytywania zadań: {e}")
+            self.log_to_console(f"Błąd wczytywania: {e}")
