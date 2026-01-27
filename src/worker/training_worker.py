@@ -5,10 +5,10 @@ class TrainingWorker(QObject):
     finished = pyqtSignal()
     log_signal = pyqtSignal(str)
 
-    def __init__(self, job_uuid, db_manager):
+    def __init__(self, db_manager, job_uuid):
         super().__init__()
-        self.job_uuid = job_uuid
         self.db_manager = db_manager
+        self.job_uuid = job_uuid
         self.train_pipeline = None
 
     def run(self):

@@ -139,7 +139,7 @@ class TrainingTab(QWidget):
             return
 
         self.thread = QThread()
-        self.worker = TrainingWorker(self.last_clicked_uuid, self.db_manager)
+        self.worker = TrainingWorker(self.db_manager, self.last_clicked_uuid)
         self.worker.log_signal.connect(self.log_to_console)
         self.worker.moveToThread(self.thread)
 
