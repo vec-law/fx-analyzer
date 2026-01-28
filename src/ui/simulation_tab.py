@@ -206,14 +206,16 @@ class SimulationTab(QWidget):
                 if not val:
                     raise ValueError(f"Pole {key} nie może być puste.")
 
-            self.db_manager.add_simulation_job(
+            sim_uuid = self.db_manager.add_simulation_job(
                 training_uuid=self.last_clicked_training_uuid,
                 samples_simulation=int(vals["samples_simulation"]),
                 predicted_samples=int(vals["predicted_samples"]),
                 strategies=[s.strip() for s in vals["strategies"].split(",") if s.strip()]
             )
-            self.log_to_console("Dodano nową symulację.")
-            self.fill_sim_table()
+            
+            if sim_uuid:
+                self.log_to_console(f"Dodano symulację: {sim_uuid}")
+                self.fill_sim_table()
         except Exception as e:
             self.log_to_console(f"Błąd dodawania symulacji: {e}")
 
@@ -256,57 +258,6 @@ class SimulationTab(QWidget):
     def log_to_console(self, message: str):
         self.console.append(message)
 
-    # def on_download_results(self):
-    #     try:
-    #         import pandas as pd
-    #         import io
-    #         import matplotlib.pyplot as plt
-    #         import os
-
-    #         if not self.last_clicked_sim_uuid:
-    #             self.log_to_console("Błąd: Nie wybrano symulacji.")
-    #             return
-
-    #         dir_path = QFileDialog.getExistingDirectory(self, "Folder zapisu")
-    #         if not dir_path:
-    #             return
-
-    #         config = self.db_manager.get_simulation_config(self.last_clicked_sim_uuid)
-    #         train_config = self.db_manager.get_training_config(config['train_uuid'])
-    #         targets = train_config.get('target_names', [])
-
-    #         for strategy in config['strategies']:
-    #             for arch in train_config['architectures']:
-    #                 data = self.db_manager.load_simulation_result(self.last_clicked_sim_uuid, strategy, arch)
-    #                 if not data:
-    #                     continue
-
-    #                 df = pd.read_parquet(io.BytesIO(data))
-                    
-    #                 plt.figure(figsize=(16, 8))
-                    
-    #                 # Pełna czarna linia dla ceny - zero tła, zero alpha
-    #                 if 'close' in df.columns:
-    #                     plt.plot(df.index, df['close'], color='black', linewidth=1.0, label='close', zorder=1)
-                    
-    #                 # Pełna czerwona linia dla predykcji
-    #                 for t in targets:
-    #                     if t in df.columns:
-    #                         plt.plot(df.index, df[t], color='red', linewidth=1.2, label=t, zorder=2)
-
-    #                 plt.title(f"{strategy} | {arch}")
-    #                 plt.legend(loc='upper left')
-    #                 plt.grid(True)
-                    
-    #                 full_path = os.path.join(dir_path, f"{strategy}_{arch}.png")
-    #                 plt.savefig(full_path, dpi=150)
-    #                 plt.close()
-                    
-    #                 self.log_to_console(f"Zapisano: {full_path}")
-
-    #     except Exception as e:
-    #         self.log_to_console(f"Błąd: {e}")
-
     def on_download_results(self):
         try:
             if not self.last_clicked_sim_uuid:
@@ -329,28 +280,23 @@ class SimulationTab(QWidget):
 
                     df = pd.read_parquet(io.BytesIO(data))
                     plt.figure(figsize=(16, 8))
-                    
-                    # Rysowanie ceny 'close' jako bazowej czarnej linii
+
                     if 'close' in df.columns:
                         plt.plot(df.index, df['close'], color='black', linewidth=1.0, label='close', zorder=1)
-                    
-                    # Rysowanie każdej kolumny target z dynamicznym kolorem
+
                     for t in targets:
                         if t in df.columns:
                             y = df[t].values
                             x = np.arange(len(y))
-                            
-                            # Przygotowanie segmentów (x_i, y_i) -> (x_i+1, y_i+1)
+
                             points = np.array([x, y]).T.reshape(-1, 1, 2)
                             segments = np.concatenate([points[:-1], points[1:]], axis=1)
-                            
-                            # Wyznaczenie kolorów: zielony jeśli y[i+1] > y[i], czerwony w przeciwnym razie
+
                             colors = ['green' if y[i+1] > y[i] else 'red' for i in range(len(y)-1)]
                             
                             lc = LineCollection(segments, colors=colors, linewidths=1.5, zorder=2)
                             plt.gca().add_collection(lc)
-                            
-                            # Dummy plot dla legendy (LineCollection domyślnie nie dodaje etykiety)
+
                             plt.plot([], [], color='green', label=f'{t} (Wzrost)')
                             plt.plot([], [], color='red', label=f'{t} (Spadek)')
                         else:
@@ -361,7 +307,6 @@ class SimulationTab(QWidget):
                     plt.legend(loc='upper left')
                     plt.grid(True)
                     
-                    # Automatyczne skalowanie osi, bo LineCollection ich nie aktualizuje
                     plt.gca().autoscale()
                     
                     full_path = os.path.join(dir_path, f"{strategy}_{arch}.png")

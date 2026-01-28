@@ -10,6 +10,7 @@ class TrainingPipeline:
     def __init__(self, config: dict, log_signal, db_manager, job_uuid):
         self.config = config
         self.log_signal = log_signal
+        self.model_manager = None
         self.db_manager = db_manager
         self.job_uuid = job_uuid
         self._is_stopped = False
@@ -144,12 +145,12 @@ class TrainingPipeline:
                     raise ValueError("Nie utworzono ten_test_norm")
                 if self._handle_stop(f_name): return
 
-            model_manager = ModelManager(self.log_signal)
+            self.model_manager = ModelManager(self.log_signal)
 
             for arch in self.config['architectures']:
                 if self._handle_stop(f_name): return
 
-                model, optimizer, loss_function = model_manager.create_model(
+                model, optimizer, loss_function = self.model_manager.create_model(
                     len(self.config['feature_names']),
                     len(self.config['target_names']),
                     self.config['parameter_set'],
@@ -160,7 +161,7 @@ class TrainingPipeline:
                     raise ValueError("Nie utworzono modelu")
                 if self._handle_stop(f_name): return
                 
-                model = model_manager.train_model(
+                model = self.model_manager.train_model(
                     model,
                     optimizer,
                     loss_function,
@@ -177,7 +178,7 @@ class TrainingPipeline:
                 mse_loss = None
                 
                 if self.ten_test_norm_x is not None and self.ten_test_norm_y is not None:
-                    mse_loss, mae_loss = model_manager.evaluate_model(
+                    mse_loss, mae_loss = self.model_manager.evaluate_model(
                         model,
                         loss_function,
                         self.ten_test_norm_x,
@@ -187,7 +188,7 @@ class TrainingPipeline:
                         raise ValueError("Nie wykonano ewaluacji modelu")
                     if self._handle_stop(f_name): return
                     
-                weights = model_manager.get_model_weights(model)
+                weights = self.model_manager.get_model_weights(model)
                 if weights is None:
                     raise ValueError("Nie odczytano wag modelu")
                 if self._handle_stop(f_name): return
@@ -207,7 +208,7 @@ class TrainingPipeline:
             self.log_signal.emit(f"[{f_name}] Koniec treningu")
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Przerwano z powodu błędu: {e}")
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             try:
                 self.db_manager.update_training_status(self.job_uuid, 'failed')
             except Exception as db_err:
@@ -216,6 +217,7 @@ class TrainingPipeline:
     def stop(self):
         f_name = inspect.currentframe().f_code.co_name
         self._is_stopped = True
+        self.model_manager.stop()
         self.log_signal.emit(f"[{f_name}] Zatrzymywanie...")
 
     def _handle_stop(self, f_name):

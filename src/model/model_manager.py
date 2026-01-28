@@ -10,6 +10,10 @@ import src.model.architecture as archs
 class ModelManager:
     def __init__(self, log_signal):
         self.log_signal = log_signal
+        self._stop_requested = False
+
+    def stop(self):
+        self._stop_requested = True
 
     def create_model(self, x_num, y_num, params, arch, device):
         f_name = inspect.currentframe().f_code.co_name
@@ -78,6 +82,9 @@ class ModelManager:
             self.log_signal.emit(f"[{f_name}] Rozpoczęto uczenie modelu")
 
             for epoch in range(params['epochs']):
+                if self._stop_requested:
+                    return None
+                
                 optimizer.zero_grad()
                 
                 noise = (torch.randn_like(ten_train_norm_x) * params['train_noise']).to(device)

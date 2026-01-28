@@ -160,12 +160,12 @@ class TrainingTab(QWidget):
         self.thread.start()
 
     def on_stop_task(self):
-        if self.worker:
+        if self.worker and self.thread and self.thread.isRunning():
             try:
-                self.set_running_ui(False)
+                self.log_to_console("Zatrzymywanie treningu...")
                 self.worker.stop()
-            except RuntimeError:
-                self.worker = self.thread = None
+            except Exception as e:
+                self.log_to_console(f"Błąd podczas zatrzymywania: {e}")
 
     def set_running_ui(self, running: bool):
         for btn in [self.add_task_btn, self.remove_task_btn, 
@@ -241,7 +241,7 @@ class TrainingTab(QWidget):
                     self.table.setCurrentItem(item)
                     break
 
-            self.log_to_console(f"Dodano zadanie: {new_uuid}")
+            self.log_to_console(f"Dodano trening: {new_uuid}")
 
         except Exception as e:
             self.log_to_console(f"Błąd dodawania: {e}")
@@ -297,7 +297,15 @@ class TrainingTab(QWidget):
                 if show_log:
                     self.log_to_console("Brak zadań w bazie.")
                 return
+            
             self.fill_tasks_table(tasks)
+            
+            if not self.last_clicked_uuid and self.table.rowCount() > 0:
+                self.table.selectRow(0)
+                item = self.table.item(0, 0)
+                if item:
+                    self.last_clicked_uuid = item.text()
+            
             if show_log:
                 self.log_to_console("Zaktualizowano listę zadań.")
         except Exception as e:
