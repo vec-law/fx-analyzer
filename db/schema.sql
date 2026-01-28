@@ -143,7 +143,18 @@ INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('fail
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
 INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
-INSERT INTO architecture (name) VALUES ('ModelV1'), ('ModelV2'), ('ModelV3'), ('ModelV4'), ('ModelV5'), ('ModelV6'), ('ModelV7'), ('ModelV8'), ('ModelV9'), ('ModelV10'), ('ModelV11'), ('ModelV12'), ('ModelV13'), ('ModelV14'), ('ModelV15'), ('ModelV16'), ('ModelV17'), ('ModelV18'), ('ModelV19'), ('ModelV20'), ('ModelV21'), ('ModelV22'), ('ModelV23'), ('ModelV24'), ('ModelV25'), ('ModelV26'), ('ModelV27'), ('ModelV28'), ('ModelV29'), ('ModelV30');
+INSERT INTO architecture (name) VALUES ('ModelV1'), ('ModelV2'), ('ModelV3'), ('ModelV4'), ('ModelV5'), ('ModelV6'), ('ModelV7'), ('ModelV8'), ('ModelV9'), ('ModelV10'),
+('ModelV11'), ('ModelV12'), ('ModelV13'), ('ModelV14'), ('ModelV15'), ('ModelV16'), ('ModelV17'), ('ModelV18'), ('ModelV19'), ('ModelV20'),
+('ModelV21'), ('ModelV22'), ('ModelV23'), ('ModelV24'), ('ModelV25'), ('ModelV26'), ('ModelV27'), ('ModelV28'), ('ModelV29'), ('ModelV30'),
+('ModelV31'), ('ModelV32'), ('ModelV33'), ('ModelV34'), ('ModelV35'), ('ModelV36'), ('ModelV37'), ('ModelV38'), ('ModelV39'), ('ModelV40'),
+('ModelV41'), ('ModelV42'), ('ModelV43'), ('ModelV44'), ('ModelV45'), ('ModelV46'), ('ModelV47'), ('ModelV48'), ('ModelV49'), ('ModelV50'),
+('ModelV51'), ('ModelV52'), ('ModelV53'), ('ModelV54'), ('ModelV55'), ('ModelV56'), ('ModelV57'), ('ModelV58'), ('ModelV59'), ('ModelV60'), 
+('ModelV61'), ('ModelV62'), ('ModelV63'), ('ModelV64'), ('ModelV65'), ('ModelV66'), ('ModelV67'), ('ModelV68'), ('ModelV69'), ('ModelV70'), 
+('ModelV71'), ('ModelV72'), ('ModelV73'), ('ModelV74'), ('ModelV75'), ('ModelV76'), ('ModelV77'), ('ModelV78'), ('ModelV79'), ('ModelV80'), 
+('ModelV81'), ('ModelV82'), ('ModelV83'), ('ModelV84'), ('ModelV85'), ('ModelV86'), ('ModelV87'), ('ModelV88'), ('ModelV89'), ('ModelV90'), 
+('ModelV91'), ('ModelV92'), ('ModelV93'), ('ModelV94'), ('ModelV95'), ('ModelV96'), ('ModelV97'), ('ModelV98'), ('ModelV99'), ('ModelV100'),
+('ModelV101'), ('ModelV102'), ('ModelV103'), ('ModelV104'), ('ModelV105'), ('ModelV106'), ('ModelV107'), ('ModelV108'), ('ModelV109'), ('ModelV110'),
+('ModelV111'), ('ModelV112'), ('ModelV113'), ('ModelV114'), ('ModelV115'), ('ModelV116'), ('ModelV117'), ('ModelV118'), ('ModelV119'), ('ModelV120');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO data_source (name) VALUES ('YF');
 INSERT INTO strategy (name) VALUES ('only_predict');
