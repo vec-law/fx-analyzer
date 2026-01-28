@@ -56,10 +56,27 @@ class DatabaseManager:
                         ))
 
                     for target in config['targets']:
+                        column_name = target['column']
+                        shift = target['shift']
+
+                        cur.execute("SELECT base_column.id FROM base_column WHERE name = %s", (column_name,))
+                        base_column = cur.fetchone()
+                        
+                        base_column_id = base_column[0] if base_column else None
+                        calculated_column_id = None
+
+                        if not base_column_id:
+                            cur.execute("SELECT calculated_column.id FROM calculated_column WHERE name = %s", (column_name,))
+                            calculated_column = cur.fetchone()
+                            calculated_column_id = calculated_column[0] if calculated_column else None
+                            
+                        if not base_column_id and not calculated_column_id:
+                            raise ValueError(f"Kolumna {column_name} nie istnieje w bazie danych.")
+
                         cur.execute("""
-                            INSERT INTO target_def (training_job_uuid, base_column_id, shift) 
-                            VALUES (%s, (SELECT id FROM base_column WHERE name = %s), %s)
-                        """, (job_uuid, target['base_column'], target['shift']))
+                            INSERT INTO target_def (training_job_uuid, base_column_id, calculated_column_id, shift) 
+                            VALUES (%s, %s, %s, %s)
+                        """, (job_uuid, base_column_id, calculated_column_id, shift))
 
                     for architecture in config['architectures']:
                         cur.execute("""
@@ -73,145 +90,6 @@ class DatabaseManager:
             raise e
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy dodawaniu zadania: {str(e)}")
-        
-    def get_training_config(self, job_uuid):
-        try:
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    config = {
-                        'instrument': {},
-                        'timeframe': {},
-                        'parameter_set': {},
-                        'base_columns': [],
-                        'features': [],
-                        'targets': [],
-                        'architectures': [],
-                        'data_source': None,
-                        'feature_names': [],
-                        'target_names': []
-                    }
-                    
-                    cur.execute("""
-                        SELECT 
-                            instrument.name, 
-                            instrument.ticker
-                        FROM instrument
-                        JOIN training_job ON training_job.instrument_id = instrument.id
-                        WHERE training_job.job_uuid = %s
-                    """, (job_uuid,))
-                    instrument = cur.fetchone()
-                    if instrument:
-                        config['instrument'] = {
-                            'name': instrument[0],
-                            'ticker': instrument[1]
-                        }
-
-                    cur.execute("""
-                        SELECT 
-                            timeframe.name, 
-                            timeframe.range,
-                            timeframe.check_period,
-                            timeframe.min_count
-                        FROM timeframe
-                        JOIN training_job ON training_job.timeframe_id = timeframe.id
-                        WHERE training_job.job_uuid = %s
-                    """, (job_uuid,))
-                    timeframe = cur.fetchone()
-                    if timeframe:
-                        config['timeframe'] = {
-                            'name': timeframe[0],
-                            'range': timeframe[1],
-                            'check_period': timeframe[2],
-                            'min_count': timeframe[3]
-                        }
-
-                    cur.execute("""
-                        SELECT 
-                            samples_limit, 
-                            test_samples, 
-                            seed, 
-                            epochs, 
-                            train_noise, 
-                            learning_rate
-                        FROM parameter_set
-                        WHERE training_job_uuid = %s
-                    """, (job_uuid,))
-                    parameter_set = cur.fetchone()
-                    if parameter_set:
-                        config['parameter_set'] = {
-                            'samples_limit': parameter_set[0],
-                            'test_samples': parameter_set[1],
-                            'seed': parameter_set[2],
-                            'epochs': parameter_set[3],
-                            'train_noise': parameter_set[4],
-                            'learning_rate': parameter_set[5]
-                        }
-
-                    cur.execute("SELECT base_column.name FROM base_column ORDER BY id")
-                    base_columns = cur.fetchall()
-                    config['base_columns'] = [base_column[0] for base_column in base_columns]
-
-                    cur.execute("""
-                        SELECT 
-                            feature_type.name, 
-                            feature_def.feature_periods, 
-                            feature_def.shift
-                        FROM feature_def
-                        JOIN feature_type ON feature_def.feature_type_id = feature_type.id
-                        WHERE feature_def.training_job_uuid = %s
-                        ORDER BY feature_def.id
-                    """, (job_uuid,))
-                    features = cur.fetchall()
-                    for f_type, f_periods, f_shift in features:
-                        config['features'].append({
-                            'feature_type': f_type, 
-                            'feature_periods': f_periods,
-                            'shift': f_shift
-                        })
-                        periods_str = "-".join(map(str, f_periods))
-                        config['feature_names'].append(f"{f_type}:{periods_str}:{f_shift}")
-
-                    cur.execute("""
-                        SELECT base_column.name, target_def.shift 
-                        FROM target_def
-                        JOIN base_column ON target_def.base_column_id = base_column.id
-                        WHERE target_def.training_job_uuid = %s
-                        ORDER BY target_def.id
-                    """, (job_uuid,))
-                    targets = cur.fetchall()
-                    for t_name, t_shift in targets:
-                        config['targets'].append({
-                            'base_column': t_name, 
-                            'shift': t_shift
-                        })
-                        config['target_names'].append(f"{t_name}:{t_shift}")
-
-                    cur.execute("""
-                        SELECT architecture.name
-                        FROM architecture
-                        JOIN training_job_architecture ON training_job_architecture.architecture_id = architecture.id
-                        WHERE training_job_architecture.training_job_uuid = %s
-                        ORDER BY architecture_id
-                    """, (job_uuid,))
-                    architectures = cur.fetchall()
-                    config['architectures'] = [architecture[0] for architecture in architectures]
-
-                    cur.execute("""
-                        SELECT data_source.name
-                        FROM data_source
-                        JOIN training_job ON training_job.data_source_id = data_source.id
-                        WHERE training_job.job_uuid = %s
-                    """, (job_uuid,))
-                    data_source = cur.fetchone()
-                    if data_source:
-                        config['data_source'] = data_source[0]
-
-                    if not config['data_source']:
-                        raise ValueError(f"Nie znaleziono danych dla zadania: {job_uuid}")
-
-                    return config
-        except Exception as e:
-            raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
         
     def get_training_status(self, job_uuid):
         try:
@@ -581,3 +459,166 @@ class DatabaseManager:
                     return None
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie wyniku: {str(e)}")
+        
+
+    def get_training_config(self, job_uuid):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    config = {
+                        'instrument': {},
+                        'timeframe': {},
+                        'parameter_set': {},
+                        'base_columns': [],
+                        'calculated_columns': [],
+                        'features': [],
+                        'targets': [],
+                        'architectures': [],
+                        'data_source': None,
+                        'feature_names': [],
+                        'target_names': []
+                    }
+                    
+                    cur.execute("""
+                        SELECT 
+                            instrument.name, 
+                            instrument.ticker
+                        FROM instrument
+                        JOIN training_job ON training_job.instrument_id = instrument.id
+                        WHERE training_job.job_uuid = %s
+                    """, (job_uuid,))
+                    instrument = cur.fetchone()
+                    if instrument:
+                        config['instrument'] = {
+                            'name': instrument[0],
+                            'ticker': instrument[1]
+                        }
+
+                    cur.execute("""
+                        SELECT 
+                            timeframe.name, 
+                            timeframe.range,
+                            timeframe.check_period,
+                            timeframe.min_count
+                        FROM timeframe
+                        JOIN training_job ON training_job.timeframe_id = timeframe.id
+                        WHERE training_job.job_uuid = %s
+                    """, (job_uuid,))
+                    timeframe = cur.fetchone()
+                    if timeframe:
+                        config['timeframe'] = {
+                            'name': timeframe[0],
+                            'range': timeframe[1],
+                            'check_period': timeframe[2],
+                            'min_count': timeframe[3]
+                        }
+
+                    cur.execute("""
+                        SELECT 
+                            samples_limit, 
+                            test_samples, 
+                            seed, 
+                            epochs, 
+                            train_noise, 
+                            learning_rate
+                        FROM parameter_set
+                        WHERE training_job_uuid = %s
+                    """, (job_uuid,))
+                    parameter_set = cur.fetchone()
+                    if parameter_set:
+                        config['parameter_set'] = {
+                            'samples_limit': parameter_set[0],
+                            'test_samples': parameter_set[1],
+                            'seed': parameter_set[2],
+                            'epochs': parameter_set[3],
+                            'train_noise': parameter_set[4],
+                            'learning_rate': parameter_set[5]
+                        }
+
+                    cur.execute("SELECT base_column.name FROM base_column ORDER BY id")
+                    base_columns = cur.fetchall()
+                    config['base_columns'] = [base_column[0] for base_column in base_columns]
+
+                    cur.execute("SELECT calculated_column.name FROM calculated_column ORDER BY id")
+                    calculated_columns = cur.fetchall()
+                    config['calculated_columns'] = [calculated_column[0] for calculated_column in calculated_columns]
+
+                    cur.execute("""
+                        SELECT 
+                            feature_type.name, 
+                            feature_def.feature_periods, 
+                            feature_def.shift
+                        FROM feature_def
+                        JOIN feature_type ON feature_def.feature_type_id = feature_type.id
+                        WHERE feature_def.training_job_uuid = %s
+                        ORDER BY feature_def.id
+                    """, (job_uuid,))
+                    features = cur.fetchall()
+                    for f_type, f_periods, f_shift in features:
+                        config['features'].append({
+                            'feature_type': f_type, 
+                            'feature_periods': f_periods,
+                            'shift': f_shift
+                        })
+                        periods_str = "-".join(map(str, f_periods))
+                        config['feature_names'].append(f"{f_type}:{periods_str}:{f_shift}")
+
+                    cur.execute("""
+                        SELECT 
+                            base_column_id, 
+                            calculated_column_id, 
+                            shift 
+                        FROM target_def 
+                        WHERE training_job_uuid = %s 
+                        ORDER BY id
+                    """, (job_uuid,))
+                    targets = cur.fetchall()
+
+                    for base_column_id, calculated_column_id, target_shift in targets:
+                        target_name = None
+                        
+                        if base_column_id is not None:
+                            cur.execute("SELECT base_column.name FROM base_column WHERE id = %s", (base_column_id,))
+                            base_column = cur.fetchone()
+                            if base_column:
+                                target_name = base_column[0]
+                                
+                        elif calculated_column_id is not None:
+                            cur.execute("SELECT calculated_column.name FROM calculated_column WHERE id = %s", (calculated_column_id,))
+                            calculated_column = cur.fetchone()
+                            if calculated_column:
+                                target_name = calculated_column[0]
+                                
+                        if target_name:
+                            config['targets'].append({
+                                'column': target_name, 
+                                'shift': target_shift
+                            })
+                            config['target_names'].append(f"{target_name}:{target_shift}")
+
+                    cur.execute("""
+                        SELECT architecture.name
+                        FROM architecture
+                        JOIN training_job_architecture ON training_job_architecture.architecture_id = architecture.id
+                        WHERE training_job_architecture.training_job_uuid = %s
+                        ORDER BY architecture_id
+                    """, (job_uuid,))
+                    architectures = cur.fetchall()
+                    config['architectures'] = [architecture[0] for architecture in architectures]
+
+                    cur.execute("""
+                        SELECT data_source.name
+                        FROM data_source
+                        JOIN training_job ON training_job.data_source_id = data_source.id
+                        WHERE training_job.job_uuid = %s
+                    """, (job_uuid,))
+                    data_source = cur.fetchone()
+                    if data_source:
+                        config['data_source'] = data_source[0]
+
+                    if not config['data_source']:
+                        raise ValueError(f"Nie znaleziono danych dla zadania: {job_uuid}")
+
+                    return config
+        except Exception as e:
+            raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")

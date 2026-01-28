@@ -6,6 +6,48 @@ class DataExtractor:
         self.config = config
         self.log_signal = log_signal
 
+    def add_calculated_columns(self, df):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych w df")
+                return None
+            
+            c_cols = []
+            
+            for col_name in self.config["calculated_columns"]:
+                if col_name == 'typical':
+                    series = (df['high'] + df['low'] + df['close']) / 3
+                    series.name = col_name
+                    c_cols.append(series)
+
+                elif col_name == 'median':
+                    series = (df['high'] + df['low']) / 2
+                    series.name = col_name
+                    c_cols.append(series)
+
+                elif col_name == 'weighted':
+                    series = (df['high'] + df['low'] + 2 * df['close']) / 4
+                    series.name = col_name
+                    c_cols.append(series)
+
+                elif col_name == 'ohlc':
+                    series = (df['open'] + df['high'] + df['low'] + df['close']) / 4
+                    series.name = col_name
+                    c_cols.append(series)
+
+                else:
+                    self.log_signal.emit(f"[{f_name}] Brak wzoru dla obliczanej kolumny")
+                    return None
+            
+            df = pd.concat([df] + c_cols, axis=1).copy()
+            self.log_signal.emit(f"[{f_name}] Dodano obliczane kolumny")            
+            return df
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            return None
+
     def add_features(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
@@ -39,9 +81,9 @@ class DataExtractor:
                     series.name = col_name
                     f_cols.append(series)
 
-            if not f_cols:
-                self.log_signal.emit(f"[{f_name}] Brak cech do dodania")
-                return None
+                else:
+                    self.log_signal.emit(f"[{f_name}] Brak wzoru dla dodawanej cechy")
+                    return None
             
             df = pd.concat([df] + f_cols, axis=1).copy()
             self.log_signal.emit(f"[{f_name}] Dodano cechy")            
@@ -61,7 +103,7 @@ class DataExtractor:
             t_cols = []
 
             for t, col_name in zip(self.config["targets"], self.config["target_names"]):
-                series = df[t['base_column']].shift(t['shift'])
+                series = df[t['column']].shift(t['shift'])
                 series.name = col_name
                 t_cols.append(series)
                 

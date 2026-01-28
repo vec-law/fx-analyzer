@@ -22,6 +22,11 @@ CREATE TABLE base_column (
     name TEXT UNIQUE NOT NULL
 );
 
+CREATE TABLE calculated_column (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
 CREATE TABLE feature_type (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL
@@ -70,10 +75,14 @@ CREATE TABLE feature_def (
 CREATE TABLE target_def (
     id SERIAL PRIMARY KEY,
     training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
-    base_column_id INTEGER REFERENCES base_column(id) NOT NULL,
+    base_column_id INTEGER REFERENCES base_column(id),
+    calculated_column_id INTEGER REFERENCES calculated_column(id),
     shift INTEGER NOT NULL CHECK (shift < 0),
-    CONSTRAINT uq_target_def UNIQUE (training_job_uuid, base_column_id, shift)
-    
+    CONSTRAINT uq_target_def UNIQUE (training_job_uuid, base_column_id, calculated_column_id, shift),
+    CONSTRAINT check_single_source CHECK (
+        (base_column_id IS NOT NULL AND calculated_column_id IS NULL) OR 
+        (base_column_id IS NULL AND calculated_column_id IS NOT NULL)
+    )
 );
 
 CREATE TABLE training_job_architecture (
@@ -142,6 +151,7 @@ CREATE INDEX idx_tj_arch_job_uuid ON training_job_architecture(training_job_uuid
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
+INSERT INTO calculated_column (name) VALUES ('typical'), ('median'), ('weighted'), ('ohlc');
 INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
 INSERT INTO architecture (name) VALUES ('ModelV1'), ('ModelV2'), ('ModelV3'), ('ModelV4'), ('ModelV5'), ('ModelV6'), ('ModelV7'), ('ModelV8'), ('ModelV9'), ('ModelV10'),
 ('ModelV11'), ('ModelV12'), ('ModelV13'), ('ModelV14'), ('ModelV15'), ('ModelV16'), ('ModelV17'), ('ModelV18'), ('ModelV19'), ('ModelV20'),

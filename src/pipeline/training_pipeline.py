@@ -48,6 +48,11 @@ class TrainingPipeline:
 
             data_extractor = DataExtractor(self.config, log_signal=self.log_signal)
 
+            self.df = data_extractor.add_calculated_columns(self.df)
+            if self.df is None or self.df.empty:
+                raise ValueError("Nie dodano obliczanych kolumn")
+            if self._handle_stop(f_name): return
+
             self.df = data_extractor.add_features(self.df)
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano cech")

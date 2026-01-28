@@ -215,11 +215,14 @@ class TrainingTab(QWidget):
                 })
 
             for target in field_values["targets"].split(","):
-                parts = target.strip().split(":")
+                target_str = target.strip()
+                if not target_str:
+                    continue
+                parts = target_str.split(":")
                 if len(parts) != 2:
-                    raise ValueError(f"Format target: base_column:shift")
+                    raise ValueError("Format targetu to 'nazwa_kolumny:shift' (np. close:1)")
                 config["targets"].append({
-                    "base_column": parts[0].strip(),
+                    "column": parts[0].strip(),
                     "shift": int(parts[1].strip())
                 })
 

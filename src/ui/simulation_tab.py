@@ -356,6 +356,7 @@ class SimulationTab(QWidget):
                         else:
                             self.log_to_console(f"Brak kolumny {t} w wynikach.")
 
+                    plt.ylabel(f"{train_config['instrument']['name']}")
                     plt.title(f"{strategy} | {arch}")
                     plt.legend(loc='upper left')
                     plt.grid(True)
