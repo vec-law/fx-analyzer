@@ -42,8 +42,8 @@ CREATE TABLE data_source (
     name TEXT UNIQUE NOT NULL
 );
 
-CREATE TABLE training_job (
-    job_uuid UUID PRIMARY KEY,
+CREATE TABLE training (
+    train_uuid UUID PRIMARY KEY,
     instrument_id INTEGER REFERENCES instrument(id) NOT NULL,
     timeframe_id INTEGER REFERENCES timeframe(id) NOT NULL,
     status_id INTEGER REFERENCES status(id) NOT NULL,
@@ -52,9 +52,9 @@ CREATE TABLE training_job (
 );
 
 CREATE TABLE parameter_set (
-    training_job_uuid UUID PRIMARY KEY REFERENCES training_job(job_uuid) ON DELETE CASCADE,
-    samples_limit INTEGER NOT NULL CHECK (samples_limit > 0),
-    test_samples INTEGER NOT NULL CHECK (test_samples >= 0 AND test_samples < samples_limit),
+    train_uuid UUID PRIMARY KEY REFERENCES training(train_uuid) ON DELETE CASCADE,
+    all_samples INTEGER NOT NULL CHECK (all_samples > 0),
+    test_samples INTEGER NOT NULL CHECK (test_samples >= 0 AND test_samples < all_samples),
     seed INTEGER NOT NULL CHECK (seed > 0),
     epochs INTEGER NOT NULL CHECK (epochs > 0),
     train_noise REAL NOT NULL CHECK (train_noise >= 0 AND train_noise < 1),
@@ -63,90 +63,77 @@ CREATE TABLE parameter_set (
 
 CREATE TABLE feature_def (
     id SERIAL PRIMARY KEY,
-    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    train_uuid UUID REFERENCES training(train_uuid) ON DELETE CASCADE,
     feature_type_id INTEGER REFERENCES feature_type(id) NOT NULL,
     feature_periods INTEGER[] NOT NULL,
     shift INTEGER NOT NULL CHECK (shift > 0),
-    CONSTRAINT uq_feature_def UNIQUE (training_job_uuid, feature_type_id, feature_periods, shift),
+    CONSTRAINT uq_feature_def UNIQUE (train_uuid, feature_type_id, feature_periods, shift),
     CONSTRAINT feature_periods_not_empty CHECK (array_length(feature_periods, 1) > 0),
     CONSTRAINT feature_periods_positive CHECK (0 < ALL(feature_periods))
 );
 
 CREATE TABLE target_def (
     id SERIAL PRIMARY KEY,
-    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    train_uuid UUID REFERENCES training(train_uuid) ON DELETE CASCADE,
     base_column_id INTEGER REFERENCES base_column(id),
     calculated_column_id INTEGER REFERENCES calculated_column(id),
     shift INTEGER NOT NULL CHECK (shift < 0),
-    CONSTRAINT uq_target_def UNIQUE (training_job_uuid, base_column_id, calculated_column_id, shift),
+    CONSTRAINT uq_target_def UNIQUE (train_uuid, base_column_id, calculated_column_id, shift),
     CONSTRAINT check_single_source CHECK (
         (base_column_id IS NOT NULL AND calculated_column_id IS NULL) OR 
         (base_column_id IS NULL AND calculated_column_id IS NOT NULL)
     )
 );
 
-CREATE TABLE training_job_architecture (
-    training_job_uuid UUID REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+CREATE TABLE training_architecture (
+    train_uuid UUID REFERENCES training(train_uuid) ON DELETE CASCADE,
     architecture_id INTEGER REFERENCES architecture(id),
-    PRIMARY KEY (training_job_uuid, architecture_id)
+    PRIMARY KEY (train_uuid, architecture_id)
 );
 
 CREATE TABLE statistic (
     id SERIAL PRIMARY KEY,
-    training_job_uuid UUID NOT NULL REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    train_uuid UUID NOT NULL REFERENCES training(train_uuid) ON DELETE CASCADE,
     column_name TEXT NOT NULL,
     stat_name TEXT NOT NULL,
     stat_value REAL NOT NULL,
-    CONSTRAINT uq_stat_entry UNIQUE (training_job_uuid, column_name, stat_name)
+    CONSTRAINT uq_stat_entry UNIQUE (train_uuid, column_name, stat_name)
 );
 
 CREATE TABLE model (
     id SERIAL PRIMARY KEY,
-    training_job_uuid UUID NOT NULL REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+    train_uuid UUID NOT NULL REFERENCES training(train_uuid) ON DELETE CASCADE,
     architecture_id INTEGER NOT NULL REFERENCES architecture(id),
     weights BYTEA NOT NULL,
     mse_loss REAL,
     mae_loss REAL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_model_job_arch UNIQUE (training_job_uuid, architecture_id)
+    CONSTRAINT uq_model_arch UNIQUE (train_uuid, architecture_id)
 );
 
-CREATE TABLE simulation (
-    sim_uuid UUID PRIMARY KEY,
-    training_job_uuid UUID NOT NULL REFERENCES training_job(job_uuid) ON DELETE CASCADE,
+CREATE TABLE prediction (
+    pred_uuid UUID PRIMARY KEY,
+    train_uuid UUID NOT NULL REFERENCES training(train_uuid) ON DELETE CASCADE,
     status_id INTEGER NOT NULL REFERENCES status(id),
-    samples_simulation INTEGER NOT NULL CHECK (samples_simulation > 0),
+    all_samples INTEGER NOT NULL CHECK (all_samples > 0),
     predicted_samples INTEGER NOT NULL CHECK (predicted_samples > 0),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT chk_predicted_samples_limit CHECK (predicted_samples <= samples_simulation)
+    CONSTRAINT chk_samples CHECK (predicted_samples <= all_samples)
 );
 
-CREATE TABLE strategy (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL
-);
-
-CREATE TABLE simulation_strategy (
-    simulation_uuid UUID REFERENCES simulation(sim_uuid) ON DELETE CASCADE,
-    strategy_id INTEGER REFERENCES strategy(id) ON DELETE CASCADE,
-    PRIMARY KEY (simulation_uuid, strategy_id)
-);
-
-CREATE TABLE result (
-    sim_uuid UUID NOT NULL REFERENCES simulation(sim_uuid) ON DELETE CASCADE,
-    strategy_id INTEGER NOT NULL REFERENCES strategy(id),
+CREATE TABLE prediction_result (
+    pred_uuid UUID NOT NULL REFERENCES prediction(pred_uuid) ON DELETE CASCADE,
     architecture_id INTEGER NOT NULL REFERENCES architecture(id),
     data BYTEA NOT NULL,
-    PRIMARY KEY (sim_uuid, strategy_id, architecture_id)
+    PRIMARY KEY (pred_uuid, architecture_id)
 );
 
-CREATE INDEX idx_simulation_training_uuid ON simulation(training_job_uuid);
-CREATE INDEX idx_sim_strat_sim_uuid ON simulation_strategy(simulation_uuid);
-CREATE INDEX idx_model_job_uuid ON model(training_job_uuid);
-CREATE INDEX idx_statistic_job_uuid ON statistic(training_job_uuid);
-CREATE INDEX idx_target_def_job_uuid ON target_def(training_job_uuid);
-CREATE INDEX idx_feature_def_job_uuid ON feature_def(training_job_uuid);
-CREATE INDEX idx_tj_arch_job_uuid ON training_job_architecture(training_job_uuid);
+CREATE INDEX idx_pred_train_uuid ON prediction(train_uuid);
+CREATE INDEX idx_model_train_uuid ON model(train_uuid);
+CREATE INDEX idx_statistic_train_uuid ON statistic(train_uuid);
+CREATE INDEX idx_target_def_train_uuid ON target_def(train_uuid);
+CREATE INDEX idx_feature_def_train_uuid ON feature_def(train_uuid);
+CREATE INDEX idx_train_arch_uuid ON training_architecture(train_uuid);
 
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
@@ -167,4 +154,3 @@ INSERT INTO architecture (name) VALUES ('ModelV1'), ('ModelV2'), ('ModelV3'), ('
 ('ModelV111'), ('ModelV112'), ('ModelV113'), ('ModelV114'), ('ModelV115'), ('ModelV116'), ('ModelV117'), ('ModelV118'), ('ModelV119'), ('ModelV120');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO data_source (name) VALUES ('YF');
-INSERT INTO strategy (name) VALUES ('only_predict');

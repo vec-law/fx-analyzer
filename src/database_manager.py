@@ -6,8 +6,8 @@ class DatabaseManager:
     def __init__(self, db_config):
         self.config = db_config
 
-    def add_training_job(self, config):
-        job_uuid = str(uuid.uuid4())
+    def add_training(self, config):
+        train_uuid = str(uuid.uuid4())
 
         try:
             if not config.get('features') or not config.get('targets') or not config.get('architectures'):
@@ -16,208 +16,210 @@ class DatabaseManager:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO training_job (job_uuid, instrument_id, timeframe_id, status_id, data_source_id) 
+                        INSERT INTO training (train_uuid, instrument_id, timeframe_id, status_id, data_source_id) 
                         VALUES (%s, 
                             (SELECT id FROM instrument WHERE name = %s), 
                             (SELECT id FROM timeframe WHERE name = %s), 
                             (SELECT id FROM status WHERE name = 'pending'),
                             (SELECT id FROM data_source WHERE name = %s))
                     """, (
-                        job_uuid, 
-                        config['instrument']['name'], 
-                        config['timeframe']['name'], 
+                        train_uuid,
+                        config['instrument']['name'],
+                        config['timeframe']['name'],
                         config['data_source']
                     ))
 
                     cur.execute("""
-                        INSERT INTO parameter_set (training_job_uuid, samples_limit, test_samples, seed, epochs, train_noise, learning_rate) 
+                        INSERT INTO parameter_set (train_uuid, all_samples, test_samples, seed, epochs, train_noise, learning_rate) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (
-                        job_uuid, 
-                        config['parameter_set']['samples_limit'], 
-                        config['parameter_set']['test_samples'], 
-                        config['parameter_set']['seed'], 
-                        config['parameter_set']['epochs'], 
-                        config['parameter_set']['train_noise'], 
+                        train_uuid,
+                        config['parameter_set']['all_samples'],
+                        config['parameter_set']['test_samples'],
+                        config['parameter_set']['seed'],
+                        config['parameter_set']['epochs'],
+                        config['parameter_set']['train_noise'],
                         config['parameter_set']['learning_rate']
                     ))
 
                     for feature in config['features']:
                         cur.execute("""
-                            INSERT INTO feature_def (training_job_uuid, feature_type_id, feature_periods, shift) 
+                            INSERT INTO feature_def (train_uuid, feature_type_id, feature_periods, shift) 
                             VALUES (%s, 
                                 (SELECT id FROM feature_type WHERE name = %s), 
                                 %s, %s)
                         """, (
-                            job_uuid, 
-                            feature['feature_type'], 
+                            train_uuid,
+                            feature['feature_type'],
                             feature['feature_periods'],
                             feature['shift']
                         ))
 
+                    # --- ZMIANA: Obsługa targetów bez LEFT JOIN i UNION ---
                     for target in config['targets']:
                         column_name = target['column']
-                        shift = target['shift']
+                        target_shift = target['shift']
+                        base_id = None
+                        calc_id = None
 
-                        cur.execute("SELECT base_column.id FROM base_column WHERE name = %s", (column_name,))
-                        base_column = cur.fetchone()
-                        
-                        base_column_id = base_column[0] if base_column else None
-                        calculated_column_id = None
+                        cur.execute("SELECT id FROM base_column WHERE name = %s", (column_name,))
+                        row_base = cur.fetchone()
 
-                        if not base_column_id:
-                            cur.execute("SELECT calculated_column.id FROM calculated_column WHERE name = %s", (column_name,))
-                            calculated_column = cur.fetchone()
-                            calculated_column_id = calculated_column[0] if calculated_column else None
-                            
-                        if not base_column_id and not calculated_column_id:
-                            raise ValueError(f"Kolumna {column_name} nie istnieje w bazie danych.")
+                        if row_base:
+                            base_id = row_base[0]
+                        else:
+                            cur.execute("SELECT id FROM calculated_column WHERE name = %s", (column_name,))
+                            row_calc = cur.fetchone()
+                            if row_calc:
+                                calc_id = row_calc[0]
+
+                        if base_id is None and calc_id is None:
+                            raise ValueError(f"Kolumna {column_name} nie istnieje w słownikach.")
 
                         cur.execute("""
-                            INSERT INTO target_def (training_job_uuid, base_column_id, calculated_column_id, shift) 
+                            INSERT INTO target_def (train_uuid, base_column_id, calculated_column_id, shift) 
                             VALUES (%s, %s, %s, %s)
-                        """, (job_uuid, base_column_id, calculated_column_id, shift))
+                        """, (train_uuid, base_id, calc_id, target_shift))
 
                     for architecture in config['architectures']:
                         cur.execute("""
-                            INSERT INTO training_job_architecture (training_job_uuid, architecture_id) 
+                            INSERT INTO training_architecture (train_uuid, architecture_id) 
                             VALUES (%s, (SELECT id FROM architecture WHERE name = %s))
-                        """, (job_uuid, architecture))
+                        """, (train_uuid, architecture))
 
                     conn.commit()
-                    return job_uuid            
+                    return train_uuid
         except ValueError as e:
             raise e
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy dodawaniu zadania: {str(e)}")
-        
-    def get_training_status(self, job_uuid):
+
+    def get_training_status(self, train_uuid):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT s.name 
-                        FROM training_job tj
-                        JOIN status s ON tj.status_id = s.id
-                        WHERE tj.job_uuid = %s
-                    """, (job_uuid,))
+                        SELECT status.name 
+                        FROM training
+                        JOIN status ON training.status_id = status.id
+                        WHERE training.train_uuid = %s
+                    """, (train_uuid,))
                     result = cur.fetchone()
                     return result[0] if result else None
         except Exception as e:
             raise Exception(f"Błąd pobierania statusu: {str(e)}")
-        
-    def update_training_status(self, job_uuid, status_name):
+
+    def update_training_status(self, train_uuid, status_name):
         try:
-            if not job_uuid or not status_name:
+            if not train_uuid or not status_name:
                 raise ValueError("Błąd: Brak UUID zadania lub nazwy statusu.")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        UPDATE training_job 
+                        UPDATE training
                         SET status_id = (SELECT id FROM status WHERE name = %s)
-                        WHERE job_uuid = %s
-                    """, (status_name, job_uuid))
-                    
+                        WHERE train_uuid = %s
+                    """, (status_name, train_uuid))
+
                     if cur.rowcount == 0:
-                        raise Exception(f"Nie znaleziono zadania o UUID: {job_uuid}")
+                        raise Exception(f"Nie znaleziono treningu o UUID: {train_uuid}")
 
                     conn.commit()
                     return True
         except Exception as e:
             raise Exception(f"Nie udało się zaktualizować statusu: {str(e)}")
 
-
-    def del_training_job(self, job_uuid):
+    def del_training(self, train_uuid):
         try:
-            if not job_uuid:
-                raise ValueError("Błąd: Nie podano UUID do usunięcia.")
+            if not train_uuid:
+                raise ValueError("Błąd: Nie podano UUID treningu do usunięcia")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM training_job WHERE job_uuid = %s", (job_uuid,))
+                    cur.execute("DELETE FROM training WHERE train_uuid = %s", (train_uuid,))
 
                     if cur.rowcount == 0:
-                        raise Exception(f"Zadanie {job_uuid} nie istnieje w bazie danych.")
-                    
+                        raise Exception(f"Trening {train_uuid} nie istnieje w bazie danych.")
+
                     conn.commit()
                     return True
         except Exception as e:
             raise Exception(f"Błąd podczas usuwania zadania: {str(e)}")
 
-    def get_training_jobs(self):
+    def get_trainings(self):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT 
-                            training_job.job_uuid, 
+                            training.train_uuid, 
                             instrument.name, 
                             timeframe.name, 
                             data_source.name, 
                             status.name, 
-                            training_job.created_at
-                        FROM training_job
-                        JOIN instrument ON training_job.instrument_id = instrument.id
-                        JOIN timeframe ON training_job.timeframe_id = timeframe.id
-                        JOIN data_source ON training_job.data_source_id = data_source.id
-                        JOIN status ON training_job.status_id = status.id
-                        ORDER BY training_job.created_at DESC
+                            training.created_at
+                        FROM training
+                        JOIN instrument ON training.instrument_id = instrument.id
+                        JOIN timeframe ON training.timeframe_id = timeframe.id
+                        JOIN data_source ON training.data_source_id = data_source.id
+                        JOIN status ON training.status_id = status.id
+                        ORDER BY training.created_at DESC
                     """)
                     rows = cur.fetchall()
-                    
+
                     return [
                         {
-                            'job_uuid': r[0], 
-                            'instrument': r[1], 
-                            'timeframe_name': r[2], 
-                            'data_source': r[3], 
-                            'status': r[4], 
+                            'train_uuid': r[0],
+                            'instrument': r[1],
+                            'timeframe_name': r[2],
+                            'data_source': r[3],
+                            'status': r[4],
                             'created_at': r[5]
                         } for r in rows
                     ]
         except Exception as e:
-            raise Exception(f"Błąd podczas pobierania listy zadań: {str(e)}")
-        
-    def save_training_stats(self, job_uuid, ser_mean, ser_std):
+            raise Exception(f"Błąd podczas pobierania listy treningów: {str(e)}")
+
+    def save_training_stats(self, train_uuid, ser_mean, ser_std):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     data = []
                     for col in ser_mean.index:
-                        data.append((job_uuid, col, 'mean', float(ser_mean[col])))
-                        data.append((job_uuid, col, 'std', float(ser_std[col])))
+                        data.append((train_uuid, col, 'mean', float(ser_mean[col])))
+                        data.append((train_uuid, col, 'std', float(ser_std[col])))
 
                     if data:
                         cur.executemany("""
-                            INSERT INTO statistic (training_job_uuid, column_name, stat_name, stat_value)
+                            INSERT INTO statistic (train_uuid, column_name, stat_name, stat_value)
                             VALUES (%s, %s, %s, %s)
-                            ON CONFLICT (training_job_uuid, column_name, stat_name) 
+                            ON CONFLICT (train_uuid, column_name, stat_name) 
                             DO UPDATE SET stat_value = EXCLUDED.stat_value
                         """, data)
-                    
+
                     conn.commit()
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy zapisywaniu statystyk: {str(e)}")
 
-    def load_training_stats(self, job_uuid):
+    def load_training_stats(self, train_uuid):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT column_name, stat_name, stat_value 
                         FROM statistic 
-                        WHERE training_job_uuid = %s
-                    """, (job_uuid,))
-                    
+                        WHERE train_uuid = %s
+                    """, (train_uuid,))
+
                     rows = cur.fetchall()
-                    
+
                     if not rows:
                         return None, None
 
                     means = {}
                     stds = {}
-                    
+
                     for col_name, stat_name, value in rows:
                         if stat_name == 'mean':
                             means[col_name] = value
@@ -231,10 +233,10 @@ class DatabaseManager:
 
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie statystyk: {str(e)}")
-        
-    def save_model_weights(self, job_uuid, arch_name, weights, mse_loss=None, mae_loss=None):
+
+    def save_model_weights(self, train_uuid, arch_name, weights, mse_loss=None, mae_loss=None):
         query = """
-            INSERT INTO model (training_job_uuid, architecture_id, weights, mse_loss, mae_loss)
+            INSERT INTO model (train_uuid, architecture_id, weights, mse_loss, mae_loss)
             VALUES (
                 %s, 
                 (SELECT id FROM architecture WHERE name = %s), 
@@ -242,7 +244,7 @@ class DatabaseManager:
                 %s, 
                 %s
             )
-            ON CONFLICT (training_job_uuid, architecture_id) 
+            ON CONFLICT (train_uuid, architecture_id) 
             DO UPDATE SET 
                 weights = EXCLUDED.weights,
                 mse_loss = EXCLUDED.mse_loss,
@@ -251,217 +253,188 @@ class DatabaseManager:
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    cur.execute(query, (job_uuid, arch_name, weights, mse_loss, mae_loss))
+                    cur.execute(query, (train_uuid, arch_name, weights, mse_loss, mae_loss))
                     conn.commit()
             return True
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy zapisywaniu modelu: {str(e)}")
-        
-    def load_model_weights(self, job_uuid, arch_name):
+
+    def load_model_weights(self, train_uuid, arch_name):
         query = """
             SELECT weights 
             FROM model 
-            WHERE training_job_uuid = %s 
+            WHERE train_uuid = %s 
             AND architecture_id = (SELECT id FROM architecture WHERE name = %s);
         """
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    cur.execute(query, (job_uuid, arch_name))
+                    cur.execute(query, (train_uuid, arch_name))
                     result = cur.fetchone()
-                    
+
                     if result:
                         weights = bytes(result[0])
                         return weights
                     return None
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie modelu: {str(e)}")
-        
-    def add_simulation_job(self, training_uuid, samples_simulation, predicted_samples, strategies):
-        sim_uuid = str(uuid.uuid4())
+
+    def add_prediction(self, train_uuid, all_samples, predicted_samples):
+        pred_uuid = str(uuid.uuid4())
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    strategy_ids = []
-                    for strategy_name in strategies:
-                        cur.execute("SELECT id FROM strategy WHERE name = %s", (strategy_name,))
-                        result = cur.fetchone()
-                        if not result:
-                            raise ValueError(f"Błąd: Strategia '{strategy_name}' nie istnieje w bazie danych.")
-                        strategy_ids.append(result[0])
-
                     cur.execute("""
-                        INSERT INTO simulation (
-                            sim_uuid, training_job_uuid, status_id, 
-                            samples_simulation, predicted_samples
+                        INSERT INTO prediction (
+                            pred_uuid, train_uuid, status_id, 
+                            all_samples, predicted_samples
                         ) 
                         VALUES (%s, %s, (SELECT id FROM status WHERE name = 'pending'), %s, %s)
-                    """, (sim_uuid, training_uuid, samples_simulation, predicted_samples))
-
-                    for strategy_id in strategy_ids:
-                        cur.execute("""
-                            INSERT INTO simulation_strategy (simulation_uuid, strategy_id)
-                            VALUES (%s, %s)
-                        """, (sim_uuid, strategy_id))
+                    """, (pred_uuid, train_uuid, all_samples, predicted_samples))
 
                     conn.commit()
-                    return sim_uuid
+                    return pred_uuid
         except ValueError as e:
             raise e
         except Exception as e:
-            raise Exception(f"Błąd bazy danych przy dodawaniu symulacji: {str(e)}")
-        
-    def get_simulations(self):
+            raise Exception(f"Błąd bazy danych przy dodawaniu predykcji: {str(e)}")
+
+    def get_predictions(self):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT 
-                            simulation.sim_uuid, 
-                            simulation.training_job_uuid, 
+                            prediction.pred_uuid, 
+                            prediction.train_uuid, 
                             status.name, 
-                            simulation.samples_simulation, 
-                            simulation.predicted_samples, 
-                            simulation.created_at,
-                            STRING_AGG(strategy.name, ', ')
-                        FROM simulation
-                        JOIN status ON simulation.status_id = status.id
-                        JOIN simulation_strategy ON simulation.sim_uuid = simulation_strategy.simulation_uuid
-                        JOIN strategy ON simulation_strategy.strategy_id = strategy.id
-                        GROUP BY simulation.sim_uuid, status.name
-                        ORDER BY simulation.created_at DESC
+                            prediction.all_samples, 
+                            prediction.predicted_samples, 
+                            prediction.created_at
+                        FROM prediction
+                        JOIN status ON prediction.status_id = status.id
+                        ORDER BY prediction.created_at DESC
                     """)
                     rows = cur.fetchall()
-                    
+
                     return [
                         {
-                            'sim_uuid': r[0],
-                            'training_job_uuid': r[1],
+                            'pred_uuid': r[0],
+                            'train_uuid': r[1],
                             'status': r[2],
-                            'samples_simulation': r[3],
+                            'all_samples': r[3],
                             'predicted_samples': r[4],
-                            'created_at': r[5],
-                            'strategies': r[6]
+                            'created_at': r[5]
                         } for r in rows
                     ]
         except Exception as e:
-            raise Exception(f"Błąd podczas pobierania listy symulacji: {str(e)}")
-        
-    def del_simulation_job(self, sim_uuid):
+            raise Exception(f"Błąd podczas pobierania listy predykcji: {str(e)}")
+
+    def del_prediction(self, pred_uuid):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM simulation WHERE sim_uuid = %s", (sim_uuid,))
+                    cur.execute("DELETE FROM prediction WHERE pred_uuid = %s", (pred_uuid,))
                     if cur.rowcount == 0:
-                        raise Exception(f"Symulacja {sim_uuid} nie istnieje.")
+                        raise Exception(f"Predykcja {pred_uuid} nie istnieje.")
                     conn.commit()
             return True
         except Exception as e:
-            raise Exception(f"Błąd podczas usuwania symulacji: {str(e)}")
-        
-    def update_simulation_status(self, sim_uuid, status_name):
-        """
-        Updates the status of a specific simulation job in the 'simulation' table.
-        """
+            raise Exception(f"Błąd podczas usuwania predykcji: {str(e)}")
+
+    def update_prediction_status(self, pred_uuid, status_name):
         try:
-            if not sim_uuid or not status_name:
-                raise ValueError("Błąd: Brak UUID symulacji lub nazwy statusu.")
+            if not pred_uuid or not status_name:
+                raise ValueError("Błąd: Brak UUID predykcji lub nazwy statusu")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        UPDATE simulation 
+                        UPDATE prediction
                         SET status_id = (SELECT id FROM status WHERE name = %s)
-                        WHERE sim_uuid = %s
-                    """, (status_name, sim_uuid))
-                    
+                        WHERE pred_uuid = %s
+                    """, (status_name, pred_uuid))
+
                     if cur.rowcount == 0:
-                        raise Exception(f"Nie znaleziono symulacji o UUID: {sim_uuid}")
+                        raise Exception(f"Nie znaleziono predykcji o UUID: {pred_uuid}")
 
                     conn.commit()
                     return True
         except Exception as e:
-            raise Exception(f"Nie udało się zaktualizować statusu symulacji: {str(e)}")
-        
-    def get_simulation_config(self, sim_uuid):
-        """
-        Pobiera konfigurację konkretnej symulacji na podstawie jej UUID.
-        """
+            raise Exception(f"Nie udało się zaktualizować statusu predykcji: {str(e)}")
+
+    def get_prediction_config(self, pred_uuid):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT 
-                            simulation.samples_simulation, 
-                            simulation.predicted_samples,
-                            ARRAY_AGG(strategy.name) as strategies,
-                            simulation.training_job_uuid
-                        FROM simulation
-                        JOIN simulation_strategy ON simulation.sim_uuid = simulation_strategy.simulation_uuid
-                        JOIN strategy ON simulation_strategy.strategy_id = strategy.id
-                        WHERE simulation.sim_uuid = %s
-                        GROUP BY simulation.sim_uuid, simulation.training_job_uuid
-                    """, (sim_uuid,))
-                    
+                            prediction.all_samples, 
+                            prediction.predicted_samples,
+                            prediction.train_uuid
+                        FROM prediction
+                        WHERE prediction.pred_uuid = %s
+                    """, (pred_uuid,))
+
                     row = cur.fetchone()
                     config = None
-                    
+
                     if row:
                         config = {
-                            "samples_simulation": row[0],
+                            "all_samples": row[0],
                             "predicted_samples": row[1],
-                            "strategies": row[2],
-                            "train_uuid": row[3]
+                            "train_uuid": row[2]
                         }
-                        
+
                     return config
         except Exception as e:
-            raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji symulacji: {str(e)}")
-        
-    def save_simulation_result(self, sim_uuid, strategy_name, arch_name, data_bytes):
+            raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji predykcji: {str(e)}")
+
+    def save_prediction_result(self, pred_uuid, arch_name, data_bytes):
         query = """
-            INSERT INTO result (sim_uuid, strategy_id, architecture_id, data)
+            INSERT INTO prediction_result (pred_uuid, architecture_id, data)
             VALUES (
                 %s, 
-                (SELECT id FROM strategy WHERE name = %s), 
                 (SELECT id FROM architecture WHERE name = %s), 
                 %s
             )
-            ON CONFLICT (sim_uuid, strategy_id, architecture_id) 
-            DO UPDATE SET data = EXCLUDED.data
+            ON CONFLICT (pred_uuid, architecture_id) 
+            DO UPDATE SET data = EXCLUDED.data;
         """
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    cur.execute(query, (sim_uuid, strategy_name, arch_name, psycopg2.Binary(data_bytes)))
+                    cur.execute(query, (pred_uuid, arch_name, psycopg2.Binary(data_bytes)))
+
+                    if cur.rowcount == 0:
+                        raise Exception(f"Nie znaleziono architektury o nazwie: {arch_name}")
+
                     conn.commit()
                     return True
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy zapisywaniu wyniku: {str(e)}")
 
-    def load_simulation_result(self, sim_uuid, strategy_name, arch_name):
+    def load_prediction_result(self, pred_uuid, arch_name):
         query = """
-            SELECT data 
-            FROM result 
-            WHERE sim_uuid = %s 
-            AND strategy_id = (SELECT id FROM strategy WHERE name = %s)
-            AND architecture_id = (SELECT id FROM architecture WHERE name = %s)
+            SELECT prediction_result.data 
+            FROM prediction_result
+            JOIN architecture ON prediction_result.architecture_id = architecture.id
+            WHERE prediction_result.pred_uuid = %s 
+            AND architecture.name = %s
         """
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
-                    cur.execute(query, (sim_uuid, strategy_name, arch_name))
+                    cur.execute(query, (pred_uuid, arch_name))
                     result = cur.fetchone()
-                    
+
                     if result:
-                        # result[0] zawiera memoryview/bytes z kolumny BYTEA
                         return bytes(result[0])
                     return None
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie wyniku: {str(e)}")
-        
 
-    def get_training_config(self, job_uuid):
+    def get_training_config(self, train_uuid):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
@@ -478,146 +451,102 @@ class DatabaseManager:
                         'feature_names': [],
                         'target_names': []
                     }
-                    
+
                     cur.execute("""
-                        SELECT 
-                            instrument.name, 
-                            instrument.ticker
+                        SELECT instrument.name, instrument.ticker
                         FROM instrument
-                        JOIN training_job ON training_job.instrument_id = instrument.id
-                        WHERE training_job.job_uuid = %s
-                    """, (job_uuid,))
+                        JOIN training ON training.instrument_id = instrument.id
+                        WHERE training.train_uuid = %s
+                    """, (train_uuid,))
                     instrument = cur.fetchone()
                     if instrument:
-                        config['instrument'] = {
-                            'name': instrument[0],
-                            'ticker': instrument[1]
-                        }
+                        config['instrument'] = {'name': instrument[0], 'ticker': instrument[1]}
 
                     cur.execute("""
-                        SELECT 
-                            timeframe.name, 
-                            timeframe.range,
-                            timeframe.check_period,
-                            timeframe.min_count
+                        SELECT timeframe.name, timeframe.range, timeframe.check_period, timeframe.min_count
                         FROM timeframe
-                        JOIN training_job ON training_job.timeframe_id = timeframe.id
-                        WHERE training_job.job_uuid = %s
-                    """, (job_uuid,))
-                    timeframe = cur.fetchone()
-                    if timeframe:
+                        JOIN training ON training.timeframe_id = timeframe.id
+                        WHERE training.train_uuid = %s
+                    """, (train_uuid,))
+                    tf_row = cur.fetchone()
+                    if tf_row:
                         config['timeframe'] = {
-                            'name': timeframe[0],
-                            'range': timeframe[1],
-                            'check_period': timeframe[2],
-                            'min_count': timeframe[3]
+                            'name': tf_row[0], 'range': tf_row[1],
+                            'check_period': tf_row[2], 'min_count': tf_row[3]
                         }
 
                     cur.execute("""
-                        SELECT 
-                            samples_limit, 
-                            test_samples, 
-                            seed, 
-                            epochs, 
-                            train_noise, 
-                            learning_rate
+                        SELECT all_samples, test_samples, seed, epochs, train_noise, learning_rate
                         FROM parameter_set
-                        WHERE training_job_uuid = %s
-                    """, (job_uuid,))
-                    parameter_set = cur.fetchone()
-                    if parameter_set:
+                        WHERE train_uuid = %s
+                    """, (train_uuid,))
+                    ps_row = cur.fetchone()
+                    if ps_row:
                         config['parameter_set'] = {
-                            'samples_limit': parameter_set[0],
-                            'test_samples': parameter_set[1],
-                            'seed': parameter_set[2],
-                            'epochs': parameter_set[3],
-                            'train_noise': parameter_set[4],
-                            'learning_rate': parameter_set[5]
+                            'all_samples': ps_row[0], 'test_samples': ps_row[1], 'seed': ps_row[2],
+                            'epochs': ps_row[3], 'train_noise': ps_row[4], 'learning_rate': ps_row[5]
                         }
 
-                    cur.execute("SELECT base_column.name FROM base_column ORDER BY id")
-                    base_columns = cur.fetchall()
-                    config['base_columns'] = [base_column[0] for base_column in base_columns]
-
-                    cur.execute("SELECT calculated_column.name FROM calculated_column ORDER BY id")
-                    calculated_columns = cur.fetchall()
-                    config['calculated_columns'] = [calculated_column[0] for calculated_column in calculated_columns]
+                    cur.execute("SELECT name FROM base_column ORDER BY id")
+                    config['base_columns'] = [row[0] for row in cur.fetchall()]
+                    cur.execute("SELECT name FROM calculated_column ORDER BY id")
+                    config['calculated_columns'] = [row[0] for row in cur.fetchall()]
 
                     cur.execute("""
-                        SELECT 
-                            feature_type.name, 
-                            feature_def.feature_periods, 
-                            feature_def.shift
+                        SELECT feature_type.name, feature_def.feature_periods, feature_def.shift
                         FROM feature_def
                         JOIN feature_type ON feature_def.feature_type_id = feature_type.id
-                        WHERE feature_def.training_job_uuid = %s
+                        WHERE feature_def.train_uuid = %s
                         ORDER BY feature_def.id
-                    """, (job_uuid,))
-                    features = cur.fetchall()
-                    for f_type, f_periods, f_shift in features:
+                    """, (train_uuid,))
+                    for f_type, f_periods, f_shift in cur.fetchall():
                         config['features'].append({
-                            'feature_type': f_type, 
-                            'feature_periods': f_periods,
-                            'shift': f_shift
+                            'feature_type': f_type, 'feature_periods': f_periods, 'shift': f_shift
                         })
-                        periods_str = "-".join(map(str, f_periods))
-                        config['feature_names'].append(f"{f_type}:{periods_str}:{f_shift}")
+                        config['feature_names'].append(f"{f_type}:{'-'.join(map(str, f_periods))}:{f_shift}")
+
+                    # --- ZMIANA: Pobieranie targetów bez LEFT JOIN ---
+                    cur.execute("""
+                        SELECT base_column.name, target_def.shift
+                        FROM target_def
+                        JOIN base_column ON target_def.base_column_id = base_column.id
+                        WHERE target_def.train_uuid = %s
+                    """, (train_uuid,))
+                    for name, shift in cur.fetchall():
+                        config['targets'].append({'column': name, 'shift': shift})
+                        config['target_names'].append(f"{name}:{shift}")
 
                     cur.execute("""
-                        SELECT 
-                            base_column_id, 
-                            calculated_column_id, 
-                            shift 
-                        FROM target_def 
-                        WHERE training_job_uuid = %s 
-                        ORDER BY id
-                    """, (job_uuid,))
-                    targets = cur.fetchall()
-
-                    for base_column_id, calculated_column_id, target_shift in targets:
-                        target_name = None
-                        
-                        if base_column_id is not None:
-                            cur.execute("SELECT base_column.name FROM base_column WHERE id = %s", (base_column_id,))
-                            base_column = cur.fetchone()
-                            if base_column:
-                                target_name = base_column[0]
-                                
-                        elif calculated_column_id is not None:
-                            cur.execute("SELECT calculated_column.name FROM calculated_column WHERE id = %s", (calculated_column_id,))
-                            calculated_column = cur.fetchone()
-                            if calculated_column:
-                                target_name = calculated_column[0]
-                                
-                        if target_name:
-                            config['targets'].append({
-                                'column': target_name, 
-                                'shift': target_shift
-                            })
-                            config['target_names'].append(f"{target_name}:{target_shift}")
+                        SELECT calculated_column.name, target_def.shift
+                        FROM target_def
+                        JOIN calculated_column ON target_def.calculated_column_id = calculated_column.id
+                        WHERE target_def.train_uuid = %s
+                    """, (train_uuid,))
+                    for name, shift in cur.fetchall():
+                        config['targets'].append({'column': name, 'shift': shift})
+                        config['target_names'].append(f"{name}:{shift}")
 
                     cur.execute("""
                         SELECT architecture.name
                         FROM architecture
-                        JOIN training_job_architecture ON training_job_architecture.architecture_id = architecture.id
-                        WHERE training_job_architecture.training_job_uuid = %s
-                        ORDER BY architecture_id
-                    """, (job_uuid,))
-                    architectures = cur.fetchall()
-                    config['architectures'] = [architecture[0] for architecture in architectures]
+                        JOIN training_architecture ON training_architecture.architecture_id = architecture.id
+                        WHERE training_architecture.train_uuid = %s
+                        ORDER BY architecture.id
+                    """, (train_uuid,))
+                    config['architectures'] = [row[0] for row in cur.fetchall()]
 
                     cur.execute("""
                         SELECT data_source.name
                         FROM data_source
-                        JOIN training_job ON training_job.data_source_id = data_source.id
-                        WHERE training_job.job_uuid = %s
-                    """, (job_uuid,))
-                    data_source = cur.fetchone()
-                    if data_source:
-                        config['data_source'] = data_source[0]
+                        JOIN training ON training.data_source_id = data_source.id
+                        WHERE training.train_uuid = %s
+                    """, (train_uuid,))
+                    ds_row = cur.fetchone()
+                    if ds_row:
+                        config['data_source'] = ds_row[0]
 
                     if not config['data_source']:
-                        raise ValueError(f"Nie znaleziono danych dla zadania: {job_uuid}")
+                        raise ValueError(f"Nie znaleziono danych dla zadania: {train_uuid}")
 
                     return config
         except Exception as e:

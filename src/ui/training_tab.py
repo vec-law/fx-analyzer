@@ -10,7 +10,7 @@ from src.worker.training_worker import TrainingWorker
 class TrainingTab(QWidget):
     PARAM_MAP = {
         "Instrument": "instrument_name", "Interwał": "timeframe_name",
-        "Źródło danych": "data_source", "Liczba próbek": "samples_limit",
+        "Źródło danych": "data_source", "Liczba próbek": "all_samples",
         "Liczba próbek testowych": "test_samples", "Losowość": "seed",
         "Liczba epok": "epochs", "Współczynnik szumu": "train_noise",
         "Współczynnik uczenia": "learning_rate", "Cechy": "features",
@@ -107,7 +107,7 @@ class TrainingTab(QWidget):
     def fill_tasks_table(self, tasks: list[dict]):
         self.table.setRowCount(len(tasks))
         for row, t in enumerate(tasks):
-            self.table.setItem(row, 0, QTableWidgetItem(str(t["job_uuid"])))
+            self.table.setItem(row, 0, QTableWidgetItem(str(t["train_uuid"])))
             self.table.setItem(row, 1, QTableWidgetItem(t["instrument"]))
             self.table.setItem(row, 2, QTableWidgetItem(t["timeframe_name"]))
             self.table.setItem(row, 3, QTableWidgetItem(t["status"]))
@@ -184,12 +184,12 @@ class TrainingTab(QWidget):
                 if not field_values.get(field):
                     raise ValueError(f"Pole '{field}' nie może być puste")
                 
-            config = {
+            train_config = {
                 "instrument": {"name": field_values["instrument_name"]},
                 "timeframe": {"name": field_values["timeframe_name"]},
                 "data_source": field_values["data_source"],
                 "parameter_set": {
-                    "samples_limit": int(field_values["samples_limit"]),
+                    "all_samples": int(field_values["all_samples"]),
                     "test_samples": int(field_values["test_samples"]),
                     "seed": int(field_values["seed"]),
                     "epochs": int(field_values["epochs"]),
@@ -208,7 +208,7 @@ class TrainingTab(QWidget):
                 parts = f_str.split(":")
                 if len(parts) != 3:
                     raise ValueError(f"Format feature: typ:parametry:shift")
-                config["features"].append({
+                train_config["features"].append({
                     "feature_type": parts[0].strip(),
                     "feature_periods": [int(p.strip()) for p in parts[1].split("-") if p.strip()],
                     "shift": int(parts[2].strip())
@@ -221,15 +221,15 @@ class TrainingTab(QWidget):
                 parts = target_str.split(":")
                 if len(parts) != 2:
                     raise ValueError("Format targetu to 'nazwa_kolumny:shift' (np. close:1)")
-                config["targets"].append({
+                train_config["targets"].append({
                     "column": parts[0].strip(),
                     "shift": int(parts[1].strip())
                 })
 
             for architecture in field_values["architectures"].split(","):
-                config["architectures"].append(architecture.strip())
+                train_config["architectures"].append(architecture.strip())
 
-            new_uuid = self.db_manager.add_training_job(config)
+            new_uuid = self.db_manager.add_training(train_config)
             self.table.clearSelection()
             self.last_clicked_uuid = new_uuid
             self.on_load_tasks(show_log=False)
@@ -251,21 +251,21 @@ class TrainingTab(QWidget):
             self.log_to_console("Nie wybrano zadania")
             return
         try:
-            config = self.db_manager.get_training_config(self.last_clicked_uuid)
-            self.param_fields["instrument_name"].setText(config["instrument"]["name"])
-            self.param_fields["timeframe_name"].setText(config["timeframe"]["name"])
-            self.param_fields["data_source"].setText(config["data_source"])
+            train_config = self.db_manager.get_training_config(self.last_clicked_uuid)
+            self.param_fields["instrument_name"].setText(train_config["instrument"]["name"])
+            self.param_fields["timeframe_name"].setText(train_config["timeframe"]["name"])
+            self.param_fields["data_source"].setText(train_config["data_source"])
 
-            ps = config["parameter_set"]
-            self.param_fields["samples_limit"].setText(str(ps["samples_limit"]))
+            ps = train_config["parameter_set"]
+            self.param_fields["all_samples"].setText(str(ps["all_samples"]))
             self.param_fields["test_samples"].setText(str(ps["test_samples"]))
             self.param_fields["seed"].setText(str(ps["seed"]))
             self.param_fields["epochs"].setText(str(ps["epochs"]))
             self.param_fields["train_noise"].setText(str(ps["train_noise"]))
             self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
-            self.param_fields["features"].setText(", ".join(config["feature_names"]))
-            self.param_fields["targets"].setText(", ".join(config["target_names"]))
-            self.param_fields["architectures"].setText(", ".join(config["architectures"]))
+            self.param_fields["features"].setText(", ".join(train_config["feature_names"]))
+            self.param_fields["targets"].setText(", ".join(train_config["target_names"]))
+            self.param_fields["architectures"].setText(", ".join(train_config["architectures"]))
 
             self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
         except Exception as e:
@@ -276,7 +276,7 @@ class TrainingTab(QWidget):
             self.log_to_console("Nie wybrano zadania do usunięcia")
             return
         try:
-            self.db_manager.del_training_job(self.last_clicked_uuid)
+            self.db_manager.del_training(self.last_clicked_uuid)
             self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
             self.on_load_tasks(show_log=False)
 
@@ -291,7 +291,7 @@ class TrainingTab(QWidget):
 
     def on_load_tasks(self, show_log=True):
         try:
-            tasks = self.db_manager.get_training_jobs()
+            tasks = self.db_manager.get_trainings()
             if not tasks:
                 self.table.setRowCount(0)
                 if show_log:

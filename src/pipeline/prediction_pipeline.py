@@ -7,12 +7,12 @@ import torch
 import io
 from src.model.model_manager import ModelManager
 
-class SimulationPipeline:
-    def __init__(self, sim_config: dict, log_signal, db_manager, sim_uuid):
-        self.sim_config = sim_config
+class PredictionPipeline:
+    def __init__(self, pred_config: dict, log_signal, db_manager, pred_uuid):
+        self.pred_config = pred_config
         self.log_signal = log_signal
         self.db_manager = db_manager
-        self.sim_uuid = sim_uuid
+        self.pred_uuid = pred_uuid
         self._is_stopped = False
         self.train_config = None
         self.df = None
@@ -25,10 +25,10 @@ class SimulationPipeline:
     def run(self):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            self.db_manager.update_simulation_status(self.sim_uuid, 'running')
-            self.log_signal.emit(f"[{f_name}] Rozpoczynanie symulacji")
+            self.db_manager.update_prediction_status(self.pred_uuid, 'running')
+            self.log_signal.emit(f"[{f_name}] Rozpoczynanie predykcji")
 
-            self.train_config = self.db_manager.get_training_config(self.sim_config['train_uuid'])
+            self.train_config = self.db_manager.get_training_config(self.pred_config['train_uuid'])
             if self.train_config is None:
                 raise ValueError("Nie pobrano konfiguracji treningu")
             if self._handle_stop(f_name): return
@@ -59,7 +59,7 @@ class SimulationPipeline:
                 raise ValueError("Nie dodano cech")
             if self._handle_stop(f_name): return
             
-            self.df = data_extractor.dropna_and_cut(self.df, self.sim_config['samples_simulation'])
+            self.df = data_extractor.dropna_and_cut(self.df, self.pred_config['all_samples'])
             if self.df is None or self.df.empty:
                 raise ValueError("Nie ucięto df")
             if self._handle_stop(f_name): return
@@ -68,14 +68,14 @@ class SimulationPipeline:
 
             _, self.df_pred = preprocessor.split_data(
                 self.df,
-                self.sim_config['predicted_samples'],
+                self.pred_config['predicted_samples'],
                 self.train_config['feature_names']
             )
             if self.df_pred is None:
                 raise ValueError("Nie wykonano splitu")
             if self._handle_stop(f_name): return
 
-            self.ser_mean, self.ser_std = self.db_manager.load_training_stats(self.sim_config['train_uuid'])
+            self.ser_mean, self.ser_std = self.db_manager.load_training_stats(self.pred_config['train_uuid'])
             if self.ser_mean is None or self.ser_std is None:
                 raise ValueError("Nie załadowano statystyk")
             if self._handle_stop(f_name): return
@@ -100,71 +100,69 @@ class SimulationPipeline:
                 self.device
             )
             if self.ten_pred_norm_x is None:
-                raise ValueError("Nie utworzono ten_train_norm")
+                raise ValueError("Nie utworzono ten_pred_norm")
             if self._handle_stop(f_name): return
 
             model_manager = ModelManager(self.log_signal)
 
-            for strategy in self.sim_config['strategies']:
-                for arch in self.train_config['architectures']:
-                    if self._handle_stop(f_name): return
+            for arch in self.train_config['architectures']:
+                if self._handle_stop(f_name): return
 
-                    model, _, _ = model_manager.create_model(
-                        len(self.train_config['feature_names']),
-                        len(self.train_config['target_names']),
-                        self.train_config['parameter_set'],
-                        arch,
-                        self.device
-                    )
-                    if model is None:
-                        raise ValueError("Nie utworzono modelu")
-                    if self._handle_stop(f_name): return
+                model, _, _ = model_manager.create_model(
+                    len(self.train_config['feature_names']),
+                    len(self.train_config['target_names']),
+                    self.train_config['parameter_set'],
+                    arch,
+                    self.device
+                )
+                if model is None:
+                    raise ValueError("Nie utworzono modelu")
+                if self._handle_stop(f_name): return
 
-                    weights = self.db_manager.load_model_weights(self.sim_config['train_uuid'], arch)
+                weights = self.db_manager.load_model_weights(self.pred_config['train_uuid'], arch)
 
-                    if weights is None:
-                        raise ValueError("Nie pobrano wag modelu")
-                    if self._handle_stop(f_name): return
+                if weights is None:
+                    raise ValueError("Nie pobrano wag modelu")
+                if self._handle_stop(f_name): return
 
-                    if not model_manager.set_model_weights(model, weights):
-                        raise ValueError("Nie załadowano wag modelu")
-                    if self._handle_stop(f_name): return
+                if not model_manager.set_model_weights(model, weights):
+                    raise ValueError("Nie załadowano wag modelu")
+                if self._handle_stop(f_name): return
 
-                    ten_pred_norm_y = model_manager.predict(model, self.ten_pred_norm_x)
-                    if ten_pred_norm_y is None:
-                        raise ValueError("Nie policzono ten_pred_norm_y")
-                    if self._handle_stop(f_name): return
+                ten_pred_norm_y = model_manager.predict(model, self.ten_pred_norm_x)
+                if ten_pred_norm_y is None:
+                    raise ValueError("Nie policzono ten_pred_norm_y")
+                if self._handle_stop(f_name): return
 
-                    df_pred = preprocessor.descale_data(
-                        ten_pred_norm_y,
-                        self.ser_mean,
-                        self.ser_std,
-                        self.train_config['target_names']
-                    )
-                    if df_pred is None or df_pred.empty:
-                        raise ValueError("Nie zdenormalizowano ten_pred_norm_y")
-                    if self._handle_stop(f_name): return
+                df_pred = preprocessor.descale_data(
+                    ten_pred_norm_y,
+                    self.ser_mean,
+                    self.ser_std,
+                    self.train_config['target_names']
+                )
+                if df_pred is None or df_pred.empty:
+                    raise ValueError("Nie zdenormalizowano ten_pred_norm_y")
+                if self._handle_stop(f_name): return
 
-                    df = data_extractor.join_at_end(self.df, df_pred)
-                    
-                    df_buffer = io.BytesIO()
-                    df.to_parquet(df_buffer, engine='pyarrow', index=True)
-                    df_parquet = df_buffer.getvalue()
-                    if not self.db_manager.save_simulation_result(
-                        self.sim_uuid,
-                        strategy,
-                        arch,
-                        df_parquet
-                        ):
-                        raise ValueError("Nie zapisano wyników do db")
+                df = data_extractor.join_at_end(self.df, df_pred)
+                
+                df_buffer = io.BytesIO()
+                df.to_parquet(df_buffer, engine='pyarrow', index=True)
+                df_parquet = df_buffer.getvalue()
+                if not self.db_manager.save_prediction_result(
+                    self.pred_uuid,
+                    arch,
+                    df_parquet
+                    ):
+                    raise ValueError("Nie zapisano wyników do db")
 
-            self.db_manager.update_simulation_status(self.sim_uuid, "completed")
-            self.log_signal.emit(f"[{f_name}] Koniec symulacji")
+            self.db_manager.update_prediction_status(self.pred_uuid, "completed")
+            self.log_signal.emit(f"[{f_name}] Koniec predykcji")
 
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Przerwano z powodu błędu: {e}")
             try:
-                self.db_manager.update_simulation_status(self.sim_uuid, 'failed')
+                self.db_manager.update_prediction_status(self.pred_uuid, 'failed')
             except Exception as db_err:
                 self.log_signal.emit(f"[{f_name}] Błąd bazy danych: {db_err}")
 
@@ -175,7 +173,7 @@ class SimulationPipeline:
 
     def _handle_stop(self, f_name):
         if self._is_stopped:
-            self.db_manager.update_simulation_status(self.sim_uuid, 'failed')
+            self.db_manager.update_prediction_status(self.pred_uuid, 'failed')
             self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
             return True
         return False

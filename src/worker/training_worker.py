@@ -5,20 +5,20 @@ class TrainingWorker(QObject):
     finished = pyqtSignal()
     log_signal = pyqtSignal(str)
 
-    def __init__(self, db_manager, job_uuid):
+    def __init__(self, db_manager, train_uuid):
         super().__init__()
         self.db_manager = db_manager
-        self.job_uuid = job_uuid
+        self.train_uuid = train_uuid
         self.train_pipeline = None
 
     def run(self):
         try:
-            config = self.db_manager.get_training_config(self.job_uuid)
+            config = self.db_manager.get_training_config(self.train_uuid)
             self.train_pipeline = TrainingPipeline(
                 config=config, 
                 log_signal=self.log_signal,
                 db_manager=self.db_manager, 
-                job_uuid=self.job_uuid
+                train_uuid=self.train_uuid
             )
             self.train_pipeline.run()
 
@@ -27,7 +27,7 @@ class TrainingWorker(QObject):
             self.log_signal.emit(error_msg)
 
             try:
-                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.db_manager.update_training_status(self.train_uuid, 'failed')
             except:
                 pass 
 

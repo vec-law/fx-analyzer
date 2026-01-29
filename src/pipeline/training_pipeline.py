@@ -7,12 +7,12 @@ import torch
 from src.model.model_manager import ModelManager
 
 class TrainingPipeline:
-    def __init__(self, config: dict, log_signal, db_manager, job_uuid):
+    def __init__(self, config: dict, log_signal, db_manager, train_uuid):
         self.config = config
         self.log_signal = log_signal
         self.model_manager = None
         self.db_manager = db_manager
-        self.job_uuid = job_uuid
+        self.train_uuid = train_uuid
         self._is_stopped = False
         self.df = None
         self.df_train = None
@@ -30,7 +30,7 @@ class TrainingPipeline:
     def run(self):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            self.db_manager.update_training_status(self.job_uuid, 'running')
+            self.db_manager.update_training_status(self.train_uuid, 'running')
             self.log_signal.emit(f"[{f_name}] Rozpoczynanie treningu")
 
             loader = Loader(self.config, log_signal=self.log_signal)
@@ -64,7 +64,7 @@ class TrainingPipeline:
                 raise ValueError("Nie dodano wartości docelowych")
             if self._handle_stop(f_name): return
             
-            self.df = data_extractor.dropna_and_cut(self.df, self.config['parameter_set']['samples_limit'])
+            self.df = data_extractor.dropna_and_cut(self.df, self.config['parameter_set']['all_samples'])
             if self.df is None or self.df.empty:
                 raise ValueError("Nie ucięto df")
             if self._handle_stop(f_name): return
@@ -88,7 +88,7 @@ class TrainingPipeline:
                 raise ValueError("Nie obliczono statystyk")
             if self._handle_stop(f_name): return
         
-            self.db_manager.save_training_stats(self.job_uuid, self.ser_mean, self.ser_std)
+            self.db_manager.save_training_stats(self.train_uuid, self.ser_mean, self.ser_std)
             if self._handle_stop(f_name): return
 
             self.df_train_norm = preprocessor.scale_data(
@@ -194,7 +194,7 @@ class TrainingPipeline:
                 if self._handle_stop(f_name): return
                 
                 if not self.db_manager.save_model_weights(
-                    self.job_uuid,
+                    self.train_uuid,
                     arch,
                     weights,
                     mse_loss,
@@ -204,13 +204,13 @@ class TrainingPipeline:
 
             if self._handle_stop(f_name): return
 
-            self.db_manager.update_training_status(self.job_uuid, "completed")
+            self.db_manager.update_training_status(self.train_uuid, "completed")
             self.log_signal.emit(f"[{f_name}] Koniec treningu")
 
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             try:
-                self.db_manager.update_training_status(self.job_uuid, 'failed')
+                self.db_manager.update_training_status(self.train_uuid, 'failed')
             except Exception as db_err:
                 self.log_signal.emit(f"[{f_name}] Błąd bazy danych: {db_err}")
 
@@ -222,7 +222,7 @@ class TrainingPipeline:
 
     def _handle_stop(self, f_name):
         if self._is_stopped:
-            self.db_manager.update_training_status(self.job_uuid, 'failed')
+            self.db_manager.update_training_status(self.train_uuid, 'failed')
             self.log_signal.emit(f"[{f_name}] Proces przerwany przez użytkownika")
             return True
         return False
