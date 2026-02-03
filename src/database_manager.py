@@ -55,7 +55,6 @@ class DatabaseManager:
                             feature['shift']
                         ))
 
-                    # --- ZMIANA: Obsługa targetów bez LEFT JOIN i UNION ---
                     for target in config['targets']:
                         column_name = target['column']
                         target_shift = target['shift']
@@ -310,9 +309,14 @@ class DatabaseManager:
                             status.name, 
                             prediction.all_samples, 
                             prediction.predicted_samples, 
-                            prediction.created_at
+                            prediction.created_at,
+                            instrument.name,
+                            timeframe.name
                         FROM prediction
                         JOIN status ON prediction.status_id = status.id
+                        JOIN training ON prediction.train_uuid = training.train_uuid
+                        JOIN instrument ON training.instrument_id = instrument.id
+                        JOIN timeframe ON training.timeframe_id = timeframe.id
                         ORDER BY prediction.created_at DESC
                     """)
                     rows = cur.fetchall()
@@ -324,7 +328,43 @@ class DatabaseManager:
                             'status': r[2],
                             'all_samples': r[3],
                             'predicted_samples': r[4],
-                            'created_at': r[5]
+                            'created_at': r[5],
+                            'instrument_name': r[6],
+                            'timeframe_name': r[7]
+                        } for r in rows
+                    ]
+        except Exception as e:
+            raise Exception(f"Błąd podczas pobierania listy predykcji: {str(e)}")
+        
+    def get_simulations(self):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT 
+                            simulation.sim_uuid, 
+                            simulation.pred_uuid, 
+                            status.name, 
+                            simulation.created_at,
+                            instrument.name,
+                            timeframe.name
+                        FROM simulation
+                        JOIN prediction ON simulation.pred_uuid = prediction.pred_uuid
+                        JOIN status ON simulation.status_id = status.id
+                        JOIN instrument ON training.instrument_id = instrument.id
+                        JOIN timeframe ON training.timeframe_id = timeframe.id
+                        ORDER BY prediction.created_at DESC
+                    """)
+                    rows = cur.fetchall()
+
+                    return [
+                        {
+                            'sim_uuid': r[0],
+                            'pred_uuid': r[1],
+                            'status': r[2],
+                            'created_at': r[3],
+                            'instrument_name': r[6],
+                            'timeframe_name': r[7]
                         } for r in rows
                     ]
         except Exception as e:
@@ -505,7 +545,6 @@ class DatabaseManager:
                         })
                         config['feature_names'].append(f"{f_type}:{'-'.join(map(str, f_periods))}:{f_shift}")
 
-                    # --- ZMIANA: Pobieranie targetów bez LEFT JOIN ---
                     cur.execute("""
                         SELECT base_column.name, target_def.shift
                         FROM target_def

@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 from src.ui.training_tab import TrainingTab
 from src.ui.prediction_tab import PredictionTab
+from src.ui.simulation_tab import SimulationTab
 
 class GUI(QWidget):
     def __init__(self, db_manager):
@@ -13,9 +14,11 @@ class GUI(QWidget):
 
         self.training_tab = TrainingTab(self.db_manager, self.tabs)
         self.prediction_tab = PredictionTab(self.db_manager, self.tabs)
+        self.simulation_tab = SimulationTab(self.db_manager, self.tabs)
 
-        self.tabs.addTab(self.training_tab, "Trening")
-        self.tabs.addTab(self.prediction_tab, "Predykcja")
+        self.tabs.addTab(self.training_tab, "Trening modeli")
+        self.tabs.addTab(self.prediction_tab, "Predykcja wartości docelowych")
+        self.tabs.addTab(self.simulation_tab, "Symulacja strategii")
 
         layout = QVBoxLayout()
         layout.addWidget(self.tabs)
