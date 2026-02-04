@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
     QTableWidgetItem
 )
-from src.worker.prediction_worker import PredictionWorker
+from src.worker.simulation_worker import SimulationWorker
 
 class SimulationTab(QWidget):
     PARAM_MAP = {
@@ -32,16 +32,16 @@ class SimulationTab(QWidget):
 
         left_layout = QVBoxLayout()
         self.add_sim_btn = QPushButton("Dodaj symulację")
-        self.remove_pred_btn = QPushButton("Usuń symulację")
+        self.remove_sim_btn = QPushButton("Usuń symulację")
         self.load_params_btn = QPushButton("Wczytaj parametry")
-        self.run_pred_btn = QPushButton("Uruchom symulację")
-        self.stop_pred_btn = QPushButton("Zatrzymaj symulację")
+        self.run_sim_btn = QPushButton("Uruchom symulację")
+        self.stop_sim_btn = QPushButton("Zatrzymaj symulację")
         self.clear_console_btn = QPushButton("Wyczyść konsolę")
         self.download_results_btn = QPushButton("Pobierz wyniki")
 
         self.buttons = [
-            self.add_sim_btn, self.remove_pred_btn, self.load_params_btn, self.run_pred_btn,
-            self.stop_pred_btn, self.clear_console_btn, self.download_results_btn
+            self.add_sim_btn, self.remove_sim_btn, self.load_params_btn, self.run_sim_btn,
+            self.stop_sim_btn, self.clear_console_btn, self.download_results_btn
         ]
         for btn in self.buttons:
             left_layout.addWidget(btn)
@@ -90,22 +90,22 @@ class SimulationTab(QWidget):
         self.source_table.cellClicked.connect(self.on_source_table_clicked)
         self.sim_table.cellClicked.connect(self.on_sim_table_clicked)
         self.add_sim_btn.clicked.connect(self.on_add_simulation)
-        self.remove_pred_btn.clicked.connect(self.on_remove_simulation)
+        self.remove_sim_btn.clicked.connect(self.on_remove_simulation)
         self.load_params_btn.clicked.connect(self.on_load_params_to_fields)
-        self.run_pred_btn.clicked.connect(self.on_run_prediction)
-        self.stop_pred_btn.clicked.connect(self.on_stop_prediction)
+        self.run_sim_btn.clicked.connect(self.on_run_simulation)
+        self.stop_sim_btn.clicked.connect(self.on_stop_simulation)
 
     def toggle_ui_lock(self, is_running: bool):
         if self.tab_widget:
             self.tab_widget.tabBar().setEnabled(not is_running)
         
         self.add_sim_btn.setEnabled(not is_running)
-        self.remove_pred_btn.setEnabled(not is_running)
-        self.run_pred_btn.setEnabled(not is_running)
+        self.remove_sim_btn.setEnabled(not is_running)
+        self.run_sim_btn.setEnabled(not is_running)
 
-    def on_run_prediction(self):
-        if not self.last_clicked_pred_uuid:
-            self.log_to_console("Błąd: Nie wybrano predykcji")
+    def on_run_simulation(self):
+        if not self.last_clicked_sim_uuid:
+            self.log_to_console("Błąd: Nie wybrano symulacji")
             return
 
         if self.thread is not None and self.thread.isRunning():
@@ -114,7 +114,7 @@ class SimulationTab(QWidget):
         self.toggle_ui_lock(True)
 
         self.thread = QThread()
-        self.worker = PredictionWorker(self.db_manager, self.last_clicked_pred_uuid)
+        self.worker = SimulationWorker(self.db_manager, self.last_clicked_sim_uuid)
         self.worker.moveToThread(self.thread)
 
         self.thread.started.connect(self.worker.run)
@@ -129,12 +129,12 @@ class SimulationTab(QWidget):
         self.thread.finished.connect(lambda: self.toggle_ui_lock(False))
 
         self.thread.start()
-        self.log_to_console(f"Uruchomiono predykcję: {self.last_clicked_pred_uuid}")
+        self.log_to_console(f"Uruchomiono symulacji: {self.last_clicked_sim_uuid}")
 
-    def on_stop_prediction(self):
+    def on_stop_simulation(self):
         if self.worker:
             self.worker.stop()
-            self.log_to_console("Zatrzymywanie predykcji...")
+            self.log_to_console("Zatrzymywanie symulacji...")
 
     def on_load_params_to_fields(self):
         if not self.last_clicked_sim_uuid:

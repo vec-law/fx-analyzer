@@ -433,6 +433,27 @@ class DatabaseManager:
                     return True
         except Exception as e:
             raise Exception(f"Nie udało się zaktualizować statusu predykcji: {str(e)}")
+        
+    def update_simulation_status(self, sim_uuid, status_name):
+        try:
+            if not sim_uuid or not status_name:
+                raise ValueError("Błąd: Brak UUID symulacji lub nazwy statusu")
+
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE simulation
+                        SET status_id = (SELECT id FROM status WHERE name = %s)
+                        WHERE sim_uuid = %s
+                    """, (status_name, sim_uuid))
+
+                    if cur.rowcount == 0:
+                        raise Exception(f"Nie znaleziono symulacji o UUID: {sim_uuid}")
+
+                    conn.commit()
+                    return True
+        except Exception as e:
+            raise Exception(f"Nie udało się zaktualizować statusu symulacji: {str(e)}")
 
     def get_prediction_config(self, pred_uuid):
         try:
