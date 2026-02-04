@@ -138,16 +138,15 @@ class SimulationTab(QWidget):
             self.log_to_console("Zatrzymywanie predykcji...")
 
     def on_load_params_to_fields(self):
-        if not self.last_clicked_pred_uuid:
-            self.log_to_console("Nie wybrano predykcji do wczytania parametrów.")
+        if not self.last_clicked_sim_uuid:
+            self.log_to_console("Nie wybrano symulacji do wczytania parametrów.")
             return
         
         try:
-            config = self.db_manager.get_prediction_config(self.last_clicked_pred_uuid)
+            config = self.db_manager.get_simulation_config(self.last_clicked_sim_uuid)
             if config:
-                self.param_fields["all_samples"].setText(str(config.get("all_samples", "")))
-                self.param_fields["predicted_samples"].setText(str(config.get("predicted_samples", "")))
-                self.log_to_console(f"Wczytano parametry predykcji: {self.last_clicked_pred_uuid}")
+                self.param_fields["strategies"].setText(", ".join(config["strategies"]))
+                self.log_to_console(f"Wczytano parametry symulacji: {self.last_clicked_sim_uuid}")
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania parametrów: {e}")
 
@@ -179,17 +178,17 @@ class SimulationTab(QWidget):
             self.source_table.setItem(row, 5, QTableWidgetItem(dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""))
         
         if len(tasks) > 0:
-            self.last_clicked_train_uuid = self.source_table.item(0, 0).text()
+            self.last_clicked_pred_uuid = self.source_table.item(0, 0).text()
             self.source_table.selectRow(0)
         else:
-            self.last_clicked_train_uuid = None
+            self.last_clicked_pred_uuid = None
             
         self.source_table.resizeColumnsToContents()
 
     def on_source_table_clicked(self, row, column):
         item = self.source_table.item(row, 0)
         if item:
-            self.last_clicked_train_uuid = item.text()
+            self.last_clicked_pred_uuid = item.text()
 
     def on_sim_table_clicked(self, row, column):
         item = self.sim_table.item(row, 0)
@@ -197,8 +196,8 @@ class SimulationTab(QWidget):
             self.last_clicked_sim_uuid = item.text()
 
     def on_add_simulation(self):
-        if not self.last_clicked_sim_uuid:
-            self.log_to_console("Błąd: Nie zaznaczono ukończonej symulacji w lewej tabeli.")
+        if not self.last_clicked_pred_uuid:
+            self.log_to_console("Błąd: Nie zaznaczono ukończonej predykcji w lewej tabeli.")
             return
         try:
             vals = {p: self.param_fields[p].text().strip() for p in self.PARAM_MAP.values()}
@@ -212,7 +211,7 @@ class SimulationTab(QWidget):
                 strategies.append(strategy.strip())
 
             sim_uuid = self.db_manager.add_simulation(
-                sim_uuid=self.last_clicked_sim_uuid,
+                pred_uuid=self.last_clicked_pred_uuid,
                 strategies = strategies
             )
             

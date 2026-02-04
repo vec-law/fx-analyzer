@@ -42,6 +42,11 @@ CREATE TABLE data_source (
     name TEXT UNIQUE NOT NULL
 );
 
+CREATE TABLE strategy (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
 CREATE TABLE training (
     train_uuid UUID PRIMARY KEY,
     instrument_id INTEGER REFERENCES instrument(id) NOT NULL,
@@ -128,6 +133,22 @@ CREATE TABLE prediction_result (
     PRIMARY KEY (pred_uuid, architecture_id)
 );
 
+CREATE TABLE simulation (
+    sim_uuid UUID PRIMARY KEY,
+    pred_uuid UUID NOT NULL REFERENCES prediction(pred_uuid) ON DELETE CASCADE,
+    status_id INTEGER NOT NULL REFERENCES status(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE simulation_strategy (
+    sim_uuid UUID NOT NULL REFERENCES simulation(sim_uuid) ON DELETE CASCADE,
+    strategy_id INTEGER NOT NULL REFERENCES strategy(id) ON DELETE CASCADE,
+    PRIMARY KEY (sim_uuid, strategy_id)
+);
+
+CREATE INDEX idx_simulation_pred_uuid ON simulation(pred_uuid);
+CREATE INDEX idx_simulation_status_id ON simulation(status_id);
+CREATE INDEX idx_sim_strat_strategy_id ON simulation_strategy(strategy_id);
 CREATE INDEX idx_pred_train_uuid ON prediction(train_uuid);
 CREATE INDEX idx_model_train_uuid ON model(train_uuid);
 CREATE INDEX idx_statistic_train_uuid ON statistic(train_uuid);
@@ -135,6 +156,7 @@ CREATE INDEX idx_target_def_train_uuid ON target_def(train_uuid);
 CREATE INDEX idx_feature_def_train_uuid ON feature_def(train_uuid);
 CREATE INDEX idx_train_arch_uuid ON training_architecture(train_uuid);
 
+INSERT INTO strategy (name) VALUES ('only_predict'), ('delta_change');
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
