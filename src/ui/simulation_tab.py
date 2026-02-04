@@ -15,7 +15,6 @@ class SimulationTab(QWidget):
         super().__init__()
         self.db_manager = db_manager
         self.tab_widget = tab_widget
-        self.last_clicked_train_uuid = None
         self.last_clicked_pred_uuid = None
         self.last_clicked_sim_uuid = None
         self.thread = None
@@ -25,7 +24,7 @@ class SimulationTab(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self.on_load_completed_trainings()
+        self.on_load_completed_predictions()
         self.fill_sim_table()
 
     def init_ui(self):
@@ -149,14 +148,6 @@ class SimulationTab(QWidget):
                 self.log_to_console(f"Wczytano parametry symulacji: {self.last_clicked_sim_uuid}")
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania parametrów: {e}")
-
-    def on_load_completed_trainings(self):
-        try:
-            all_tasks = self.db_manager.get_predictions()
-            completed = [t for t in all_tasks if str(t.get("status")).lower() == 'completed']
-            self.fill_source_table(completed)
-        except Exception as e:
-            self.log_to_console(f"Błąd wczytywania treningów: {e}")
 
     def on_load_completed_predictions(self):
         try:
