@@ -118,7 +118,7 @@ class DataExtractor:
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             return None
-
+        
     def dropna_and_cut(self, df, limit):
         f_name = inspect.currentframe().f_code.co_name
         try:
@@ -169,4 +169,23 @@ class DataExtractor:
 
         except Exception as e:
             self.log_signal.emit(f"[{f_name}] Błąd podczas operacji join_at_end: {e}")
+            return None
+        
+    def add_diff(self, df):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych w df")
+                return None
+            
+            cols_to_diff = self.config["target_names"]
+            diff_df = df[cols_to_diff].diff().add_suffix('_diff')
+            diff_df = diff_df.fillna(0)
+            df = df.join(diff_df)
+            
+            self.log_signal.emit(f"[{f_name}] Dodano wartości diff")
+            return df
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
             return None

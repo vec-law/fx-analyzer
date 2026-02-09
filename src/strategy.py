@@ -1,56 +1,59 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import os
-from .container import Container
-
 class Strategy:
-    @staticmethod
-    def add_indicators_and_clean(container: Container):
-        try:
-            df_dict = container.df_dict
+    def __init__(self, log_signal, strategy_name):
+        self.log_signal = log_signal
+        self.strategy_name = strategy_name
 
-            if not 'train' in df_dict or not 'test' in df_dict:
-                print(f"  [add_indicators] Brak zbiorów train i test")
-                return False
+    def add_indicators(target_names):
+        pass
 
-            for subset in ['train', 'test']:
-                cols_to_drop = [col for col in df_dict[subset].columns 
-                    if col.startswith('target') or col == 'volume']
+# class Strategy:
+#     @staticmethod
+#     def add_indicators_and_clean(container: Container):
+#         try:
+#             df_dict = container.df_dict
+
+#             if not 'train' in df_dict or not 'test' in df_dict:
+#                 print(f"  [add_indicators] Brak zbiorów train i test")
+#                 return False
+
+#             for subset in ['train', 'test']:
+#                 cols_to_drop = [col for col in df_dict[subset].columns 
+#                     if col.startswith('target') or col == 'volume']
                 
-                if cols_to_drop:
-                    df_dict[subset] = df_dict[subset].drop(columns=cols_to_drop, errors='ignore')
+#                 if cols_to_drop:
+#                     df_dict[subset] = df_dict[subset].drop(columns=cols_to_drop, errors='ignore')
 
-                if 'high' in df_dict[subset] and 'low' in df_dict[subset]:
-                    df_dict[subset]['mean'] = (df_dict[subset]['high'] + df_dict[subset]['low']) / 2
-                    print(f"  [add_indicators] Dodano wskaźnik mean w df_dict['{subset}']")
+#                 if 'high' in df_dict[subset] and 'low' in df_dict[subset]:
+#                     df_dict[subset]['mean'] = (df_dict[subset]['high'] + df_dict[subset]['low']) / 2
+#                     print(f"  [add_indicators] Dodano wskaźnik mean w df_dict['{subset}']")
 
-                if 'pred_0' in df_dict[subset]:
-                    df_dict[subset]['delta'] = (
-                        df_dict[subset]['pred_0'] - df_dict[subset]['pred_0'].shift(1)
-                    )
-                    df_dict[subset]['delta_m1'] = df_dict[subset]['delta'].shift(1)
-                    df_dict[subset]['delta_m2'] = df_dict[subset]['delta_m1'].shift(1)
-                    df_dict[subset]['delta_m3'] = df_dict[subset]['delta_m2'].shift(1)
-                    print(f"  [add_indicators] Dodano wskaźniki delta w df_dict['{subset}']")
+#                 if 'pred_0' in df_dict[subset]:
+#                     df_dict[subset]['delta'] = (
+#                         df_dict[subset]['pred_0'] - df_dict[subset]['pred_0'].shift(1)
+#                     )
+#                     df_dict[subset]['delta_m1'] = df_dict[subset]['delta'].shift(1)
+#                     df_dict[subset]['delta_m2'] = df_dict[subset]['delta_m1'].shift(1)
+#                     df_dict[subset]['delta_m3'] = df_dict[subset]['delta_m2'].shift(1)
+#                     print(f"  [add_indicators] Dodano wskaźniki delta w df_dict['{subset}']")
 
-                    if 'mean' in df_dict[subset]:
-                        df_dict[subset]['diff_rel'] = (
-                        (df_dict[subset]['mean'] - df_dict[subset]['pred_0']) /
-                        (df_dict[subset]['mean'] + 1e-9)
-                        )
-                        print(f"  [add_indicators] Dodano wskaźnik diff_rel w df_dict['{subset}']")
+#                     if 'mean' in df_dict[subset]:
+#                         df_dict[subset]['diff_rel'] = (
+#                         (df_dict[subset]['mean'] - df_dict[subset]['pred_0']) /
+#                         (df_dict[subset]['mean'] + 1e-9)
+#                         )
+#                         print(f"  [add_indicators] Dodano wskaźnik diff_rel w df_dict['{subset}']")
                 
-            # df_dict['train'].dropna(inplace=True)
-            # df_dict['test'].dropna(inplace=True)
+#             # df_dict['train'].dropna(inplace=True)
+#             # df_dict['test'].dropna(inplace=True)
 
-            print(df_dict['train'])
-            print(df_dict['test'])
+#             print(df_dict['train'])
+#             print(df_dict['test'])
 
-            return True
+#             return True
         
-        except Exception as e:
-            print(f"  [add_indicators] Błąd: {e}")
-            return False
+#         except Exception as e:
+#             print(f"  [add_indicators] Błąd: {e}")
+#             return False
 
 # SUPPORTED_STRATEGIES = [1]
 

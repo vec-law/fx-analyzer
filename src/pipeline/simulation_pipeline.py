@@ -1,3 +1,5 @@
+import pandas as pd
+from src.strategy import Strategy
 import inspect
 from src.loader import Loader
 from src.cleaner import Cleaner
@@ -7,14 +9,16 @@ import torch
 import io
 from src.model.model_manager import ModelManager
 
+
 class SimulationPipeline:
     def __init__(self, sim_config: dict, log_signal, db_manager, sim_uuid):
         self.sim_config = sim_config
+        self.pred_config = None
+        self.train_config = None
         self.log_signal = log_signal
         self.db_manager = db_manager
         self.sim_uuid = sim_uuid
         self._is_stopped = False
-        # self.train_config = None
         # self.df = None
         # self.df_pred = None
         # self.df_pred_norm = None
@@ -28,10 +32,27 @@ class SimulationPipeline:
             self.db_manager.update_simulation_status(self.sim_uuid, 'running')
             self.log_signal.emit(f"[{f_name}] Rozpoczynanie symulacji")
 
-            # self.train_config = self.db_manager.get_training_config(self.pred_config['train_uuid'])
-            # if self.train_config is None:
-            #     raise ValueError("Nie pobrano konfiguracji treningu")
-            # if self._handle_stop(f_name): return
+            self.pred_config = self.db_manager.get_prediction_config(self.sim_config['pred_uuid'])
+            if self.pred_config is None:
+                raise ValueError("Nie pobrano konfiguracji predykcji")
+            if self._handle_stop(f_name): return
+
+            self.train_config = self.db_manager.get_training_config(self.pred_config['train_uuid'])
+            if self.train_config is None:
+                raise ValueError("Nie pobrano konfiguracji treningu")
+            if self._handle_stop(f_name): return
+
+            
+            for architecture in self.train_config['architectures']:
+                data = self.db_manager.load_prediction_result(self.sim_config['pred_uuid'], architecture)
+                
+                if not data:
+                    continue
+
+                df = pd.read_parquet(io.BytesIO(data))
+
+                for strategy_name in self.sim_config["strategies"]:
+                    strategy = Strategy(self.log_signal, strategy_name)
 
             # loader = Loader(self.train_config, log_signal=self.log_signal)
 

@@ -145,6 +145,14 @@ class PredictionPipeline:
                 if self._handle_stop(f_name): return
 
                 df = data_extractor.join_at_end(self.df, df_pred)
+                if df is None or df.empty:
+                    raise ValueError("Nie dołączono df_pred")
+                if self._handle_stop(f_name): return
+
+                df = data_extractor.add_diff(df)
+                if df is None or df.empty:
+                    raise ValueError("Nie dodano diff")
+                if self._handle_stop(f_name): return
                 
                 df_buffer = io.BytesIO()
                 df.to_parquet(df_buffer, engine='pyarrow', index=True)
