@@ -120,7 +120,6 @@ class PredictionPipeline:
                 if self._handle_stop(f_name): return
 
                 weights = self.db_manager.load_model_weights(self.pred_config['train_uuid'], arch)
-
                 if weights is None:
                     raise ValueError("Nie pobrano wag modelu")
                 if self._handle_stop(f_name): return

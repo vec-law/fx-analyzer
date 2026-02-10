@@ -156,7 +156,7 @@ CREATE INDEX idx_target_def_train_uuid ON target_def(train_uuid);
 CREATE INDEX idx_feature_def_train_uuid ON feature_def(train_uuid);
 CREATE INDEX idx_train_arch_uuid ON training_architecture(train_uuid);
 
-INSERT INTO strategy (name) VALUES ('only_predict'), ('delta_change');
+INSERT INTO strategy (name) VALUES ('only_predict'), ('diff_change');
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
 INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');

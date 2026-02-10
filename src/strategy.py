@@ -1,10 +1,44 @@
+import inspect
+
 class Strategy:
     def __init__(self, log_signal, strategy_name):
         self.log_signal = log_signal
         self.strategy_name = strategy_name
 
-    def add_indicators(target_names):
-        pass
+    def add_signals(self, df, target_names):
+        f_name = inspect.currentframe().f_code.co_name
+        try:
+            if df is None or df.empty:
+                self.log_signal.emit(f"[{f_name}] Brak danych w df")
+                return None
+            
+            if self.strategy_name == 'only_predict':
+                self.log_signal.emit(f"[{f_name}] Strategia: only_predict - brak zmian")
+                return df
+            
+            df_result = df.copy()
+
+            if self.strategy_name == 'diff_change':
+                for target in target_names:
+                    col_diff = f"{target}_diff"
+
+                    if col_diff in df_result.columns:                     
+                        buy_signal_mask = (df_result[col_diff].shift(1) < 0) & (df_result[col_diff] > 0)
+                        df_result[f"{target}_buy_signal"] = buy_signal_mask.astype(int)
+
+                        sell_signal_mask = (df_result[col_diff].shift(1) > 0) & (df_result[col_diff] < 0)
+                        df_result[f"{target}_sell_signal"] = sell_signal_mask.astype(int)
+
+            else:
+                self.log_signal.emit(f"[{f_name}] Nieobsługiwana strategia: {self.strategy_name}")
+                return df
+
+            self.log_signal.emit(f"[{f_name}] Dodano sygnały: {self.strategy_name}")
+            return df_result
+
+        except Exception as e:
+            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
+            return None
 
 # class Strategy:
 #     @staticmethod
