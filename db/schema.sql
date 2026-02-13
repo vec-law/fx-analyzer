@@ -158,7 +158,7 @@ CREATE INDEX idx_train_arch_uuid ON training_architecture(train_uuid);
 
 INSERT INTO strategy (name) VALUES ('only_predict'), ('diff_change');
 INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
-INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X');
+INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X'), ('US100', '^NDX');
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
 INSERT INTO calculated_column (name) VALUES ('typical'), ('median'), ('weighted'), ('ohlc');
 INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi');
@@ -175,4 +175,5 @@ INSERT INTO architecture (name) VALUES ('ModelV1'), ('ModelV2'), ('ModelV3'), ('
 ('ModelV101'), ('ModelV102'), ('ModelV103'), ('ModelV104'), ('ModelV105'), ('ModelV106'), ('ModelV107'), ('ModelV108'), ('ModelV109'), ('ModelV110'),
 ('ModelV111'), ('ModelV112'), ('ModelV113'), ('ModelV114'), ('ModelV115'), ('ModelV116'), ('ModelV117'), ('ModelV118'), ('ModelV119'), ('ModelV120');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
+INSERT INTO timeframe (name, range) VALUES ('2m', '60d'), ('5m', '60d'), ('15m', '60d');
 INSERT INTO data_source (name) VALUES ('YF');

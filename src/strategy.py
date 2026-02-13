@@ -23,15 +23,69 @@ class Strategy:
                     col_diff = f"{target}_diff"
 
                     if col_diff in df_result.columns:                     
-                        buy_signal_mask = (df_result[col_diff].shift(1) < 0) & (df_result[col_diff] > 0)
+                        buy_signal_mask = (df_result[col_diff].shift(2) < 0) & (df_result[col_diff].shift(1) > 0) & (df_result[col_diff] > 0)
                         df_result[f"{target}_buy_signal"] = buy_signal_mask.astype(int)
 
-                        sell_signal_mask = (df_result[col_diff].shift(1) > 0) & (df_result[col_diff] < 0)
+                        sell_signal_mask = (df_result[col_diff].shift(2) > 0) & (df_result[col_diff].shift(1) < 0) & (df_result[col_diff] < 0)
                         df_result[f"{target}_sell_signal"] = sell_signal_mask.astype(int)
+
+                        df_result = df_result[buy_signal_mask | sell_signal_mask].copy()
+
+                        for target in target_names:
+                            df_result[f"{target}_buy_lot"] = 0
+                            df_result[f"{target}_sell_lot"] = 0
+
+                        for i, row in df_result.iterrows():
+                            for target in target_names:
+                                buy_signal = row[f"{target}_buy_signal"]
+                                sell_signal = row[f"{target}_sell_signal"]
+
+                                current_pos = df_result.index.get_loc(i)
+                                buy_lot_sum = df_result[f"{target}_buy_lot"].iloc[:current_pos].sum()
+                                sell_lot_sum = df_result[f"{target}_sell_lot"].iloc[:current_pos].sum()
+
+                                is_last_row = (current_pos == len(df_result) - 1)
+
+                                if buy_signal == 1:
+                                    if is_last_row:
+                                        lot_value = sell_lot_sum - buy_lot_sum
+                                    else:
+                                        lot_value = 1
+                                        if sell_lot_sum - buy_lot_sum > 0:
+                                            lot_value = sell_lot_sum - buy_lot_sum + 1
+                                    
+                                    df_result.at[i, f"{target}_buy_lot"] = lot_value
+
+                                elif sell_signal == 1:
+                                    if is_last_row:
+                                        lot_value = buy_lot_sum - sell_lot_sum
+                                    else:
+                                        lot_value = 1
+                                        if buy_lot_sum - sell_lot_sum > 0:
+                                            lot_value = buy_lot_sum - sell_lot_sum + 1
+                                            
+                                    df_result.at[i, f"{target}_sell_lot"] = lot_value
+
+                        # --- OBLICZENIA I PRINT PO ZAKOŃCZENIU PĘTLI GŁÓWNEJ ---
+                        for target in target_names:
+                            # Obliczenie sumy wartości dla kupna i sprzedaży
+                            # Wartość = cena (typical) * wolumen (lot)
+                            buy_value_sum = (df_result[f"{target}_buy_lot"] * df_result['typical']).sum()
+                            sell_value_sum = (df_result[f"{target}_sell_lot"] * df_result['typical']).sum()
+                            
+                            # Całkowita ilość jednostek (wolumen)
+                            total_buy_lots = df_result[f"{target}_buy_lot"].sum()
+                            total_sell_lots = df_result[f"{target}_sell_lot"].sum()
+
+                            print(f"\n--- Summary for {target} ---")
+                            print(f"Total Buy Value: {buy_value_sum:.2f} (Total Lots: {total_buy_lots})")
+                            print(f"Total Sell Value: {sell_value_sum:.2f} (Total Lots: {total_sell_lots})")
+                            print(f"Net Value Balance: {sell_value_sum - buy_value_sum:.2f}")
+                            print("----------------------------\n")
 
             else:
                 self.log_signal.emit(f"[{f_name}] Nieobsługiwana strategia: {self.strategy_name}")
-                return df
+                return None
 
             self.log_signal.emit(f"[{f_name}] Dodano sygnały: {self.strategy_name}")
             return df_result

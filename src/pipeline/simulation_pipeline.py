@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import pandas as pd
 from src.strategy import Strategy
 import inspect
@@ -39,6 +42,12 @@ class SimulationPipeline:
                 if df is None or df.empty:
                     raise ValueError(f"Nie odczytano danych dla architektury {architecture}")
                 if self._handle_stop(f_name): return
+                
+                for target in self.train_config["target_names"]:
+                    plt.scatter(df.index, df['close'], color='r', marker='.')
+                    plt.plot(df.index, df[target], color='b')
+                plt.savefig(r"output_plot.png", dpi=150)
+                plt.close()
 
                 for strategy_name in self.sim_config["strategies"]:
                     strategy = Strategy(self.log_signal, strategy_name)
