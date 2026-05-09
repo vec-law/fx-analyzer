@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem
 )
 from src.worker.prediction_worker import PredictionWorker
+from tkinter import filedialog
 
 import pandas as pd
 import io
@@ -232,8 +233,8 @@ class PredictionTab(QWidget):
             self.log_to_console("Nie wybrano predykcji.")
             return
         
-        plots_dir = os.path.join(os.getcwd(), "plots")
-        os.makedirs(plots_dir, exist_ok=True)
+        plots_dir = filedialog.askdirectory()
+        if not plots_dir: return
 
         try:
             pred_config = self.db_manager.get_prediction_config(pred_uuid)
@@ -268,7 +269,7 @@ class PredictionTab(QWidget):
                 plt.savefig(os.path.join(plots_dir, plot_name), dpi=120)
                 plt.close('all')
 
-            self.log_to_console(f"Wygenerowano wykresy w /plots")
+            self.log_to_console(f"Wygenerowano wykresy w: {plots_dir}")
             
         except Exception as e:
             self.log_to_console(f"Błąd: {e}")
