@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem
 )
 from src.worker.prediction_worker import PredictionWorker
-from tkinter import filedialog
+from PyQt6.QtWidgets import QFileDialog
 
 import pandas as pd
 import io
@@ -233,7 +233,7 @@ class PredictionTab(QWidget):
             self.log_to_console("Nie wybrano predykcji.")
             return
         
-        plots_dir = filedialog.askdirectory()
+        plots_dir = QFileDialog.getExistingDirectory(self, "Wybierz folder do zapisu")
         if not plots_dir: return
 
         try:
