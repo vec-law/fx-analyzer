@@ -140,9 +140,7 @@ INSERT INTO instrument (name, ticker) VALUES ('EURUSD', 'EURUSD=X'), ('US100', '
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
 INSERT INTO calculated_column (name) VALUES ('typical'), ('median'), ('weighted'), ('ohlc');
 INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi'), ('pct');
-INSERT INTO architecture (name)
-    SELECT 'ModelV' || i
-    FROM generate_series(1, 120) AS i;
+INSERT INTO architecture (name) VALUES ('ModelV1');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO timeframe (name, range) VALUES ('2m', '60d'), ('5m', '60d'), ('15m', '60d');
 INSERT INTO data_source (name) VALUES ('YF');
