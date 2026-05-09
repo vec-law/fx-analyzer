@@ -1,17 +1,21 @@
 import sys
+import os
+from dotenv import load_dotenv
 from PyQt6.QtWidgets import QApplication
 from src.database_manager import DatabaseManager
 from src.ui.gui import GUI
+
+load_dotenv()
 
 def main():
     app = QApplication(sys.argv)
 
     db_config = {
-        "dbname": "fx_analyzer_db",
-        "user": "postgres",
-        "password": "1111",
-        "host": "localhost",
-        "port": 5432
+        "dbname": os.getenv("DB_NAME"),
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
+        "host": os.getenv("DB_HOST"),
+        "port": int(os.getenv("DB_PORT"))
     }
 
     db_manager = DatabaseManager(db_config)

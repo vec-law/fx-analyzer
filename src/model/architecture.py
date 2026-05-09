@@ -5,17 +5,26 @@ import torch.nn.functional as F
 class ModelV1(nn.Module):
     def __init__(self, x_num, y_num):
         super().__init__()
+        # self.net = nn.Sequential(
+        #     nn.Linear(x_num, 16),
+        #     nn.ReLU(),
+        #     nn.Linear(16, 8),
+        #     nn.ReLU(),
+        #     nn.Linear(8, y_num)
+        # )
         self.net = nn.Sequential(
-            nn.Linear(x_num, 16),
+            nn.Linear(x_num, 64),
             nn.ReLU(),
-            nn.Linear(16, 8),
+            nn.Linear(64, 32),
             nn.ReLU(),
-            nn.Linear(8, y_num)
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Linear(16, y_num)
         )
 
     def forward(self, x):
         return self.net(x)
-    
+
 class ModelV2(nn.Module):
     def __init__(self, x_num, y_num):
         super().__init__()

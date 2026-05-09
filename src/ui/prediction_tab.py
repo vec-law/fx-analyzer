@@ -6,6 +6,11 @@ from PyQt6.QtWidgets import (
 )
 from src.worker.prediction_worker import PredictionWorker
 
+import pandas as pd
+import io
+import matplotlib.pyplot as plt
+import os
+
 class PredictionTab(QWidget):
     PARAM_MAP = {
         "Liczba próbek": "all_samples",
@@ -37,11 +42,12 @@ class PredictionTab(QWidget):
         self.load_params_btn = QPushButton("Wczytaj parametry")
         self.run_pred_btn = QPushButton("Uruchom predykcję")
         self.stop_pred_btn = QPushButton("Zatrzymaj predykcję")
+        self.plot_charts_btn = QPushButton("Generuj wykresy")
         self.clear_console_btn = QPushButton("Wyczyść konsolę")
 
         self.buttons = [
             self.add_pred_btn, self.remove_pred_btn, self.load_params_btn, self.run_pred_btn,
-            self.stop_pred_btn, self.clear_console_btn
+            self.stop_pred_btn, self.plot_charts_btn, self.clear_console_btn
         ]
         for btn in self.buttons:
             left_layout.addWidget(btn)
@@ -94,6 +100,7 @@ class PredictionTab(QWidget):
         self.load_params_btn.clicked.connect(self.on_load_params_to_fields)
         self.run_pred_btn.clicked.connect(self.on_run_prediction)
         self.stop_pred_btn.clicked.connect(self.on_stop_prediction)
+        self.plot_charts_btn.clicked.connect(self.on_plot_charts)
 
     def toggle_ui_lock(self, is_running: bool):
         if self.tab_widget:
@@ -217,6 +224,54 @@ class PredictionTab(QWidget):
             self.fill_pred_table()
         except Exception as e:
             self.log_to_console(f"Błąd usuwania: {e}")
+
+    def on_plot_charts(self):
+        pred_uuid = self.last_clicked_pred_uuid
+
+        if not pred_uuid:
+            self.log_to_console("Nie wybrano predykcji.")
+            return
+        
+        plots_dir = os.path.join(os.getcwd(), "plots")
+        os.makedirs(plots_dir, exist_ok=True)
+
+        try:
+            pred_config = self.db_manager.get_prediction_config(pred_uuid)
+            if not pred_config or pred_config["status"] != 'completed': return
+            
+            train_config = self.db_manager.get_training_config(pred_config['train_uuid'])
+            if not train_config: return
+            
+            for arch in train_config['architectures']:
+                data = self.db_manager.load_prediction_result(pred_uuid, arch)
+                if not data: continue
+                
+                df = pd.read_parquet(io.BytesIO(data))
+                if df.empty: continue
+
+                plt.figure(figsize=(12, 6)) 
+                plt.grid(True, color='gray', linestyle=':', alpha=0.5)
+
+                plt.scatter(df.index, df['close'], color='#CC0000', marker='o', s=2, label='Cena bieżąca close', zorder=1)
+
+                for target in train_config["target_names"]:
+                    plt.plot(df.index, df[target], linewidth=1, label=f"Predykcja {target}", zorder=2)
+                
+                plt.title(f"{train_config['instrument']['name']} - {arch}")
+                plt.legend(loc='best', fontsize='small')
+                plt.xlabel("Numer próbki")
+                plt.ylabel("Cena")
+                
+                plt.tight_layout()
+
+                plot_name = f"{train_config['instrument']['name']}_{arch}_{pred_uuid[:6]}.png".replace(" ", "")
+                plt.savefig(os.path.join(plots_dir, plot_name), dpi=120)
+                plt.close('all')
+
+            self.log_to_console(f"Wygenerowano wykresy w /plots")
+            
+        except Exception as e:
+            self.log_to_console(f"Błąd: {e}")
 
     def fill_pred_table(self):
         try:

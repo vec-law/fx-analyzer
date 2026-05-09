@@ -297,31 +297,6 @@ class DatabaseManager:
             raise e
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy dodawaniu predykcji: {str(e)}")
-        
-    def add_simulation(self, pred_uuid, strategies):
-        sim_uuid = str(uuid.uuid4())
-        try:
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        INSERT INTO simulation (
-                            sim_uuid, pred_uuid, status_id
-                        ) 
-                        VALUES (%s, %s, (SELECT id FROM status WHERE name = 'pending'))
-                    """, (sim_uuid, pred_uuid))
-
-                    for strategy in strategies:
-                        cur.execute("""
-                            INSERT INTO simulation_strategy (sim_uuid, strategy_id) 
-                            VALUES (%s, (SELECT id FROM strategy WHERE name = %s))
-                        """, (sim_uuid, strategy))
-
-                    conn.commit()
-                    return sim_uuid
-        except ValueError as e:
-            raise e
-        except Exception as e:
-            raise Exception(f"Błąd bazy danych przy dodawaniu symulacji: {str(e)}")
 
     def get_predictions(self):
         try:
@@ -360,34 +335,6 @@ class DatabaseManager:
                     ]
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania listy predykcji: {str(e)}")
-        
-    def get_simulations(self):
-        try:
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT 
-                            simulation.sim_uuid, 
-                            simulation.pred_uuid, 
-                            status.name, 
-                            simulation.created_at
-                        FROM simulation
-                        JOIN prediction ON simulation.pred_uuid = prediction.pred_uuid
-                        JOIN status ON simulation.status_id = status.id
-                        ORDER BY simulation.created_at DESC
-                    """)
-                    rows = cur.fetchall()
-
-                    return [
-                        {
-                            'sim_uuid': r[0],
-                            'pred_uuid': r[1],
-                            'status': r[2],
-                            'created_at': r[3],
-                        } for r in rows
-                    ]
-        except Exception as e:
-            raise Exception(f"Błąd podczas pobierania listy symulacji: {str(e)}")
 
     def del_prediction(self, pred_uuid):
         try:
@@ -400,18 +347,6 @@ class DatabaseManager:
             return True
         except Exception as e:
             raise Exception(f"Błąd podczas usuwania predykcji: {str(e)}")
-        
-    def del_simulation(self, sim_uuid):
-        try:
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM simulation WHERE sim_uuid = %s", (sim_uuid,))
-                    if cur.rowcount == 0:
-                        raise Exception(f"Symulacja {sim_uuid} nie istnieje.")
-                    conn.commit()
-            return True
-        except Exception as e:
-            raise Exception(f"Błąd podczas usuwania symulacji: {str(e)}")
 
     def update_prediction_status(self, pred_uuid, status_name):
         try:
@@ -433,27 +368,6 @@ class DatabaseManager:
                     return True
         except Exception as e:
             raise Exception(f"Nie udało się zaktualizować statusu predykcji: {str(e)}")
-        
-    def update_simulation_status(self, sim_uuid, status_name):
-        try:
-            if not sim_uuid or not status_name:
-                raise ValueError("Błąd: Brak UUID symulacji lub nazwy statusu")
-
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE simulation
-                        SET status_id = (SELECT id FROM status WHERE name = %s)
-                        WHERE sim_uuid = %s
-                    """, (status_name, sim_uuid))
-
-                    if cur.rowcount == 0:
-                        raise Exception(f"Nie znaleziono symulacji o UUID: {sim_uuid}")
-
-                    conn.commit()
-                    return True
-        except Exception as e:
-            raise Exception(f"Nie udało się zaktualizować statusu symulacji: {str(e)}")
 
     def get_prediction_config(self, pred_uuid):
         try:
@@ -463,8 +377,10 @@ class DatabaseManager:
                         SELECT 
                             prediction.all_samples, 
                             prediction.predicted_samples,
-                            prediction.train_uuid
+                            prediction.train_uuid,
+                            status.name
                         FROM prediction
+                        JOIN status ON prediction.status_id = status.id
                         WHERE prediction.pred_uuid = %s
                     """, (pred_uuid,))
 
@@ -475,48 +391,40 @@ class DatabaseManager:
                         config = {
                             "all_samples": row[0],
                             "predicted_samples": row[1],
-                            "train_uuid": row[2]
+                            "train_uuid": row[2],
+                            "status": row[3]
                         }
 
                     return config
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji predykcji: {str(e)}")
-        
-    def get_simulation_config(self, sim_uuid):
-        try:
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT pred_uuid, status_id, created_at 
-                        FROM simulation 
-                        WHERE sim_uuid = %s
-                    """, (sim_uuid,))
-                    
-                    row = cur.fetchone()
-                    if not row:
-                        raise Exception(f"Symulacja {sim_uuid} nie istnieje.")
 
-                    config = {
-                        'sim_uuid': sim_uuid,
-                        'pred_uuid': row[0],
-                        'status_id': row[1],
-                        'created_at': row[2],
-                        'strategies': []
-                    }
+    # def get_prediction_config(self, pred_uuid):
+    #     try:
+    #         with psycopg2.connect(**self.config) as conn:
+    #             with conn.cursor() as cur:
+    #                 cur.execute("""
+    #                     SELECT 
+    #                         prediction.all_samples, 
+    #                         prediction.predicted_samples,
+    #                         prediction.train_uuid
+    #                     FROM prediction
+    #                     WHERE prediction.pred_uuid = %s
+    #                 """, (pred_uuid,))
 
-                    cur.execute("""
-                        SELECT strategy.name
-                        FROM strategy
-                        JOIN simulation_strategy ON simulation_strategy.strategy_id = strategy.id
-                        WHERE simulation_strategy.sim_uuid = %s
-                        ORDER BY strategy.id
-                    """, (sim_uuid,))
-                    
-                    config['strategies'] = [r[0] for r in cur.fetchall()]
+    #                 row = cur.fetchone()
+    #                 config = None
 
-                    return config
-        except Exception as e:
-            raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji symulacji: {str(e)}")
+    #                 if row:
+    #                     config = {
+    #                         "all_samples": row[0],
+    #                         "predicted_samples": row[1],
+    #                         "train_uuid": row[2]
+    #                     }
+
+    #                 return config
+    #     except Exception as e:
+    #         raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji predykcji: {str(e)}")
 
     def save_prediction_result(self, pred_uuid, arch_name, data_bytes):
         query = """

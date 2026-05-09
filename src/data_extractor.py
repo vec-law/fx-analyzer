@@ -81,6 +81,11 @@ class DataExtractor:
                     series.name = col_name
                     f_cols.append(series)
 
+                elif f_type == 'pct':
+                    series = df['close'].pct_change(periods[0]).shift(shift)
+                    series.name = col_name
+                    f_cols.append(series)
+
                 else:
                     self.log_signal.emit(f"[{f_name}] Brak wzoru dla dodawanej cechy")
                     return None
