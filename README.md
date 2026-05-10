@@ -56,7 +56,8 @@
 
 2. Skonfiguruj bazę danych PostgreSQL i utwórz schemat / Set up PostgreSQL and initialise the schema:
 
-   > **Windows:** Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH / If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<wersja>\bin` to your PATH variable.
+> [!TIP]
+> **Windows:** Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH / If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<wersja>\bin` to your PATH variable.
 
 ```bash
    psql -U <użytkownik/user> -d <baza/database> -f db/schema.sql
