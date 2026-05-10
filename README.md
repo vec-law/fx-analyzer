@@ -16,7 +16,7 @@
 
 ## Opis projektu (About)
 
-**PL:** Aplikacja desktopowa do analizy i prognozowania trendów na rynku FX przy wykorzystaniu sieci neuronowych. Umożliwia automatyczne pobieranie i przetwarzanie danych rynkowych, obliczanie wskaźników technicznych, trening modeli, generowanie predykcji oraz zapis wyników w postaci wykresów. Zadania treningu i predykcji zarządzane z poziomu graficznego interfejsu. Konfiguracje zadań, wagi modeli i wyniki predykcji są przechowywane w bazie danych.
+**PL:** Aplikacja desktopowa do analizy i prognozowania trendów na rynku FX przy wykorzystaniu sieci neuronowych. Umożliwia automatyczne pobieranie i przetwarzanie danych rynkowych, obliczanie wskaźników technicznych, trening modeli, generowanie predykcji oraz zapis wyników w postaci wykresów. Zadania treningu i predykcji są zarządzane z poziomu graficznego interfejsu. Konfiguracje zadań, wagi modeli i wyniki predykcji są przechowywane w bazie danych.
 
 **EN:** Desktop application for analysing and forecasting trends on the FX market using neural networks. Enables automatic retrieval and processing of market data, calculation of technical indicators, model training, prediction generation and export of results as charts. Training and prediction tasks are managed through a graphical interface. Task configurations, model weights and prediction results are stored in a database.
 
@@ -72,7 +72,7 @@
    ```
 
 > [!TIP]
-> **Windows:** Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH / If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<wersja>\bin` to your PATH variable.
+> **Windows:** Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH / If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<version>\bin` to your PATH variable.
 
 ---
 
