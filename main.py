@@ -1,3 +1,5 @@
+__version__ = "v1.1.0-beta"
+
 import sys
 import os
 from dotenv import load_dotenv
