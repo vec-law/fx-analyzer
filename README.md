@@ -56,7 +56,7 @@
 
 2. Skonfiguruj bazę danych PostgreSQL i utwórz schemat / Set up PostgreSQL and initialise the schema:
    ```bash
-      psql -U <użytkownik/user> -d <baza/database> -f db/schema.sql
+   psql -U <użytkownik/user> -d <baza/database> -f db/schema.sql
    ```
 
 3. Utwórz plik `.env` z danymi dostępowymi do bazy danych / Create a `.env` file with database credentials.
