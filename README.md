@@ -30,7 +30,7 @@
 | PyTorch | sieci neuronowe / neural networks |
 | PostgreSQL + psycopg2 | baza danych / database |
 | yfinance | pobieranie danych rynkowych / market data retrieval |
-| pandas + numpy | przetwarzanie danych / data processing |
+| pandas | przetwarzanie danych / data processing |
 | matplotlib | wykresy / charts |
 | safetensors + pyarrow | serializacja modeli i wyników / model and result serialisation |
 
