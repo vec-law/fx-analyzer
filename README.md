@@ -58,6 +58,7 @@
    ```bash
    psql -U <użytkownik/user> -d <baza/database> -f db/schema.sql
    ```
+   > **Windows:** Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH / If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<wersja>\bin` to your PATH variable.
 
 3. Utwórz plik `.env` z danymi dostępowymi do bazy danych / Create a `.env` file with database credentials.
 
