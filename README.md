@@ -76,6 +76,34 @@
 
 ---
 
+## Przykładowa konfiguracja (Example configuration)
+
+**Trening / Training:**
+
+| Parametr / Parameter | Wartość / Value |
+|----------------------|-----------------|
+| Instrument | EURUSD |
+| Interwał / Interval | 1d |
+| Źródło danych / Data source | YF |
+| Liczba próbek / Samples | 4000 |
+| Liczba próbek testowych / Test samples | 250 |
+| Losowość / Seed | 42 |
+| Liczba epok / Epochs | 1000 |
+| Współczynnik szumu / Noise | 0.01 |
+| Współczynnik uczenia / Learning rate | 0.001 |
+| Cechy / Features | sma:5:1, sma:10:1, sma:15:1, sma:20:1 |
+| Wartości docelowe / Targets | close:-1 |
+| Architektury / Architectures | ModelV1 |
+
+**Predykcja / Prediction:**
+
+| Parametr / Parameter | Wartość / Value |
+|----------------------|-----------------|
+| Liczba próbek / Samples | 250 |
+| Liczba próbek przewidywanych / Predicted samples | 250 |
+
+---
+
 ## Architektura (Architecture)
 
 ```
