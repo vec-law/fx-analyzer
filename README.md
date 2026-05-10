@@ -72,7 +72,9 @@
    ```
 
 > [!TIP]
-> **Windows:** Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH / If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<wersja>\bin` to your PATH variable.
+> **Windows:**
+> Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH /
+> If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<wersja>\bin` to your PATH variable.
 
 ---
 
