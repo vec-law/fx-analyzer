@@ -95,7 +95,7 @@ fx-analyzer/
 
 ## Historia zmian (Changelog)
 
-- **v1.1.0-beta**: Przepisanie aplikacji od podstaw — zastąpienie skryptu konsolowego aplikacją desktopową z graficznym interfejsem, wprowadzenie bazy danych, podział na niezależne potoki treningu i predykcji uruchamiane w osobnych wątkach, zarządzanie zadaniami przez interfejs graficzny / Full rewrite — replaced console script with a desktop application with graphical interface, introduced database, split into independent training and prediction pipelines running in separate threads, task management through graphical interface
+- **v1.1.0-beta**: Przepisanie aplikacji od podstaw — zastąpienie skryptu konsolowego aplikacją desktopową z graficznym interfejsem, dodanie bazy danych, podział na niezależne potoki treningu i predykcji uruchamiane w osobnych wątkach, zarządzanie zadaniami przez interfejs graficzny / Full rewrite — replaced console script with a desktop application with graphical interface, added database, split into independent training and prediction pipelines running in separate threads, task management through graphical interface
 - **v1.0.2**: Dodanie logiki wyboru modelu / Added model selection logic
 - **v1.0.1**: Dodanie testów integracyjnych / Added integration tests
 - **v1.0.0**: Wersja bazowa / Initial release
