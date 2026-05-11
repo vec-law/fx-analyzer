@@ -42,6 +42,18 @@ CREATE TABLE data_source (
     name TEXT UNIQUE NOT NULL
 );
 
+CREATE TABLE role (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE app_user (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role_id INTEGER REFERENCES role(id) NOT NULL
+);
+
 CREATE TABLE training (
     train_uuid UUID PRIMARY KEY,
     instrument_id INTEGER REFERENCES instrument(id) NOT NULL,
@@ -128,6 +140,13 @@ CREATE TABLE prediction_result (
     PRIMARY KEY (pred_uuid, architecture_id)
 );
 
+CREATE TABLE app_user_training (
+    app_user_id INTEGER NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
+    train_uuid UUID NOT NULL REFERENCES training(train_uuid) ON DELETE CASCADE,
+    PRIMARY KEY (app_user_id, train_uuid)
+);
+
+
 CREATE INDEX idx_pred_train_uuid ON prediction(train_uuid);
 CREATE INDEX idx_model_train_uuid ON model(train_uuid);
 CREATE INDEX idx_statistic_train_uuid ON statistic(train_uuid);
@@ -144,3 +163,4 @@ INSERT INTO architecture (name) VALUES ('ModelV1');
 INSERT INTO timeframe (name, range, check_period, min_count) VALUES ('1d', 'max', 'M', 18);
 INSERT INTO timeframe (name, range) VALUES ('2m', '60d'), ('5m', '60d'), ('15m', '60d');
 INSERT INTO data_source (name) VALUES ('YF');
+INSERT INTO role (name) VALUES ('admin'), ('user');

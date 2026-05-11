@@ -1,6 +1,7 @@
 import psycopg2
 import uuid
 import pandas as pd
+import bcrypt
 
 class DatabaseManager:
     def __init__(self, db_config):
@@ -399,33 +400,6 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji predykcji: {str(e)}")
 
-    # def get_prediction_config(self, pred_uuid):
-    #     try:
-    #         with psycopg2.connect(**self.config) as conn:
-    #             with conn.cursor() as cur:
-    #                 cur.execute("""
-    #                     SELECT 
-    #                         prediction.all_samples, 
-    #                         prediction.predicted_samples,
-    #                         prediction.train_uuid
-    #                     FROM prediction
-    #                     WHERE prediction.pred_uuid = %s
-    #                 """, (pred_uuid,))
-
-    #                 row = cur.fetchone()
-    #                 config = None
-
-    #                 if row:
-    #                     config = {
-    #                         "all_samples": row[0],
-    #                         "predicted_samples": row[1],
-    #                         "train_uuid": row[2]
-    #                     }
-
-    #                 return config
-    #     except Exception as e:
-    #         raise Exception(f"Błąd bazy danych przy pobieraniu konfiguracji predykcji: {str(e)}")
-
     def save_prediction_result(self, pred_uuid, arch_name, data_bytes):
         query = """
             INSERT INTO prediction_result (pred_uuid, architecture_id, data)
@@ -586,3 +560,37 @@ class DatabaseManager:
                     return config
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
+        
+    def is_registered(self, user_name):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT id
+                        FROM app_user
+                        WHERE name = %s
+                    """, (user_name,))
+                    result = cur.fetchone()
+                    return result[0] if result else None
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+
+    def register_user(self, user_name, password):
+        try:
+            if self.is_registered(user_name):
+                raise ValueError(f"Użytkownik {user_name} jest już zarejestrowany")
+            
+            password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        INSERT INTO app_user (name, password_hash, role_id)
+                        VALUES (%s, %s, (SELECT id FROM role WHERE name = 'user'))
+                    """, (user_name, password_hash))
+                    conn.commit()
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")        
+
