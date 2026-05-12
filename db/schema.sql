@@ -50,7 +50,7 @@ CREATE TABLE role (
 CREATE TABLE app_user (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
+    password_hash BYTEA NOT NULL,
     role_id INTEGER REFERENCES role(id) NOT NULL,
     session_token UUID DEFAULT NULL
 );

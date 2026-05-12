@@ -575,19 +575,21 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
 
-    def register_user(self, user_name, password):
+    def register_user(self, user_name, password, is_admin=False):
         try:
             if self.is_registered(user_name):
                 raise ValueError(f"Użytkownik {user_name} jest już zarejestrowany")
             
             password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+            user_type = "admin" if is_admin else "user"
         
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         INSERT INTO app_user (name, password_hash, role_id)
-                        VALUES (%s, %s, (SELECT id FROM role WHERE name = 'user'))
-                    """, (user_name, password_hash))
+                        VALUES (%s, %s, (SELECT id FROM role WHERE name = %s))
+                    """, (user_name, password_hash, user_type))
                     conn.commit()
         except ValueError as e:
             raise e
@@ -606,6 +608,7 @@ class DatabaseManager:
                         WHERE name = %s
                     """, (user_name, ))
                     password_hash = cur.fetchone()[0]
+                    password_hash = bytes(password_hash)
 
                     if not bcrypt.checkpw(password.encode('utf-8'), password_hash):
                         raise ValueError(f"Podano nieprawidłowe dane logowania")

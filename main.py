@@ -21,9 +21,10 @@ def main():
     }
 
     db_manager = DatabaseManager(db_config)
-    gui = GUI(db_manager)
 
+    gui = GUI(db_manager)
     gui.show()
+
     sys.exit(app.exec())
 
 if __name__ == "__main__":
