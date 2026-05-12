@@ -592,5 +592,74 @@ class DatabaseManager:
         except ValueError as e:
             raise e
         except Exception as e:
-            raise Exception(f"Błąd bazy danych: {str(e)}")        
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+    
+    def login_user(self, user_name, password):
+        try:
+            if not (user_id := self.is_registered(user_name)):
+                raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
+            
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT password_hash FROM app_user
+                        WHERE name = %s
+                    """, (user_name, ))
+                    password_hash = cur.fetchone()[0]
+
+                    if not bcrypt.checkpw(password.encode('utf-8'), password_hash):
+                        raise ValueError(f"Podano nieprawidłowe dane logowania")
+
+                    session_token = uuid.uuid4()
+
+                    cur.execute("""
+                        UPDATE app_user
+                        SET session_token = %s
+                        WHERE app_user.id = %s
+                    """, (session_token, user_id))
+
+                    conn.commit()
+                    
+                    return user_id, session_token
+        
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+
+    def logout_user(self, user_name):
+        try:
+            if not (user_id := self.is_registered(user_name)):
+                raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
+            
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE app_user
+                        SET session_token = NULL
+                        WHERE app_user.id = %s
+                    """, (user_id, ))
+                    conn.commit()
+
+                    return user_id
+        
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def get_session_token(self, user_id):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT session_token FROM app_user
+                        WHERE id = %s
+                    """, (user_id, ))
+                    return cur.fetchone()[0]
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+
 
