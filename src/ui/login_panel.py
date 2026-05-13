@@ -44,7 +44,7 @@ class LoginPanel(QWidget):
         layout.addWidget(self.message_label)
 
         layout.addStretch()
-        self.setFixedWidth(220)
+        self.setFixedWidth(250)
         self.setLayout(layout)
 
         self.login_button.clicked.connect(self.handle_login)
@@ -63,11 +63,13 @@ class LoginPanel(QWidget):
 
             self.user_id, self.session_token = self.db_manager.login_user(user_name, password)
 
+            self.user_name_input.setEnabled(False)
             self.password_input.setEnabled(False)
             self.admin_checkbox.setEnabled(False)
             self.register_button.setEnabled(False)
             self.login_button.setEnabled(False)
             self.logout_button.setEnabled(True)
+            self.admin_checkbox.setChecked(False)
             
             self.show_message(f"Zalogowano użytkownika {user_name}", True)
 
@@ -84,6 +86,7 @@ class LoginPanel(QWidget):
 
             self.user_id, self.session_token = None, None
 
+            self.user_name_input.setEnabled(True)
             self.password_input.setEnabled(True)
             self.admin_checkbox.setEnabled(True)
             self.register_button.setEnabled(True)
