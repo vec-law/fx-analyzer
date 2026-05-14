@@ -52,7 +52,8 @@ CREATE TABLE app_user (
     name TEXT UNIQUE NOT NULL,
     password_hash BYTEA NOT NULL,
     role_id INTEGER REFERENCES role(id) NOT NULL,
-    session_token UUID DEFAULT NULL
+    session_token UUID DEFAULT NULL,
+    is_blocked BOOLEAN DEFAULT FALSE NOT NULL
 );
 
 CREATE TABLE training (
@@ -140,13 +141,6 @@ CREATE TABLE prediction_result (
     data BYTEA NOT NULL,
     PRIMARY KEY (pred_uuid, architecture_id)
 );
-
-CREATE TABLE app_user_training (
-    app_user_id INTEGER NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
-    train_uuid UUID NOT NULL REFERENCES training(train_uuid) ON DELETE CASCADE,
-    PRIMARY KEY (app_user_id, train_uuid)
-);
-
 
 CREATE INDEX idx_pred_train_uuid ON prediction(train_uuid);
 CREATE INDEX idx_model_train_uuid ON model(train_uuid);

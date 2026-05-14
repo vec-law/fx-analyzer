@@ -601,14 +601,21 @@ class DatabaseManager:
             if not (user_id := self.is_registered(user_name)):
                 raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
             
+            if self.is_blocked(user_id):
+                raise ValueError(f"Użytkownik {user_name} jest zablokowany")
+            
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT password_hash FROM app_user
-                        WHERE name = %s
+                        SELECT password_hash, role.name FROM app_user
+                        JOIN role ON role_id = role.id
+                        WHERE app_user.name = %s
                     """, (user_name, ))
-                    password_hash = cur.fetchone()[0]
+                    result = cur.fetchone()
+                    password_hash = result[0]
                     password_hash = bytes(password_hash)
+
+                    role_name = result[1]
 
                     if not bcrypt.checkpw(password.encode('utf-8'), password_hash):
                         raise ValueError(f"Podano nieprawidłowe dane logowania")
@@ -623,7 +630,7 @@ class DatabaseManager:
 
                     conn.commit()
                     
-                    return user_id, session_token
+                    return user_id, session_token, role_name
         
         except ValueError as e:
             raise e
@@ -665,4 +672,70 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
 
+    def ensure_admin(self):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT app_user.id FROM app_user
+                        JOIN role ON role_id = role.id
+                        WHERE role.name = 'admin'
+                    """)
+                    
+                    if cur.fetchone() is None:
+                        self.register_user("admin", "admin123", is_admin=True)
 
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def is_blocked(self, user_id):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT is_blocked FROM app_user
+                        WHERE id = %s
+                    """, (user_id, ))
+                    return cur.fetchone()[0]
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def change_password(self, user_id, new_password):
+        try:
+            new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+        
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE app_user
+                        SET password_hash = %s
+                        WHERE id = %s
+                    """, (new_password_hash, user_id))
+                    conn.commit()
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def get_users(self):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT
+                            app_user.id,
+                            app_user.name,
+                            role.name,
+                            is_blocked
+                        FROM app_user
+                        JOIN role ON role_id = role.id
+                    """)
+                    return cur.fetchall()
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")

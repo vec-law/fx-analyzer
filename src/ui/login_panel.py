@@ -1,17 +1,27 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QCheckBox, QLabel
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel
+from src.ui.change_password_popup import ChangePasswordPopup
+from src.ui.utils import show_message
+from PyQt6.QtCore import pyqtSignal
 
 class LoginPanel(QWidget):
+    user_logged_in = pyqtSignal(str)
+    user_logged_out = pyqtSignal()
+
     def __init__(self, db_manager):
         super().__init__()
         self.db_manager = db_manager
         
         self.user_id = None
         self.session_token = None
+        self.role_name = None
         
         self.init_ui()
     
     def init_ui(self):
         layout = QVBoxLayout()
+
+        login_label = QLabel("LOGOWANIE")
+        layout.addWidget(login_label)
 
         user_name_label = QLabel("Nazwa użytkownika:")
         layout.addWidget(user_name_label)
@@ -26,12 +36,6 @@ class LoginPanel(QWidget):
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         layout.addWidget(self.password_input)
 
-        self.admin_checkbox = QCheckBox("Zarejestruj się jako administrator")
-        layout.addWidget(self.admin_checkbox)
-
-        self.register_button = QPushButton("Zarejestruj")
-        layout.addWidget(self.register_button)
-
         self.login_button = QPushButton("Zaloguj")
         layout.addWidget(self.login_button)
 
@@ -39,21 +43,25 @@ class LoginPanel(QWidget):
         layout.addWidget(self.logout_button)
         self.logout_button.setEnabled(False)
 
-        self.message_label = QLabel("")
-        self.message_label.setWordWrap(True)
-        layout.addWidget(self.message_label)
+        self.change_password_button = QPushButton("Zmień hasło")
+        layout.addWidget(self.change_password_button)
+        self.change_password_button.setEnabled(False)
+
+        self.login_message = QLabel("")
+        self.login_message.setWordWrap(True)
+        layout.addWidget(self.login_message)
 
         layout.addStretch()
-        self.setFixedWidth(250)
+        self.setFixedWidth(300)
         self.setLayout(layout)
 
         self.login_button.clicked.connect(self.handle_login)
         self.logout_button.clicked.connect(self.handle_logout)
-        self.register_button.clicked.connect(self.handle_register)
+        self.change_password_button.clicked.connect(self.handle_change_password)
 
     def handle_login(self):
         try:
-            self.show_message("")
+            show_message(self.login_message, "")
 
             user_name = self.user_name_input.text()
             password = self.password_input.text()
@@ -61,67 +69,50 @@ class LoginPanel(QWidget):
             if not user_name or not password:
                 raise ValueError("Żadne z pól (login, hasło) nie może być puste")
 
-            self.user_id, self.session_token = self.db_manager.login_user(user_name, password)
+            self.user_id, self.session_token, self.role_name = self.db_manager.login_user(user_name, password)
 
             self.user_name_input.setEnabled(False)
             self.password_input.setEnabled(False)
-            self.admin_checkbox.setEnabled(False)
-            self.register_button.setEnabled(False)
             self.login_button.setEnabled(False)
             self.logout_button.setEnabled(True)
-            self.admin_checkbox.setChecked(False)
+            self.change_password_button.setEnabled(True)
             
-            self.show_message(f"Zalogowano użytkownika {user_name}", True)
+            show_message(self.login_message, f"Zalogowano użytkownika {user_name}", True)
+
+            self.user_logged_in.emit(self.role_name)
 
         except Exception as e:
-            self.show_message(str(e))
+            show_message(self.login_message, str(e))
 
     def handle_logout(self):
         try:
-            self.show_message("")
+            show_message(self.login_message, "")
 
             user_name = self.user_name_input.text()
 
             self.db_manager.logout_user(user_name)
 
-            self.user_id, self.session_token = None, None
+            self.user_id, self.session_token, self.role_name = None, None, None
 
             self.user_name_input.setEnabled(True)
             self.password_input.setEnabled(True)
-            self.admin_checkbox.setEnabled(True)
-            self.register_button.setEnabled(True)
             self.login_button.setEnabled(True)
             self.logout_button.setEnabled(False)
+            self.change_password_button.setEnabled(False)
 
             self.password_input.clear()
 
-            self.show_message(f"Wylogowano użytkownika {user_name}", True)
+            show_message(self.login_message, f"Wylogowano użytkownika {user_name}", True)
+
+            self.user_logged_out.emit()
 
         except Exception as e:
-            self.show_message(str(e))
+            show_message(self.login_message, str(e))
 
-    def handle_register(self):
-        try:
-            self.show_message("")
-            
-            user_name = self.user_name_input.text()
-            password = self.password_input.text()
+    def handle_change_password(self):
+        self.change_password_popup = ChangePasswordPopup(self.user_id, self.db_manager)
+        self.change_password_popup.password_changed.connect(self.on_password_changed)
+        self.change_password_popup.show()
 
-            if not user_name or not password:
-                raise ValueError("Żadne z pól (login, hasło) nie może być puste")
-            
-            self.db_manager.register_user(user_name, password, self.admin_checkbox.isChecked())
-
-            self.admin_checkbox.setChecked(False)
-            self.user_name_input.clear()
-            self.password_input.clear()
-
-            self.show_message(f"Zarejestrowano użytkownika {user_name}", True)
-
-        except Exception as e:
-            self.show_message(str(e))
-
-    def show_message(self, text, success=False):
-        color = "green" if success else "red"
-        self.message_label.setStyleSheet(f"color: {color};")
-        self.message_label.setText(text)
+    def on_password_changed(self):
+        show_message(self.login_message, "Zmieniono hasło użytkownika", True)
