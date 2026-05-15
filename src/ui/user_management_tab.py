@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt
 from src.ui.utils import show_message
 from src.ui.base_tab import BaseTab
 from src.database_manager import DatabaseManager
+from src.ui.change_password_popup import ChangePasswordPopup
 
 class UserManagementTab(BaseTab):
     def __init__(self, db_manager: DatabaseManager):
@@ -44,6 +45,7 @@ class UserManagementTab(BaseTab):
 
         self.user_table = QTableWidget()
         self.user_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.user_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.user_table.verticalHeader().setVisible(False)
         self.user_table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft)
         right_column_layout.addWidget(self.user_table)
@@ -54,12 +56,15 @@ class UserManagementTab(BaseTab):
         self.setLayout(layout)
 
         self.load_users_button.clicked.connect(self.handle_load_users)
+        self.change_password_button.clicked.connect(self.handle_change_password)
 
     def handle_load_users(self):
         try:
+            show_message(self.message_label, "")
+            
             self.db_manager.validate_access(self.user_id, self.session_token, "admin")
 
-            users = self.db_manager.get_users()
+            users = [u for u in self.db_manager.get_users() if u[0] != self.user_id]
             self.user_table.setRowCount(len(users))
             self.user_table.setColumnCount(4)
             self.user_table.setHorizontalHeaderLabels(["ID", "Nazwa", "Rola", "Zablokowany"])
@@ -70,3 +75,33 @@ class UserManagementTab(BaseTab):
 
         except Exception as e:
             show_message(self.message_label, str(e))
+
+    def handle_change_password(self):
+        try:
+            show_message(self.message_label, "")
+
+            selected_user_id = self.get_selected_user_id()
+
+            if selected_user_id is None:
+                raise ValueError("Nie wybrano żadnego użytkownika")
+            
+            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
+            
+            self.change_password_popup = ChangePasswordPopup(selected_user_id, self.db_manager)
+
+            self.change_password_popup.password_changed.connect(self.on_password_changed)
+            
+            self.change_password_popup.show()
+
+        except Exception as e:
+            show_message(self.message_label, str(e))
+
+    def get_selected_user_id(self):
+        row_index = self.user_table.currentRow()
+
+        if row_index == -1: return None
+
+        return int(self.user_table.item(row_index, 0).text())
+    
+    def on_password_changed(self):
+        show_message(self.message_label, "Zmieniono hasło użytkownika", True)
