@@ -2,18 +2,18 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel
 from src.ui.change_password_popup import ChangePasswordPopup
 from src.ui.utils import show_message
 from PyQt6.QtCore import pyqtSignal
+from src.database_manager import DatabaseManager
 
 class LoginPanel(QWidget):
-    user_logged_in = pyqtSignal(str)
+    user_logged_in = pyqtSignal(int, object)
     user_logged_out = pyqtSignal()
 
-    def __init__(self, db_manager):
+    def __init__(self, db_manager: DatabaseManager):
         super().__init__()
         self.db_manager = db_manager
         
         self.user_id = None
         self.session_token = None
-        self.role_name = None
         
         self.init_ui()
     
@@ -69,7 +69,7 @@ class LoginPanel(QWidget):
             if not user_name or not password:
                 raise ValueError("Żadne z pól (login, hasło) nie może być puste")
 
-            self.user_id, self.session_token, self.role_name = self.db_manager.login_user(user_name, password)
+            self.user_id, self.session_token = self.db_manager.login_user(user_name, password)
 
             self.user_name_input.setEnabled(False)
             self.password_input.setEnabled(False)
@@ -79,7 +79,7 @@ class LoginPanel(QWidget):
             
             show_message(self.login_message, f"Zalogowano użytkownika {user_name}", True)
 
-            self.user_logged_in.emit(self.role_name)
+            self.user_logged_in.emit(self.user_id, self.session_token)
 
         except Exception as e:
             show_message(self.login_message, str(e))
@@ -92,7 +92,7 @@ class LoginPanel(QWidget):
 
             self.db_manager.logout_user(user_name)
 
-            self.user_id, self.session_token, self.role_name = None, None, None
+            self.user_id, self.session_token = None, None
 
             self.user_name_input.setEnabled(True)
             self.password_input.setEnabled(True)

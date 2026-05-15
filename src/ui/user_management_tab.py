@@ -1,11 +1,14 @@
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt6.QtCore import Qt
 from src.ui.utils import show_message
+from src.ui.base_tab import BaseTab
+from src.database_manager import DatabaseManager
 
-class UserManagementTab(QWidget):
-    def __init__(self, db_manager):
+class UserManagementTab(BaseTab):
+    def __init__(self, db_manager: DatabaseManager):
         super().__init__()
         self.db_manager = db_manager
+
         self.init_ui()
 
     def init_ui(self):
@@ -44,6 +47,7 @@ class UserManagementTab(QWidget):
         self.user_table.verticalHeader().setVisible(False)
         self.user_table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft)
         right_column_layout.addWidget(self.user_table)
+        right_column_layout.addWidget(self.message_label)
 
         layout.addLayout(right_column_layout)
 
@@ -52,11 +56,17 @@ class UserManagementTab(QWidget):
         self.load_users_button.clicked.connect(self.handle_load_users)
 
     def handle_load_users(self):
-        users = self.db_manager.get_users()
-        self.user_table.setRowCount(len(users))
-        self.user_table.setColumnCount(4)
-        self.user_table.setHorizontalHeaderLabels(["ID", "Nazwa", "Rola", "Zablokowany"])
+        try:
+            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
 
-        for row_index, user in enumerate(users):
-            for col_index, value in enumerate(user):
-                self.user_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+            users = self.db_manager.get_users()
+            self.user_table.setRowCount(len(users))
+            self.user_table.setColumnCount(4)
+            self.user_table.setHorizontalHeaderLabels(["ID", "Nazwa", "Rola", "Zablokowany"])
+
+            for row_index, user in enumerate(users):
+                for col_index, value in enumerate(user):
+                    self.user_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+
+        except Exception as e:
+            show_message(self.message_label, str(e))

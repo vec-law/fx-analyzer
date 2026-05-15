@@ -560,24 +560,10 @@ class DatabaseManager:
                     return config
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
-        
-    def is_registered(self, user_name):
-        try:
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT id
-                        FROM app_user
-                        WHERE name = %s
-                    """, (user_name,))
-                    result = cur.fetchone()
-                    return result[0] if result else None
-        except Exception as e:
-            raise Exception(f"Błąd bazy danych: {str(e)}")
 
     def register_user(self, user_name, password, is_admin=False):
         try:
-            if self.is_registered(user_name):
+            if self.get_user_id(user_name):
                 raise ValueError(f"Użytkownik {user_name} jest już zarejestrowany")
             
             password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -598,7 +584,7 @@ class DatabaseManager:
     
     def login_user(self, user_name, password):
         try:
-            if not (user_id := self.is_registered(user_name)):
+            if not (user_id := self.get_user_id(user_name)):
                 raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
             
             if self.is_blocked(user_id):
@@ -607,15 +593,16 @@ class DatabaseManager:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT password_hash, role.name FROM app_user
-                        JOIN role ON role_id = role.id
+                        SELECT password_hash FROM app_user
                         WHERE app_user.name = %s
                     """, (user_name, ))
                     result = cur.fetchone()
+
+                    if result is None:
+                        raise ValueError(f"Podano nieprawidłowe dane logowania")
+
                     password_hash = result[0]
                     password_hash = bytes(password_hash)
-
-                    role_name = result[1]
 
                     if not bcrypt.checkpw(password.encode('utf-8'), password_hash):
                         raise ValueError(f"Podano nieprawidłowe dane logowania")
@@ -630,7 +617,7 @@ class DatabaseManager:
 
                     conn.commit()
                     
-                    return user_id, session_token, role_name
+                    return user_id, session_token
         
         except ValueError as e:
             raise e
@@ -639,7 +626,7 @@ class DatabaseManager:
 
     def logout_user(self, user_name):
         try:
-            if not (user_id := self.is_registered(user_name)):
+            if not (user_id := self.get_user_id(user_name)):
                 raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
             
             with psycopg2.connect(**self.config) as conn:
@@ -666,7 +653,10 @@ class DatabaseManager:
                         SELECT session_token FROM app_user
                         WHERE id = %s
                     """, (user_id, ))
-                    return cur.fetchone()[0]
+                    result = cur.fetchone()
+
+                    if result is None: return None
+                    else: return result[0]
         except ValueError as e:
             raise e
         except Exception as e:
@@ -683,7 +673,7 @@ class DatabaseManager:
                     """)
                     
                     if cur.fetchone() is None:
-                        self.register_user("admin", "admin123", is_admin=True)
+                        self.register_user("admin", "1111", is_admin=True)
 
         except ValueError as e:
             raise e
@@ -698,7 +688,10 @@ class DatabaseManager:
                         SELECT is_blocked FROM app_user
                         WHERE id = %s
                     """, (user_id, ))
-                    return cur.fetchone()[0]
+                    result = cur.fetchone()
+
+                    if result is None: return None
+                    else: return result[0]
         except ValueError as e:
             raise e
         except Exception as e:
@@ -735,6 +728,83 @@ class DatabaseManager:
                         JOIN role ON role_id = role.id
                     """)
                     return cur.fetchall()
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def get_user_id(self, user_name):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT id FROM app_user
+                        WHERE name = %s
+                    """, (user_name, ))
+                    user_id = cur.fetchone()
+
+                    if user_id is None: return None
+                    else: return user_id[0]
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def user_exists(self, user_id):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT id FROM app_user
+                        WHERE id = %s
+                    """, (user_id, ))
+                    result = cur.fetchone()
+
+                    if result is None: return False
+                    else: return True
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def validate_access(self, user_id, session_token, required_role):
+        try:
+            if not self.user_exists(user_id):
+                raise ValueError(f"Użytkownik nie istnieje")
+            
+            if self.is_blocked(user_id):
+                raise ValueError(f"Użytkownik zablokowany")
+            
+            db_session_token = self.get_session_token(user_id)
+
+            if db_session_token is None:
+                raise ValueError(f"Użytkownik wylogowany")
+            elif db_session_token != session_token:
+                raise ValueError(f"Użytkownik zalogowany na innej sesji")
+            
+            if self.get_role(user_id) != required_role:
+                raise ValueError(f"Niewłaściwy typ użytkownika")
+            
+            return True
+
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def get_role(self, user_id):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT role.name FROM role
+                        JOIN app_user ON role_id = role.id
+                        WHERE app_user.id = %s
+                    """, (user_id, ))
+                    result = cur.fetchone()
+
+                    if result is None: return None
+                    else: return result[0]
         except ValueError as e:
             raise e
         except Exception as e:
