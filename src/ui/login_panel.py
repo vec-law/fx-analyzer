@@ -110,7 +110,10 @@ class LoginPanel(QWidget):
             show_message(self.login_message, str(e))
 
     def handle_change_password(self):
-        self.change_password_popup = ChangePasswordPopup(self.user_id, self.db_manager)
+        self.change_password_popup = ChangePasswordPopup(
+            self.user_id, self.session_token,
+            self.db_manager.get_role(self.user_id),
+            self.db_manager)
         self.change_password_popup.password_changed.connect(self.on_password_changed)
         self.change_password_popup.show()
 

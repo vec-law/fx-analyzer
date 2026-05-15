@@ -6,9 +6,11 @@ from src.ui.utils import show_message
 class ChangePasswordPopup(QWidget):
     password_changed = pyqtSignal()
 
-    def __init__(self, user_id, db_manager: DatabaseManager):
+    def __init__(self, user_id, session_token, required_role, db_manager: DatabaseManager):
         super().__init__()
         self.user_id = user_id
+        self.session_token = session_token
+        self.required_role = required_role
         self.db_manager = db_manager
         self.init_ui()
     
@@ -50,6 +52,8 @@ class ChangePasswordPopup(QWidget):
 
             new_password = self.new_password_input.text()
             repeated_password = self.repeat_password_input.text()
+
+            self.db_manager.validate_access(self.user_id, self.session_token, self.required_role)
 
             if not new_password or not repeated_password or new_password != repeated_password:
                 raise ValueError("Hasła nie mogą być puste i muszą być takie same")
