@@ -1,4 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView
+from PyQt6.QtCore import Qt
 from src.ui.utils import show_message
 
 class UserManagementTab(QWidget):
@@ -39,7 +40,9 @@ class UserManagementTab(QWidget):
         right_column_layout = QVBoxLayout()
 
         self.user_table = QTableWidget()
+        self.user_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.user_table.verticalHeader().setVisible(False)
+        self.user_table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft)
         right_column_layout.addWidget(self.user_table)
 
         layout.addLayout(right_column_layout)

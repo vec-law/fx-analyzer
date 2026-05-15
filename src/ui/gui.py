@@ -34,6 +34,7 @@ class GUI(QWidget):
         self.setLayout(layout)
 
         self.setWindowTitle("fx-analyzer")
+        self.resize(1200, 700)
 
         self.login_panel.user_logged_in.connect(self.on_user_logged_in)
         self.login_panel.user_logged_out.connect(self.on_user_logged_out)
