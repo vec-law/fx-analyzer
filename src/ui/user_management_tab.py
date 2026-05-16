@@ -4,6 +4,7 @@ from src.ui.utils import show_message
 from src.ui.base_tab import BaseTab
 from src.database_manager import DatabaseManager
 from src.ui.change_password_popup import ChangePasswordPopup
+from src.ui.add_user_popup import AddUserPopup
 
 class UserManagementTab(BaseTab):
     def __init__(self, db_manager: DatabaseManager):
@@ -56,6 +57,7 @@ class UserManagementTab(BaseTab):
         self.setLayout(layout)
 
         self.load_users_button.clicked.connect(self.handle_load_users)
+        self.add_user_button.clicked.connect(self.handle_add_user)
         self.change_password_button.clicked.connect(self.handle_change_password)
 
     def handle_load_users(self):
@@ -76,6 +78,23 @@ class UserManagementTab(BaseTab):
         except Exception as e:
             show_message(self.message_label, str(e))
 
+    def handle_add_user(self):
+        try:
+            show_message(self.message_label, "")
+            
+            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
+
+            self.add_user_popup = AddUserPopup(self.db_manager)
+
+            self.add_user_popup.user_added.connect(
+                lambda: self.on_action_success("Dodano użytkownika")
+            )
+
+            self.add_user_popup.show()
+
+        except Exception as e:
+            show_message(self.message_label, str(e))
+
     def handle_change_password(self):
         try:
             show_message(self.message_label, "")
@@ -89,7 +108,9 @@ class UserManagementTab(BaseTab):
             
             self.change_password_popup = ChangePasswordPopup(selected_user_id, self.db_manager)
 
-            self.change_password_popup.password_changed.connect(self.on_password_changed)
+            self.change_password_popup.password_changed.connect(
+                lambda: self.on_action_success("Zmieniono hasło użytkownika")
+            )
             
             self.change_password_popup.show()
 
@@ -103,5 +124,6 @@ class UserManagementTab(BaseTab):
 
         return int(self.user_table.item(row_index, 0).text())
     
-    def on_password_changed(self):
-        show_message(self.message_label, "Zmieniono hasło użytkownika", True)
+    def on_action_success(self, message):
+        self.handle_load_users()
+        show_message(self.message_label, message, True)

@@ -2,6 +2,10 @@ import psycopg2
 import uuid
 import pandas as pd
 import bcrypt
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class DatabaseManager:
     def __init__(self, db_config):
@@ -561,7 +565,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
 
-    def register_user(self, user_name, password, is_admin=False):
+    def add_user(self, user_name, password, is_admin=False):
         try:
             if self.get_user_id(user_name):
                 raise ValueError(f"Użytkownik {user_name} jest już zarejestrowany")
@@ -673,7 +677,11 @@ class DatabaseManager:
                     """)
                     
                     if cur.fetchone() is None:
-                        self.register_user("admin", "1111", is_admin=True)
+                        self.add_user(
+                            os.getenv("ADMIN_PASSWORD"),
+                            os.getenv("ADMIN_LOGIN"),
+                            is_admin=True
+                        ) 
 
         except ValueError as e:
             raise e
