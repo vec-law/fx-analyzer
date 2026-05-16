@@ -62,7 +62,10 @@ class UserManagementTab(BaseTab):
         self.load_users_button.clicked.connect(self.handle_load_users)
         self.add_user_button.clicked.connect(self.handle_add_user)
         self.del_user_button.clicked.connect(self.handle_del_user)
+        self.block_user_button.clicked.connect(self.handle_block_user)
+        self.unblock_user_button.clicked.connect(self.handle_unblock_user)
         self.change_password_button.clicked.connect(self.handle_change_password)
+        
 
     def handle_load_users(self):
         try:
@@ -75,9 +78,14 @@ class UserManagementTab(BaseTab):
             self.user_table.setColumnCount(4)
             self.user_table.setHorizontalHeaderLabels(["ID", "Nazwa", "Rola", "Zablokowany"])
 
+            self.user_table.setSortingEnabled(False)
             for row_index, user in enumerate(users):
                 for col_index, value in enumerate(user):
                     self.user_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+            
+            self.user_table.setSortingEnabled(True)
+            self.user_table.clearSelection()
+            self.user_table.setCurrentCell(-1, -1)
 
         except Exception as e:
             show_message(self.message_label, str(e))
@@ -120,6 +128,44 @@ class UserManagementTab(BaseTab):
             )
             
             self.del_user_popup.show()
+
+        except Exception as e:
+            show_message(self.message_label, str(e))
+
+    def handle_block_user(self):
+        try:
+            show_message(self.message_label, "")
+
+            selected_user_id = self.get_selected_user_id()
+
+            if selected_user_id is None:
+                raise ValueError("Nie wybrano żadnego użytkownika")
+            
+            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
+
+            user_name = self.db_manager.get_user_name(selected_user_id)
+            self.db_manager.block_user(selected_user_id)
+
+            self.on_action_success(f"Zablokowano użytkownika {user_name}")
+
+        except Exception as e:
+            show_message(self.message_label, str(e))
+
+    def handle_unblock_user(self):
+        try:
+            show_message(self.message_label, "")
+
+            selected_user_id = self.get_selected_user_id()
+
+            if selected_user_id is None:
+                raise ValueError("Nie wybrano żadnego użytkownika")
+            
+            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
+
+            user_name = self.db_manager.get_user_name(selected_user_id)
+            self.db_manager.unblock_user(selected_user_id)
+
+            self.on_action_success(f"Odblokowano użytkownika {user_name}")
 
         except Exception as e:
             show_message(self.message_label, str(e))

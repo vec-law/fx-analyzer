@@ -589,7 +589,7 @@ class DatabaseManager:
     def del_user(self, user_id):
         try:
             if not user_id:
-                raise ValueError("Błąd: Nie podano ID użytkownika usunięcia")
+                raise ValueError("Błąd: Nie podano ID użytkownika")
             
             # self.stop_user_jobs(user_id)  # TODO: zaimplementować po ukończeniu training i prediction tab
             
@@ -605,6 +605,54 @@ class DatabaseManager:
                     conn.commit()
                     return True
                 
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def block_user(self, user_id):
+        try:
+            if not user_id:
+                raise ValueError("Błąd: Nie podano ID użytkownika")
+            
+            # self.stop_user_jobs(user_id)  # TODO: zaimplementować po ukończeniu training i prediction tab
+            
+            self.logout_user(self.get_user_name(user_id))
+                 
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE app_user
+                        SET is_blocked = TRUE
+                        WHERE id = %s
+                    """, (user_id, ))
+
+                    if cur.rowcount == 0:
+                        raise Exception("Użytkownik nie istnieje w bazie danych")
+                    
+                    conn.commit()
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def unblock_user(self, user_id):
+        try:
+            if not user_id:
+                raise ValueError("Błąd: Nie podano ID użytkownika")
+                 
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE app_user
+                        SET is_blocked = FALSE
+                        WHERE id = %s
+                    """, (user_id, ))
+
+                    if cur.rowcount == 0:
+                        raise Exception("Użytkownik nie istnieje w bazie danych")
+                    
+                    conn.commit()
+        except ValueError as e:
+            raise e
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
     

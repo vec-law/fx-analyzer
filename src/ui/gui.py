@@ -50,6 +50,7 @@ class GUI(QWidget):
             self.tabs.setTabVisible(0, True)
             self.tabs.setTabVisible(1, False)
             self.tabs.setTabVisible(2, False)
+            
         elif role_name == 'user':
             self.tabs.setTabVisible(0, False)
             self.tabs.setTabVisible(1, True)
