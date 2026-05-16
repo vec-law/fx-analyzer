@@ -58,6 +58,7 @@ CREATE TABLE app_user (
 
 CREATE TABLE training (
     train_uuid UUID PRIMARY KEY,
+    user_id INTEGER REFERENCES app_user(id) ON DELETE CASCADE NOT NULL,
     instrument_id INTEGER REFERENCES instrument(id) NOT NULL,
     timeframe_id INTEGER REFERENCES timeframe(id) NOT NULL,
     status_id INTEGER REFERENCES status(id) NOT NULL,
@@ -148,3 +149,4 @@ CREATE INDEX idx_statistic_train_uuid ON statistic(train_uuid);
 CREATE INDEX idx_target_def_train_uuid ON target_def(train_uuid);
 CREATE INDEX idx_feature_def_train_uuid ON feature_def(train_uuid);
 CREATE INDEX idx_train_arch_uuid ON training_architecture(train_uuid);
+CREATE INDEX idx_training_user_id ON training(user_id);
