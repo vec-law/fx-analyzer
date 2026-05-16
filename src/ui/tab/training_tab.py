@@ -1,13 +1,11 @@
 from PyQt6.QtCore import QThread
-from PyQt6.QtWidgets import (
-    QWidget, QPushButton, QTextEdit, QTableWidget,
-    QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
-    QTableWidgetItem
-)
+from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
+from src.ui.tab.base_tab import BaseTab
 from src.worker.training_worker import TrainingWorker
+from src.database_manager import DatabaseManager
 
-
-class TrainingTab(QWidget):
+class TrainingTab(BaseTab):
     PARAM_MAP = {
         "Instrument": "instrument_name", "Interwał": "timeframe_name",
         "Źródło danych": "data_source", "Liczba próbek": "all_samples",
@@ -20,7 +18,7 @@ class TrainingTab(QWidget):
     def log_to_console(self, message: str):
         self.console.append(message)
 
-    def __init__(self, db_manager, tab_widget=None):
+    def __init__(self, db_manager: DatabaseManager, tab_widget=None):
         super().__init__()
         self.db_manager = db_manager
         self.tab_widget = tab_widget
@@ -29,20 +27,6 @@ class TrainingTab(QWidget):
         self.worker = None
         self.init_ui()
         self.init_actions()
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        try:
-            self.on_load_tasks(show_log=False)
-            
-            if self.last_clicked_uuid:
-                for row in range(self.table.rowCount()):
-                    item = self.table.item(row, 0)
-                    if item and item.text() == self.last_clicked_uuid:
-                        self.table.selectRow(row)
-                        break
-        except Exception as e:
-            self.log_to_console(f"Błąd auto-odświeżania: {e}")
 
     def init_ui(self):
         left_layout = QVBoxLayout()
@@ -151,10 +135,10 @@ class TrainingTab(QWidget):
         self.thread.destroyed.connect(lambda: setattr(self, 'worker', None))
 
         self.thread.finished.connect(lambda: self.set_running_ui(False))
-        self.thread.finished.connect(lambda: self.on_load_tasks(show_log=False))
+        self.thread.finished.connect(lambda: self.on_load_training_tasks(show_log=False))
 
         self.db_manager.update_training_status(self.last_clicked_uuid, 'running')
-        self.on_load_tasks(show_log=False)
+        self.on_load_training_tasks(show_log=False)
 
         self.set_running_ui(True)
         self.thread.start()
@@ -229,10 +213,10 @@ class TrainingTab(QWidget):
             for architecture in field_values["architectures"].split(","):
                 train_config["architectures"].append(architecture.strip())
 
-            new_uuid = self.db_manager.add_training(train_config)
+            new_uuid = self.db_manager.add_training(train_config, self.user_id, self.session_token)
             self.table.clearSelection()
             self.last_clicked_uuid = new_uuid
-            self.on_load_tasks(show_log=False)
+            self.on_load_training_tasks(show_log=False)
             
             for row in range(self.table.rowCount()):
                 item = self.table.item(row, 0)
@@ -278,7 +262,7 @@ class TrainingTab(QWidget):
         try:
             self.db_manager.del_training(self.last_clicked_uuid)
             self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
-            self.on_load_tasks(show_log=False)
+            self.on_load_training_tasks(show_log=False)
 
             if self.table.rowCount() > 0:
                 self.table.selectRow(0)
@@ -289,9 +273,9 @@ class TrainingTab(QWidget):
         except Exception as e:
             self.log_to_console(f"Błąd usuwania: {e}")
 
-    def on_load_tasks(self, show_log=True):
+    def on_load_training_tasks(self, show_log=True):
         try:
-            tasks = self.db_manager.get_trainings()
+            tasks = self.db_manager.get_trainings(self.user_id, self.session_token)
             if not tasks:
                 self.table.setRowCount(0)
                 if show_log:
@@ -307,6 +291,16 @@ class TrainingTab(QWidget):
                     self.last_clicked_uuid = item.text()
             
             if show_log:
-                self.log_to_console("Zaktualizowano listę zadań.")
+                self.log_to_console("Wczytano listę zadań.")
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania: {e}")
+
+    def set_session(self, user_id, session_token):
+        super().set_session(user_id, session_token)
+        self.on_load_training_tasks()
+
+    def clear_session(self):
+        super().clear_session()
+        self.console.clear()
+        self.table.setRowCount(0)
+        self.last_clicked_uuid = None

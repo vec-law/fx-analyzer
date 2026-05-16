@@ -11,24 +11,26 @@ class DatabaseManager:
     def __init__(self, db_config):
         self.config = db_config
 
-    def add_training(self, config):
+    def add_training(self, config, user_id, session_token):
         train_uuid = str(uuid.uuid4())
 
         try:
+            self.validate_access(user_id, session_token, "user")
+            
             if not config.get('features') or not config.get('targets') or not config.get('architectures'):
                 raise ValueError("Błąd walidacji: Brak Targetów, Featurów lub Architektury.")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO training (train_uuid, instrument_id, timeframe_id, status_id, data_source_id) 
-                        VALUES (%s, 
+                        INSERT INTO training (train_uuid, user_id, instrument_id, timeframe_id, status_id, data_source_id) 
+                        VALUES (%s, %s,
                             (SELECT id FROM instrument WHERE name = %s), 
                             (SELECT id FROM timeframe WHERE name = %s), 
                             (SELECT id FROM status WHERE name = 'pending'),
                             (SELECT id FROM data_source WHERE name = %s))
                     """, (
-                        train_uuid,
+                        train_uuid, user_id,
                         config['instrument']['name'],
                         config['timeframe']['name'],
                         config['data_source']
@@ -151,8 +153,10 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd podczas usuwania zadania: {str(e)}")
 
-    def get_trainings(self):
+    def get_trainings(self, user_id, session_token):
         try:
+            self.validate_access(user_id, session_token, "user")
+
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
@@ -168,8 +172,9 @@ class DatabaseManager:
                         JOIN timeframe ON training.timeframe_id = timeframe.id
                         JOIN data_source ON training.data_source_id = data_source.id
                         JOIN status ON training.status_id = status.id
+                        WHERE training.user_id = %s
                         ORDER BY training.created_at DESC
-                    """)
+                    """, (user_id, ))
                     rows = cur.fetchall()
 
                     return [
@@ -182,6 +187,9 @@ class DatabaseManager:
                             'created_at': r[5]
                         } for r in rows
                     ]
+                
+        except ValueError as e:
+            raise e
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania listy treningów: {str(e)}")
 
@@ -792,8 +800,10 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
         
-    def get_users(self):
+    def get_users(self, user_id, session_token):
         try:
+            self.validate_access(user_id, session_token, "admin")
+
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""

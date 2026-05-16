@@ -1,11 +1,11 @@
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt6.QtCore import Qt
 from src.ui.utils import show_message
-from src.ui.base_tab import BaseTab
+from src.ui.tab.base_tab import BaseTab
 from src.database_manager import DatabaseManager
-from src.ui.change_password_popup import ChangePasswordPopup
-from src.ui.add_user_popup import AddUserPopup
-from src.ui.del_user_popup import DelUserPopup
+from src.ui.popup.change_password_popup import ChangePasswordPopup
+from src.ui.popup.add_user_popup import AddUserPopup
+from src.ui.popup.del_user_popup import DelUserPopup
 
 class UserManagementTab(BaseTab):
     def __init__(self, db_manager: DatabaseManager):
@@ -59,21 +59,22 @@ class UserManagementTab(BaseTab):
 
         self.setLayout(layout)
 
-        self.load_users_button.clicked.connect(self.handle_load_users)
-        self.add_user_button.clicked.connect(self.handle_add_user)
-        self.del_user_button.clicked.connect(self.handle_del_user)
-        self.block_user_button.clicked.connect(self.handle_block_user)
-        self.unblock_user_button.clicked.connect(self.handle_unblock_user)
-        self.change_password_button.clicked.connect(self.handle_change_password)
+        self.load_users_button.clicked.connect(self.on_load_users)
+        self.add_user_button.clicked.connect(self.on_add_user)
+        self.del_user_button.clicked.connect(self.on_del_user)
+        self.block_user_button.clicked.connect(self.on_block_user)
+        self.unblock_user_button.clicked.connect(self.on_unblock_user)
+        self.change_password_button.clicked.connect(self.on_change_password)
         
 
-    def handle_load_users(self):
+    def on_load_users(self):
         try:
             show_message(self.message_label, "")
-            
-            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
 
-            users = [u for u in self.db_manager.get_users() if u[0] != self.user_id]
+            users = [
+                u for u in self.db_manager.get_users(self.user_id, self.session_token)
+                if u[0] != self.user_id
+            ]
             self.user_table.setRowCount(len(users))
             self.user_table.setColumnCount(4)
             self.user_table.setHorizontalHeaderLabels(["ID", "Nazwa", "Rola", "Zablokowany"])
@@ -90,7 +91,7 @@ class UserManagementTab(BaseTab):
         except Exception as e:
             show_message(self.message_label, str(e))
 
-    def handle_add_user(self):
+    def on_add_user(self):
         try:
             show_message(self.message_label, "")
             
@@ -107,7 +108,7 @@ class UserManagementTab(BaseTab):
         except Exception as e:
             show_message(self.message_label, str(e))
 
-    def handle_del_user(self):
+    def on_del_user(self):
         try:
             show_message(self.message_label, "")
 
@@ -132,7 +133,7 @@ class UserManagementTab(BaseTab):
         except Exception as e:
             show_message(self.message_label, str(e))
 
-    def handle_block_user(self):
+    def on_block_user(self):
         try:
             show_message(self.message_label, "")
 
@@ -151,7 +152,7 @@ class UserManagementTab(BaseTab):
         except Exception as e:
             show_message(self.message_label, str(e))
 
-    def handle_unblock_user(self):
+    def on_unblock_user(self):
         try:
             show_message(self.message_label, "")
 
@@ -170,7 +171,7 @@ class UserManagementTab(BaseTab):
         except Exception as e:
             show_message(self.message_label, str(e))
 
-    def handle_change_password(self):
+    def on_change_password(self):
         try:
             show_message(self.message_label, "")
 
@@ -200,9 +201,9 @@ class UserManagementTab(BaseTab):
         return int(self.user_table.item(row_index, 0).text())
     
     def on_action_success(self, message):
-        self.handle_load_users()
+        self.on_load_users()
         show_message(self.message_label, message, True)
 
     def set_session(self, user_id, session_token):
         super().set_session(user_id, session_token)
-        self.handle_load_users()
+        self.on_load_users()

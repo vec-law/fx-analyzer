@@ -41,10 +41,10 @@ class DelUserPopup(QWidget):
 
         self.setLayout(layout)
 
-        self.yes_button.clicked.connect(self.handle_del_user)
+        self.yes_button.clicked.connect(self.on_del_user)
         self.no_button.clicked.connect(self.close)
 
-    def handle_del_user(self):
+    def on_del_user(self):
         try:
             show_message(self.del_user_message, "")
 

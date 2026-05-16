@@ -42,9 +42,9 @@ class ChangePasswordPopup(QWidget):
 
         self.setLayout(layout)
 
-        self.save_password_button.clicked.connect(self.handle_save_password)
+        self.save_password_button.clicked.connect(self.on_save_password)
 
-    def handle_save_password(self):
+    def on_save_password(self):
         try:
             show_message(self.save_password_message, "")
 

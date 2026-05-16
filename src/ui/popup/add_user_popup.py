@@ -50,9 +50,9 @@ class AddUserPopup(QWidget):
 
         self.setLayout(layout)
 
-        self.add_user_button.clicked.connect(self.handle_add_user)
+        self.add_user_button.clicked.connect(self.on_add_user)
 
-    def handle_add_user(self):
+    def on_add_user(self):
         try:
             show_message(self.add_user_message, "")
 

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel
-from src.ui.change_password_popup import ChangePasswordPopup
+from src.ui.popup.change_password_popup import ChangePasswordPopup
 from src.ui.utils import show_message
 from PyQt6.QtCore import pyqtSignal
 from src.database_manager import DatabaseManager
@@ -55,11 +55,11 @@ class LoginPanel(QWidget):
         self.setFixedWidth(300)
         self.setLayout(layout)
 
-        self.login_button.clicked.connect(self.handle_login)
-        self.logout_button.clicked.connect(self.handle_logout)
-        self.change_password_button.clicked.connect(self.handle_change_password)
+        self.login_button.clicked.connect(self.on_login)
+        self.logout_button.clicked.connect(self.on_logout)
+        self.change_password_button.clicked.connect(self.on_change_password)
 
-    def handle_login(self):
+    def on_login(self):
         try:
             show_message(self.login_message, "")
 
@@ -84,7 +84,7 @@ class LoginPanel(QWidget):
         except Exception as e:
             show_message(self.login_message, str(e))
 
-    def handle_logout(self):
+    def on_logout(self):
         try:
             show_message(self.login_message, "")
 
@@ -109,7 +109,7 @@ class LoginPanel(QWidget):
         except Exception as e:
             show_message(self.login_message, str(e))
 
-    def handle_change_password(self):
+    def on_change_password(self):
         self.change_password_popup = ChangePasswordPopup(self.user_id, self.db_manager)
         self.change_password_popup.password_changed.connect(self.on_password_changed)
         self.change_password_popup.show()

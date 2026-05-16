@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QTabWidget
-from src.ui.user_management_tab import UserManagementTab
-from src.ui.training_tab import TrainingTab
-from src.ui.prediction_tab import PredictionTab
+from src.ui.tab.user_management_tab import UserManagementTab
+from src.ui.tab.training_tab import TrainingTab
+from src.ui.tab.prediction_tab import PredictionTab
 from src.ui.login_panel import LoginPanel
 from src.database_manager import DatabaseManager
 
@@ -42,6 +42,9 @@ class GUI(QWidget):
 
         self.login_panel.user_logged_in.connect(self.user_management_tab.set_session)
         self.login_panel.user_logged_out.connect(self.user_management_tab.clear_session)
+
+        self.login_panel.user_logged_in.connect(self.training_tab.set_session)
+        self.login_panel.user_logged_out.connect(self.training_tab.clear_session)
 
     def on_user_logged_in(self, user_id, _):
         role_name = self.db_manager.get_role(user_id)
