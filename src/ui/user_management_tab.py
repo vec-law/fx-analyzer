@@ -5,10 +5,12 @@ from src.ui.base_tab import BaseTab
 from src.database_manager import DatabaseManager
 from src.ui.change_password_popup import ChangePasswordPopup
 from src.ui.add_user_popup import AddUserPopup
+from src.ui.del_user_popup import DelUserPopup
 
 class UserManagementTab(BaseTab):
     def __init__(self, db_manager: DatabaseManager):
         super().__init__()
+
         self.db_manager = db_manager
 
         self.init_ui()
@@ -49,6 +51,7 @@ class UserManagementTab(BaseTab):
         self.user_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.user_table.verticalHeader().setVisible(False)
         self.user_table.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.user_table.setSortingEnabled(True)
         right_column_layout.addWidget(self.user_table)
         right_column_layout.addWidget(self.message_label)
 
@@ -58,6 +61,7 @@ class UserManagementTab(BaseTab):
 
         self.load_users_button.clicked.connect(self.handle_load_users)
         self.add_user_button.clicked.connect(self.handle_add_user)
+        self.del_user_button.clicked.connect(self.handle_del_user)
         self.change_password_button.clicked.connect(self.handle_change_password)
 
     def handle_load_users(self):
@@ -95,6 +99,31 @@ class UserManagementTab(BaseTab):
         except Exception as e:
             show_message(self.message_label, str(e))
 
+    def handle_del_user(self):
+        try:
+            show_message(self.message_label, "")
+
+            selected_user_id = self.get_selected_user_id()
+
+            if selected_user_id is None:
+                raise ValueError("Nie wybrano żadnego użytkownika")
+            
+            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
+            
+            self.del_user_popup = DelUserPopup(
+                selected_user_id,
+                self.db_manager
+            )
+
+            self.del_user_popup.user_deleted.connect(
+                lambda: self.on_action_success("Usunięto użytkownika")
+            )
+            
+            self.del_user_popup.show()
+
+        except Exception as e:
+            show_message(self.message_label, str(e))
+
     def handle_change_password(self):
         try:
             show_message(self.message_label, "")
@@ -127,3 +156,7 @@ class UserManagementTab(BaseTab):
     def on_action_success(self, message):
         self.handle_load_users()
         show_message(self.message_label, message, True)
+
+    def set_session(self, user_id, session_token):
+        super().set_session(user_id, session_token)
+        self.handle_load_users()

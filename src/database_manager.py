@@ -585,6 +585,28 @@ class DatabaseManager:
             raise e
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def del_user(self, user_id):
+        try:
+            if not user_id:
+                raise ValueError("Błąd: Nie podano ID użytkownika usunięcia")
+            
+            # self.stop_user_jobs(user_id)  # TODO: zaimplementować po ukończeniu training i prediction tab
+            
+            self.logout_user(self.get_user_name(user_id))
+
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM app_user WHERE id = %s", (user_id, ))
+
+                    if cur.rowcount == 0:
+                        raise Exception("Użytkownik nie istnieje w bazie danych")
+
+                    conn.commit()
+                    return True
+                
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
     
     def login_user(self, user_name, password):
         try:
@@ -678,8 +700,8 @@ class DatabaseManager:
                     
                     if cur.fetchone() is None:
                         self.add_user(
-                            os.getenv("ADMIN_PASSWORD"),
                             os.getenv("ADMIN_LOGIN"),
+                            os.getenv("ADMIN_PASSWORD"),
                             is_admin=True
                         ) 
 
@@ -753,6 +775,23 @@ class DatabaseManager:
 
                     if user_id is None: return None
                     else: return user_id[0]
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
+    def get_user_name(self, user_id):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT name FROM app_user
+                        WHERE id = %s
+                    """, (user_id, ))
+                    user_name = cur.fetchone()
+
+                    if user_name is None: return None
+                    else: return user_name[0]
         except ValueError as e:
             raise e
         except Exception as e:
