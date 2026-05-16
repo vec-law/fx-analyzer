@@ -11,6 +11,46 @@ class DatabaseManager:
     def __init__(self, db_config):
         self.config = db_config
 
+    def get_trainings(self, user_id, session_token):
+        try:
+            self.validate_access(user_id, session_token, "user")
+
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT 
+                            training.train_uuid, 
+                            instrument.name, 
+                            timeframe.name, 
+                            data_source.name, 
+                            status.name, 
+                            training.created_at
+                        FROM training
+                        JOIN instrument ON training.instrument_id = instrument.id
+                        JOIN timeframe ON training.timeframe_id = timeframe.id
+                        JOIN data_source ON training.data_source_id = data_source.id
+                        JOIN status ON training.status_id = status.id
+                        WHERE training.user_id = %s
+                        ORDER BY training.created_at DESC
+                    """, (user_id, ))
+                    rows = cur.fetchall()
+
+                    return [
+                        {
+                            'train_uuid': r[0],
+                            'instrument': r[1],
+                            'timeframe_name': r[2],
+                            'data_source': r[3],
+                            'status': r[4],
+                            'created_at': r[5]
+                        } for r in rows
+                    ]
+                
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd podczas pobierania listy treningów: {str(e)}")
+
     def add_training(self, config, user_id, session_token):
         train_uuid = str(uuid.uuid4())
 
@@ -99,6 +139,28 @@ class DatabaseManager:
             raise e
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy dodawaniu zadania: {str(e)}")
+        
+    def del_training(self, train_uuid, user_id, session_token):
+        try:
+            self.validate_access(user_id, session_token, "user")
+
+            if not train_uuid:
+                raise ValueError("Błąd: Nie podano UUID treningu do usunięcia")
+
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM training WHERE train_uuid = %s", (train_uuid,))
+
+                    if cur.rowcount == 0:
+                        raise Exception(f"Trening {train_uuid} nie istnieje w bazie danych.")
+
+                    conn.commit()
+                    return True
+
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd podczas usuwania zadania: {str(e)}")
 
     def get_training_status(self, train_uuid):
         try:
@@ -136,62 +198,7 @@ class DatabaseManager:
         except Exception as e:
             raise Exception(f"Nie udało się zaktualizować statusu: {str(e)}")
 
-    def del_training(self, train_uuid):
-        try:
-            if not train_uuid:
-                raise ValueError("Błąd: Nie podano UUID treningu do usunięcia")
 
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM training WHERE train_uuid = %s", (train_uuid,))
-
-                    if cur.rowcount == 0:
-                        raise Exception(f"Trening {train_uuid} nie istnieje w bazie danych.")
-
-                    conn.commit()
-                    return True
-        except Exception as e:
-            raise Exception(f"Błąd podczas usuwania zadania: {str(e)}")
-
-    def get_trainings(self, user_id, session_token):
-        try:
-            self.validate_access(user_id, session_token, "user")
-
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        SELECT 
-                            training.train_uuid, 
-                            instrument.name, 
-                            timeframe.name, 
-                            data_source.name, 
-                            status.name, 
-                            training.created_at
-                        FROM training
-                        JOIN instrument ON training.instrument_id = instrument.id
-                        JOIN timeframe ON training.timeframe_id = timeframe.id
-                        JOIN data_source ON training.data_source_id = data_source.id
-                        JOIN status ON training.status_id = status.id
-                        WHERE training.user_id = %s
-                        ORDER BY training.created_at DESC
-                    """, (user_id, ))
-                    rows = cur.fetchall()
-
-                    return [
-                        {
-                            'train_uuid': r[0],
-                            'instrument': r[1],
-                            'timeframe_name': r[2],
-                            'data_source': r[3],
-                            'status': r[4],
-                            'created_at': r[5]
-                        } for r in rows
-                    ]
-                
-        except ValueError as e:
-            raise e
-        except Exception as e:
-            raise Exception(f"Błąd podczas pobierania listy treningów: {str(e)}")
 
     def save_training_stats(self, train_uuid, ser_mean, ser_std):
         try:

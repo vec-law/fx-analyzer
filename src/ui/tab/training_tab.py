@@ -159,6 +159,38 @@ class TrainingTab(BaseTab):
         if self.tab_widget:
             self.tab_widget.tabBar().setEnabled(not running)
 
+    def on_load_training_tasks(self, show_log=True):
+        try:
+            tasks = self.db_manager.get_trainings(self.user_id, self.session_token)
+            if not tasks:
+                self.table.setRowCount(0)
+                if show_log:
+                    self.log_to_console("Brak zadań w bazie.")
+                return
+            
+            self.fill_tasks_table(tasks)
+            
+            if not self.last_clicked_uuid and self.table.rowCount() > 0:
+                self.table.selectRow(0)
+                item = self.table.item(0, 0)
+                if item:
+                    self.last_clicked_uuid = item.text()
+            
+            if show_log:
+                self.log_to_console("Wczytano listę zadań.")
+        except Exception as e:
+            self.log_to_console(f"Błąd wczytywania: {e}")
+
+    def set_session(self, user_id, session_token):
+        super().set_session(user_id, session_token)
+        self.on_load_training_tasks()
+
+    def clear_session(self):
+        super().clear_session()
+        self.console.clear()
+        self.table.setRowCount(0)
+        self.last_clicked_uuid = None
+
     def on_add_task(self):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
@@ -230,6 +262,26 @@ class TrainingTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd dodawania: {e}")
 
+    def on_remove_task(self):
+        if not self.last_clicked_uuid:
+            self.log_to_console("Nie wybrano zadania do usunięcia")
+            return
+        
+        try:
+            self.db_manager.del_training(self.last_clicked_uuid, self.user_id, self.session_token)
+            self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
+            self.on_load_training_tasks(show_log=False)
+
+            if self.table.rowCount() > 0:
+                self.table.selectRow(0)
+                item = self.table.item(0, 0)
+                self.last_clicked_uuid = item.text() if item else None
+            else:
+                self.last_clicked_uuid = None
+
+        except Exception as e:
+            self.log_to_console(f"Błąd usuwania: {e}")
+
     def on_load_params(self):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie wybrano zadania")
@@ -255,52 +307,3 @@ class TrainingTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd parametrów: {e}")
 
-    def on_remove_task(self):
-        if not self.last_clicked_uuid:
-            self.log_to_console("Nie wybrano zadania do usunięcia")
-            return
-        try:
-            self.db_manager.del_training(self.last_clicked_uuid)
-            self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
-            self.on_load_training_tasks(show_log=False)
-
-            if self.table.rowCount() > 0:
-                self.table.selectRow(0)
-                item = self.table.item(0, 0)
-                self.last_clicked_uuid = item.text() if item else None
-            else:
-                self.last_clicked_uuid = None
-        except Exception as e:
-            self.log_to_console(f"Błąd usuwania: {e}")
-
-    def on_load_training_tasks(self, show_log=True):
-        try:
-            tasks = self.db_manager.get_trainings(self.user_id, self.session_token)
-            if not tasks:
-                self.table.setRowCount(0)
-                if show_log:
-                    self.log_to_console("Brak zadań w bazie.")
-                return
-            
-            self.fill_tasks_table(tasks)
-            
-            if not self.last_clicked_uuid and self.table.rowCount() > 0:
-                self.table.selectRow(0)
-                item = self.table.item(0, 0)
-                if item:
-                    self.last_clicked_uuid = item.text()
-            
-            if show_log:
-                self.log_to_console("Wczytano listę zadań.")
-        except Exception as e:
-            self.log_to_console(f"Błąd wczytywania: {e}")
-
-    def set_session(self, user_id, session_token):
-        super().set_session(user_id, session_token)
-        self.on_load_training_tasks()
-
-    def clear_session(self):
-        super().clear_session()
-        self.console.clear()
-        self.table.setRowCount(0)
-        self.last_clicked_uuid = None
