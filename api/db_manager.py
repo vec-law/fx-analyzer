@@ -720,10 +720,15 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
 
-    def logout_user(self, user_name):
+    def logout_user(self, user_id, session_token, target_user_id=None):
         try:
-            if not (user_id := self.get_user_id(user_name)):
-                raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
+            self.validate_access(user_id, session_token)
+
+            if target_user_id is not None and target_user_id != user_id:
+                if self.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
+                user_id = target_user_id
+
+            if not self.user_exists(user_id): raise ValueError("Użytkownik nie istnieje")
             
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
@@ -886,7 +891,7 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
         
-    def validate_access(self, user_id, session_token, required_role):
+    def validate_access(self, user_id, session_token):
         try:
             if not self.user_exists(user_id):
                 raise ValueError(f"Użytkownik nie istnieje")
@@ -898,11 +903,9 @@ class DBManager:
 
             if db_session_token is None:
                 raise ValueError(f"Użytkownik wylogowany")
-            elif db_session_token != session_token:
-                raise ValueError(f"Użytkownik zalogowany na innej sesji")
             
-            if self.get_role(user_id) != required_role:
-                raise ValueError(f"Niewłaściwy typ użytkownika")
+            elif db_session_token != session_token:
+                raise ValueError("Nieprawidłowe dane logowania sesji")
             
             return True
 
