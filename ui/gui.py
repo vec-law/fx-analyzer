@@ -3,10 +3,10 @@ from ui.tab.user_management_tab import UserManagementTab
 from ui.tab.training_tab import TrainingTab
 from ui.tab.prediction_tab import PredictionTab
 from ui.login_panel import LoginPanel
-from src.database_manager import DatabaseManager
+from api.db_manager import DBManager
 
 class GUI(QWidget):
-    def __init__(self, db_manager: DatabaseManager):
+    def __init__(self, db_manager: DBManager):
         super().__init__()
         self.db_manager = db_manager
         self.init_ui()

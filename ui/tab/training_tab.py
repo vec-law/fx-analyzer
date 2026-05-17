@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, Q
 from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
 from ui.tab.base_tab import BaseTab
 from src.worker.training_worker import TrainingWorker
-from src.database_manager import DatabaseManager
+from api.db_manager import DBManager
 
 class TrainingTab(BaseTab):
     PARAM_MAP = {
@@ -18,7 +18,7 @@ class TrainingTab(BaseTab):
     def log_to_console(self, message: str):
         self.console.append(message)
 
-    def __init__(self, db_manager: DatabaseManager, tab_widget=None):
+    def __init__(self, db_manager: DBManager, tab_widget=None):
         super().__init__()
         self.db_manager = db_manager
         self.tab_widget = tab_widget

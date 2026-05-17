@@ -2,7 +2,7 @@ import sys
 import os
 from dotenv import load_dotenv
 from PyQt6.QtWidgets import QApplication
-from src.database_manager import DatabaseManager
+from api.db_manager import DBManager
 from ui.gui import GUI
 
 load_dotenv()
@@ -18,12 +18,9 @@ def main():
         "port": int(os.getenv("DB_PORT"))
     }
 
-    db_manager = DatabaseManager(db_config)
+    db_manager = DBManager(db_config)
 
     gui = GUI(db_manager)
     gui.show()
 
     sys.exit(app.exec())
-
-if __name__ == "__main__":
-    main()

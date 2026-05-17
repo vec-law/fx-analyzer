@@ -2,13 +2,13 @@ from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTab
 from PyQt6.QtCore import Qt
 from ui.utils import show_message
 from ui.tab.base_tab import BaseTab
-from src.database_manager import DatabaseManager
+from api.db_manager import DBManager
 from ui.popup.change_password_popup import ChangePasswordPopup
 from ui.popup.add_user_popup import AddUserPopup
 from ui.popup.del_user_popup import DelUserPopup
 
 class UserManagementTab(BaseTab):
-    def __init__(self, db_manager: DatabaseManager):
+    def __init__(self, db_manager: DBManager):
         super().__init__()
 
         self.db_manager = db_manager

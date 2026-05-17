@@ -2,13 +2,13 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel
 from ui.popup.change_password_popup import ChangePasswordPopup
 from ui.utils import show_message
 from PyQt6.QtCore import pyqtSignal
-from src.database_manager import DatabaseManager
+from api.db_manager import DBManager
 
 class LoginPanel(QWidget):
     user_logged_in = pyqtSignal(int, object)
     user_logged_out = pyqtSignal()
 
-    def __init__(self, db_manager: DatabaseManager):
+    def __init__(self, db_manager: DBManager):
         super().__init__()
         self.db_manager = db_manager
         

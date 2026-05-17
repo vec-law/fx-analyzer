@@ -4,10 +4,12 @@ import pandas as pd
 import bcrypt
 import os
 from dotenv import load_dotenv
+from psycopg2.extras import register_uuid
 
+register_uuid()
 load_dotenv()
 
-class DatabaseManager:
+class DBManager:
     def __init__(self, db_config):
         self.config = db_config
 

@@ -1,12 +1,12 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox
 from PyQt6.QtCore import pyqtSignal
-from src.database_manager import DatabaseManager
+from api.db_manager import DBManager
 from ui.utils import show_message
 
 class AddUserPopup(QWidget):
     user_added = pyqtSignal()
 
-    def __init__(self, db_manager: DatabaseManager):
+    def __init__(self, db_manager: DBManager):
         super().__init__()
         self.db_manager = db_manager
         self.init_ui()

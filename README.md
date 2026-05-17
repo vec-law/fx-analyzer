@@ -116,7 +116,7 @@ fx-analyzer/
 │   └── worker/          # wątki robocze treningu i predykcji / training and prediction worker threads
 ├── cleaner.py           # czyszczenie danych / data cleaning
 ├── data_extractor.py    # obliczanie wskaźników i cech / indicator and feature calculation
-├── database_manager.py  # obsługa bazy danych / database handler
+├── db_manager.py  # obsługa bazy danych / database handler
 ├── loader.py            # pobieranie danych rynkowych / market data retrieval
 ├── preprocessor.py      # normalizacja i podział danych / data normalisation and splitting
 └── main.py              # punkt wejścia / entry point
