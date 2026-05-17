@@ -161,6 +161,128 @@ class DatabaseManager:
             raise e
         except Exception as e:
             raise Exception(f"Błąd podczas usuwania zadania: {str(e)}")
+        
+    def get_training_config(self, train_uuid, user_id, session_token):
+        try:
+            self.validate_access(user_id, session_token, "user")
+
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    config = {
+                        'instrument': {},
+                        'timeframe': {},
+                        'parameter_set': {},
+                        'base_columns': [],
+                        'calculated_columns': [],
+                        'features': [],
+                        'targets': [],
+                        'architectures': [],
+                        'data_source': None,
+                        'feature_names': [],
+                        'target_names': []
+                    }
+
+                    cur.execute("""
+                        SELECT instrument.name, instrument.ticker
+                        FROM instrument
+                        JOIN training ON training.instrument_id = instrument.id
+                        WHERE training.train_uuid = %s
+                    """, (train_uuid,))
+                    instrument = cur.fetchone()
+                    if instrument:
+                        config['instrument'] = {'name': instrument[0], 'ticker': instrument[1]}
+
+                    cur.execute("""
+                        SELECT timeframe.name, timeframe.range, timeframe.check_period, timeframe.min_count
+                        FROM timeframe
+                        JOIN training ON training.timeframe_id = timeframe.id
+                        WHERE training.train_uuid = %s
+                    """, (train_uuid,))
+                    tf_row = cur.fetchone()
+                    if tf_row:
+                        config['timeframe'] = {
+                            'name': tf_row[0], 'range': tf_row[1],
+                            'check_period': tf_row[2], 'min_count': tf_row[3]
+                        }
+
+                    cur.execute("""
+                        SELECT all_samples, test_samples, seed, epochs, train_noise, learning_rate
+                        FROM parameter_set
+                        WHERE train_uuid = %s
+                    """, (train_uuid,))
+                    ps_row = cur.fetchone()
+                    if ps_row:
+                        config['parameter_set'] = {
+                            'all_samples': ps_row[0], 'test_samples': ps_row[1], 'seed': ps_row[2],
+                            'epochs': ps_row[3], 'train_noise': ps_row[4], 'learning_rate': ps_row[5]
+                        }
+
+                    cur.execute("SELECT name FROM base_column ORDER BY id")
+                    config['base_columns'] = [row[0] for row in cur.fetchall()]
+                    cur.execute("SELECT name FROM calculated_column ORDER BY id")
+                    config['calculated_columns'] = [row[0] for row in cur.fetchall()]
+
+                    cur.execute("""
+                        SELECT feature_type.name, feature_def.feature_periods, feature_def.shift
+                        FROM feature_def
+                        JOIN feature_type ON feature_def.feature_type_id = feature_type.id
+                        WHERE feature_def.train_uuid = %s
+                        ORDER BY feature_def.id
+                    """, (train_uuid,))
+                    for f_type, f_periods, f_shift in cur.fetchall():
+                        config['features'].append({
+                            'feature_type': f_type, 'feature_periods': f_periods, 'shift': f_shift
+                        })
+                        config['feature_names'].append(f"{f_type}:{'-'.join(map(str, f_periods))}:{f_shift}")
+
+                    cur.execute("""
+                        SELECT base_column.name, target_def.shift
+                        FROM target_def
+                        JOIN base_column ON target_def.base_column_id = base_column.id
+                        WHERE target_def.train_uuid = %s
+                    """, (train_uuid,))
+                    for name, shift in cur.fetchall():
+                        config['targets'].append({'column': name, 'shift': shift})
+                        config['target_names'].append(f"{name}:{shift}")
+
+                    cur.execute("""
+                        SELECT calculated_column.name, target_def.shift
+                        FROM target_def
+                        JOIN calculated_column ON target_def.calculated_column_id = calculated_column.id
+                        WHERE target_def.train_uuid = %s
+                    """, (train_uuid,))
+                    for name, shift in cur.fetchall():
+                        config['targets'].append({'column': name, 'shift': shift})
+                        config['target_names'].append(f"{name}:{shift}")
+
+                    cur.execute("""
+                        SELECT architecture.name
+                        FROM architecture
+                        JOIN training_architecture ON training_architecture.architecture_id = architecture.id
+                        WHERE training_architecture.train_uuid = %s
+                        ORDER BY architecture.id
+                    """, (train_uuid,))
+                    config['architectures'] = [row[0] for row in cur.fetchall()]
+
+                    cur.execute("""
+                        SELECT data_source.name
+                        FROM data_source
+                        JOIN training ON training.data_source_id = data_source.id
+                        WHERE training.train_uuid = %s
+                    """, (train_uuid,))
+                    ds_row = cur.fetchone()
+                    if ds_row:
+                        config['data_source'] = ds_row[0]
+
+                    if not config['data_source']:
+                        raise ValueError(f"Nie znaleziono danych dla zadania: {train_uuid}")
+
+                    return config
+                
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
 
     def get_training_status(self, train_uuid):
         try:
@@ -462,123 +584,6 @@ class DatabaseManager:
                     return None
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie wyniku: {str(e)}")
-
-    def get_training_config(self, train_uuid):
-        try:
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    config = {
-                        'instrument': {},
-                        'timeframe': {},
-                        'parameter_set': {},
-                        'base_columns': [],
-                        'calculated_columns': [],
-                        'features': [],
-                        'targets': [],
-                        'architectures': [],
-                        'data_source': None,
-                        'feature_names': [],
-                        'target_names': []
-                    }
-
-                    cur.execute("""
-                        SELECT instrument.name, instrument.ticker
-                        FROM instrument
-                        JOIN training ON training.instrument_id = instrument.id
-                        WHERE training.train_uuid = %s
-                    """, (train_uuid,))
-                    instrument = cur.fetchone()
-                    if instrument:
-                        config['instrument'] = {'name': instrument[0], 'ticker': instrument[1]}
-
-                    cur.execute("""
-                        SELECT timeframe.name, timeframe.range, timeframe.check_period, timeframe.min_count
-                        FROM timeframe
-                        JOIN training ON training.timeframe_id = timeframe.id
-                        WHERE training.train_uuid = %s
-                    """, (train_uuid,))
-                    tf_row = cur.fetchone()
-                    if tf_row:
-                        config['timeframe'] = {
-                            'name': tf_row[0], 'range': tf_row[1],
-                            'check_period': tf_row[2], 'min_count': tf_row[3]
-                        }
-
-                    cur.execute("""
-                        SELECT all_samples, test_samples, seed, epochs, train_noise, learning_rate
-                        FROM parameter_set
-                        WHERE train_uuid = %s
-                    """, (train_uuid,))
-                    ps_row = cur.fetchone()
-                    if ps_row:
-                        config['parameter_set'] = {
-                            'all_samples': ps_row[0], 'test_samples': ps_row[1], 'seed': ps_row[2],
-                            'epochs': ps_row[3], 'train_noise': ps_row[4], 'learning_rate': ps_row[5]
-                        }
-
-                    cur.execute("SELECT name FROM base_column ORDER BY id")
-                    config['base_columns'] = [row[0] for row in cur.fetchall()]
-                    cur.execute("SELECT name FROM calculated_column ORDER BY id")
-                    config['calculated_columns'] = [row[0] for row in cur.fetchall()]
-
-                    cur.execute("""
-                        SELECT feature_type.name, feature_def.feature_periods, feature_def.shift
-                        FROM feature_def
-                        JOIN feature_type ON feature_def.feature_type_id = feature_type.id
-                        WHERE feature_def.train_uuid = %s
-                        ORDER BY feature_def.id
-                    """, (train_uuid,))
-                    for f_type, f_periods, f_shift in cur.fetchall():
-                        config['features'].append({
-                            'feature_type': f_type, 'feature_periods': f_periods, 'shift': f_shift
-                        })
-                        config['feature_names'].append(f"{f_type}:{'-'.join(map(str, f_periods))}:{f_shift}")
-
-                    cur.execute("""
-                        SELECT base_column.name, target_def.shift
-                        FROM target_def
-                        JOIN base_column ON target_def.base_column_id = base_column.id
-                        WHERE target_def.train_uuid = %s
-                    """, (train_uuid,))
-                    for name, shift in cur.fetchall():
-                        config['targets'].append({'column': name, 'shift': shift})
-                        config['target_names'].append(f"{name}:{shift}")
-
-                    cur.execute("""
-                        SELECT calculated_column.name, target_def.shift
-                        FROM target_def
-                        JOIN calculated_column ON target_def.calculated_column_id = calculated_column.id
-                        WHERE target_def.train_uuid = %s
-                    """, (train_uuid,))
-                    for name, shift in cur.fetchall():
-                        config['targets'].append({'column': name, 'shift': shift})
-                        config['target_names'].append(f"{name}:{shift}")
-
-                    cur.execute("""
-                        SELECT architecture.name
-                        FROM architecture
-                        JOIN training_architecture ON training_architecture.architecture_id = architecture.id
-                        WHERE training_architecture.train_uuid = %s
-                        ORDER BY architecture.id
-                    """, (train_uuid,))
-                    config['architectures'] = [row[0] for row in cur.fetchall()]
-
-                    cur.execute("""
-                        SELECT data_source.name
-                        FROM data_source
-                        JOIN training ON training.data_source_id = data_source.id
-                        WHERE training.train_uuid = %s
-                    """, (train_uuid,))
-                    ds_row = cur.fetchone()
-                    if ds_row:
-                        config['data_source'] = ds_row[0]
-
-                    if not config['data_source']:
-                        raise ValueError(f"Nie znaleziono danych dla zadania: {train_uuid}")
-
-                    return config
-        except Exception as e:
-            raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
 
     def add_user(self, user_name, password, is_admin=False):
         try:

@@ -287,7 +287,10 @@ class TrainingTab(BaseTab):
             self.log_to_console("Nie wybrano zadania")
             return
         try:
-            train_config = self.db_manager.get_training_config(self.last_clicked_uuid)
+            train_config = self.db_manager.get_training_config(
+                self.last_clicked_uuid, self.user_id, self.session_token
+            )
+            
             self.param_fields["instrument_name"].setText(train_config["instrument"]["name"])
             self.param_fields["timeframe_name"].setText(train_config["timeframe"]["name"])
             self.param_fields["data_source"].setText(train_config["data_source"])
