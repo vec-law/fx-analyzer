@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel
-from src.ui.popup.change_password_popup import ChangePasswordPopup
-from src.ui.utils import show_message
+from ui.popup.change_password_popup import ChangePasswordPopup
+from ui.utils import show_message
 from PyQt6.QtCore import pyqtSignal
 from src.database_manager import DatabaseManager
 

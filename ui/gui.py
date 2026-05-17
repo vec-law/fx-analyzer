@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QTabWidget
-from src.ui.tab.user_management_tab import UserManagementTab
-from src.ui.tab.training_tab import TrainingTab
-from src.ui.tab.prediction_tab import PredictionTab
-from src.ui.login_panel import LoginPanel
+from ui.tab.user_management_tab import UserManagementTab
+from ui.tab.training_tab import TrainingTab
+from ui.tab.prediction_tab import PredictionTab
+from ui.login_panel import LoginPanel
 from src.database_manager import DatabaseManager
 
 class GUI(QWidget):

@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from PyQt6.QtWidgets import QApplication
 from src.database_manager import DatabaseManager
-from src.ui.gui import GUI
+from ui.gui import GUI
 
 load_dotenv()
 

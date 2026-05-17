@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
-from src.ui.tab.base_tab import BaseTab
+from ui.tab.base_tab import BaseTab
 from src.worker.training_worker import TrainingWorker
 from src.database_manager import DatabaseManager
 

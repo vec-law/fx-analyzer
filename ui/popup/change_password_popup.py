@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton
 from PyQt6.QtCore import pyqtSignal
 from src.database_manager import DatabaseManager
-from src.ui.utils import show_message
+from ui.utils import show_message
 
 class ChangePasswordPopup(QWidget):
     password_changed = pyqtSignal()
