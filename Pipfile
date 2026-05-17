@@ -15,6 +15,11 @@ matplotlib = "==3.10.8"
 psycopg2-binary = "2.9.11"
 PyQt6 = "==6.10.2"
 PyQt6-Qt6 = "==6.10.1"
+bcrypt = "==5.0.0"
+python-dotenv = "==1.2.2"
+fastapi = "==0.136.1"
+uvicorn = "==0.46.0"
+httpx = "==0.28.1"
 
 [dev-packages]
 
