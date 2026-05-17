@@ -1,19 +1,24 @@
+import requests
+import os
+from uuid import UUID
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel
 from ui.popup.change_password_popup import ChangePasswordPopup
 from ui.utils import show_message
 from PyQt6.QtCore import pyqtSignal
-from api.db_manager import DBManager
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class LoginPanel(QWidget):
     user_logged_in = pyqtSignal(int, object)
     user_logged_out = pyqtSignal()
 
-    def __init__(self, db_manager: DBManager):
+    def __init__(self):
         super().__init__()
-        self.db_manager = db_manager
-        
+       
         self.user_id = None
         self.session_token = None
+        self.api_url = os.getenv("API_URL")
         
         self.init_ui()
     
@@ -69,15 +74,22 @@ class LoginPanel(QWidget):
             if not user_name or not password:
                 raise ValueError("Żadne z pól (login, hasło) nie może być puste")
 
-            self.user_id, self.session_token = self.db_manager.login_user(user_name, password)
+            response = requests.post(
+                self.api_url + "/auth/login",
+                json={"user_name": user_name, "password": password}
+            )
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
 
+            if (response := response.json()) is not None:
+                self.user_id = response["user_id"]
+                self.session_token = UUID(response["session_token"])
+            
             self.user_name_input.setEnabled(False)
             self.password_input.setEnabled(False)
             self.login_button.setEnabled(False)
             self.logout_button.setEnabled(True)
             self.change_password_button.setEnabled(True)
-            
-            show_message(self.login_message, f"Zalogowano użytkownika {user_name}", True)
 
             self.user_logged_in.emit(self.user_id, self.session_token)
 
@@ -88,11 +100,16 @@ class LoginPanel(QWidget):
         try:
             show_message(self.login_message, "")
 
-            user_name = self.user_name_input.text()
+            response = requests.post(
+                self.api_url + "/auth/logout",
+                json={"user_id": self.user_id, "session_token": str(self.session_token)}
+            )
 
-            self.db_manager.logout_user(user_name)
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
 
-            self.user_id, self.session_token = None, None
+            if (response := response.json()) is not None:
+                self.user_id, self.session_token = None, None
 
             self.user_name_input.setEnabled(True)
             self.password_input.setEnabled(True)
@@ -101,8 +118,6 @@ class LoginPanel(QWidget):
             self.change_password_button.setEnabled(False)
 
             self.password_input.clear()
-
-            show_message(self.login_message, f"Wylogowano użytkownika {user_name}", True)
 
             self.user_logged_out.emit()
 

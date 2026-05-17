@@ -13,7 +13,7 @@ class GUI(QWidget):
         self.db_manager.ensure_admin()
 
     def init_ui(self):
-        self.login_panel = LoginPanel(self.db_manager)
+        self.login_panel = LoginPanel()
 
         self.tabs = QTabWidget()
 
