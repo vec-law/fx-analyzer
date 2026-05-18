@@ -54,10 +54,14 @@ class GUI(QWidget):
 
     def on_user_logged_in(self, user_id, session_token):
         try:
-            response = requests.post(
+            response = requests.get(
                 self.api_url + "/auth/get-role",
-                json={"user_id": user_id, "session_token": str(session_token)}
+                headers={
+                    "Authorization": f"Bearer {str(session_token)}",
+                    "X-User-ID": f"{user_id}"
+                }
             )
+
             if response.status_code != 200:
                 raise ValueError(response.json()["detail"])
 

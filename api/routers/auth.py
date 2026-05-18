@@ -14,10 +14,6 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
     repeated_password: str
 
-class GetRoleRequest(BaseModel):
-    user_id: int
-    session_token: str
-
 @router.post("/auth/login")
 def login(request: LoginRequest, db_manager = Depends(get_db_manager)):
     try:
@@ -91,13 +87,22 @@ def change_password(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.post("/auth/get-role")
-def get_role(request: GetRoleRequest, db_manager = Depends(get_db_manager)):
+@router.get("/auth/get-role")
+def get_role(
+    authorization: str = Header(...),
+    x_user_id: str = Header(...),
+    db_manager = Depends(get_db_manager)
+    ):
     try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
         return {
             "role_name": db_manager.get_role(
-                request.user_id,
-                UUID(request.session_token)
+                int(x_user_id),
+                session_token
             )
         }
 
