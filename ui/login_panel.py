@@ -99,9 +99,9 @@ class LoginPanel(QWidget):
         try:
             show_message(self.login_message, "")
 
-            response = requests.post(
+            response = requests.delete(
                 self.api_url + "/auth/logout",
-                json={"user_id": self.user_id, "session_token": str(self.session_token)}
+                headers={"Authorization": f"Bearer {str(self.session_token)}", "X-User-ID": f"{self.user_id}"}
             )
 
             if response.status_code != 200:

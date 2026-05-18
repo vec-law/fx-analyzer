@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional
 from api.dependencies import get_db_manager
@@ -9,11 +9,6 @@ router = APIRouter()
 class LoginRequest(BaseModel):
     user_name: str
     password: str
-
-class LogoutRequest(BaseModel):
-    user_id: int
-    session_token: str
-    target_user_id: Optional[int] = None
 
 class ChangePasswordRequest(BaseModel):
     user_id: int
@@ -40,14 +35,26 @@ def login(request: LoginRequest, db_manager = Depends(get_db_manager)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/auth/logout")
-def logout(request: LogoutRequest, db_manager = Depends(get_db_manager)):
+@router.delete("/auth/logout")
+def logout(
+    authorization: str = Header(...),
+    x_user_id: str = Header(...),
+    x_target_user_id: str = Header(None),
+    db_manager = Depends(get_db_manager)
+):
     try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        target_user_id = int(x_target_user_id) if x_target_user_id else None
+
         return {
             "user_id": db_manager.logout_user(
-                request.user_id,
-                UUID(request.session_token),
-                request.target_user_id
+                int(x_user_id),
+                session_token,
+                target_user_id
             )
         }
 

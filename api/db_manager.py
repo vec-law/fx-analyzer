@@ -837,7 +837,8 @@ class DBManager:
                
     def get_users(self, user_id, session_token):
         try:
-            self.validate_access(user_id, session_token, "admin")
+            if self.get_role(user_id, session_token) != "admin":
+                raise ValueError("Brak uprawnień")
 
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
@@ -851,6 +852,7 @@ class DBManager:
                         JOIN role ON role_id = role.id
                     """)
                     return cur.fetchall()
+                
         except ValueError as e:
             raise e
         except Exception as e:
