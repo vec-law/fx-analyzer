@@ -1,3 +1,5 @@
+import requests
+import os
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt6.QtCore import Qt
 from ui.utils import show_message
@@ -6,13 +8,16 @@ from api.db_manager import DBManager
 from ui.popup.change_password_popup import ChangePasswordPopup
 from ui.popup.add_user_popup import AddUserPopup
 from ui.popup.del_user_popup import DelUserPopup
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class UserManagementTab(BaseTab):
     def __init__(self, db_manager: DBManager):
         super().__init__()
 
         self.db_manager = db_manager
-
+        self.api_url = os.getenv("API_URL")
         self.init_ui()
 
     def init_ui(self):
@@ -65,16 +70,25 @@ class UserManagementTab(BaseTab):
         self.block_user_button.clicked.connect(self.on_block_user)
         self.unblock_user_button.clicked.connect(self.on_unblock_user)
         self.change_password_button.clicked.connect(self.on_change_password)
-        
 
     def on_load_users(self):
         try:
             show_message(self.message_label, "")
 
-            users = [
-                u for u in self.db_manager.get_users(self.user_id, self.session_token)
-                if u[0] != self.user_id
-            ]
+            response = requests.get(
+                self.api_url + "/users",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}",
+                    "X-User-ID": f"{self.user_id}"
+                }
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                users = response["users"]
+
             self.user_table.setRowCount(len(users))
             self.user_table.setColumnCount(4)
             self.user_table.setHorizontalHeaderLabels(["ID", "Nazwa", "Rola", "Zablokowany"])
