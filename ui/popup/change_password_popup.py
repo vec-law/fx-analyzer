@@ -57,7 +57,7 @@ class ChangePasswordPopup(QWidget):
             repeated_password = self.repeat_password_input.text()
 
             response = requests.post(
-                self.api_url + "/auth/change_password",
+                self.api_url + "/auth/change-password",
                 json={
                     "user_id": self.user_id,
                     "new_password": new_password,

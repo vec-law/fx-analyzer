@@ -17,7 +17,6 @@ class GUI(QWidget):
         self.db_manager = db_manager
         self.api_url = os.getenv("API_URL")
         self.init_ui()
-        self.db_manager.ensure_admin()
 
     def init_ui(self):
         self.login_panel = LoginPanel()
@@ -56,7 +55,7 @@ class GUI(QWidget):
     def on_user_logged_in(self, user_id, session_token):
         try:
             response = requests.post(
-                self.api_url + "/auth/get_role",
+                self.api_url + "/auth/get-role",
                 json={"user_id": user_id, "session_token": str(session_token)}
             )
             if response.status_code != 200:

@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from api.dependencies import get_db_manager
 from uuid import UUID
-from fastapi import HTTPException
 
 router = APIRouter()
 
@@ -57,7 +56,7 @@ def logout(request: LogoutRequest, db_manager = Depends(get_db_manager)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.post("/auth/change_password")
+@router.post("/auth/change-password")
 def change_password(request: ChangePasswordRequest, db_manager = Depends(get_db_manager)):
     try:
         return {
@@ -75,7 +74,7 @@ def change_password(request: ChangePasswordRequest, db_manager = Depends(get_db_
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.post("/auth/get_role")
+@router.post("/auth/get-role")
 def get_role(request: GetRoleRequest, db_manager = Depends(get_db_manager)):
     try:
         return {
