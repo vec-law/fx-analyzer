@@ -55,7 +55,7 @@ class GUI(QWidget):
     def on_user_logged_in(self, user_id, session_token):
         try:
             response = requests.get(
-                self.api_url + "/auth/get-role",
+                self.api_url + "/users/role",
                 headers={
                     "Authorization": f"Bearer {str(session_token)}",
                     "X-User-ID": f"{user_id}"

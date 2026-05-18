@@ -86,27 +86,3 @@ def change_password(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-@router.get("/auth/get-role")
-def get_role(
-    authorization: str = Header(...),
-    x_user_id: str = Header(...),
-    db_manager = Depends(get_db_manager)
-    ):
-    try:
-        if authorization.startswith("Bearer "):
-            session_token = UUID(authorization.removeprefix("Bearer "))
-        else:
-            raise ValueError("Nieprawidłowy format nagłówka Authorization")
-        
-        return {
-            "role_name": db_manager.get_role(
-                int(x_user_id),
-                session_token
-            )
-        }
-
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
