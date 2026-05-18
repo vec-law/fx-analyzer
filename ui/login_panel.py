@@ -121,7 +121,7 @@ class LoginPanel(QWidget):
             self.user_logged_out.emit()
 
         except requests.exceptions.ConnectionError:
-                show_message(self.login_message, "Nie można połączyć się z serwerem")
+            show_message(self.login_message, "Nie można połączyć się z serwerem")
         except Exception as e:
             show_message(self.login_message, str(e))
 

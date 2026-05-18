@@ -23,6 +23,10 @@ class ChangePasswordRequest(BaseModel):
     repeated_password: str
     target_user_id: Optional[int] = None
 
+class GetRoleRequest(BaseModel):
+    user_id: int
+    session_token: str
+
 @router.post("/auth/login")
 def login(request: LoginRequest, db_manager = Depends(get_db_manager)):
     try:
@@ -63,6 +67,21 @@ def change_password(request: ChangePasswordRequest, db_manager = Depends(get_db_
                 request.new_password,
                 request.repeated_password,
                 request.target_user_id
+            )
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/auth/get_role")
+def get_role(request: GetRoleRequest, db_manager = Depends(get_db_manager)):
+    try:
+        return {
+            "role_name": db_manager.get_role(
+                request.user_id,
+                UUID(request.session_token)
             )
         }
 
