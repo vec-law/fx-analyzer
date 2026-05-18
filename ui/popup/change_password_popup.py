@@ -75,5 +75,7 @@ class ChangePasswordPopup(QWidget):
 
             self.close()
 
+        except requests.exceptions.ConnectionError:
+                show_message(self.save_password_message, "Nie można połączyć się z serwerem")
         except Exception as e:
             show_message(self.save_password_message, str(e))

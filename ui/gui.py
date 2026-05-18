@@ -46,8 +46,8 @@ class GUI(QWidget):
         self.login_panel.user_logged_in.connect(self.training_tab.set_session)
         self.login_panel.user_logged_out.connect(self.training_tab.clear_session)
 
-    def on_user_logged_in(self, user_id, _):
-        role_name = self.db_manager.get_role(user_id)
+    def on_user_logged_in(self, user_id, session_token):
+        role_name = self.db_manager.get_role(user_id, session_token)
 
         if role_name == 'admin':
             self.tabs.setTabVisible(0, True)

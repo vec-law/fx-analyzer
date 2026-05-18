@@ -680,6 +680,9 @@ class DBManager:
     
     def login_user(self, user_name, password):
         try:
+            if not user_name or not password:
+                raise ValueError("Żadne z pól (login, hasło) nie może być puste")
+
             if not (user_id := self.get_user_id(user_name)):
                 raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
             
@@ -722,10 +725,10 @@ class DBManager:
 
     def logout_user(self, user_id, session_token, target_user_id=None):
         try:
-            self.validate_access(user_id, session_token)
+            role_name = self.get_role(user_id, session_token)
 
             if target_user_id is not None and target_user_id != user_id:
-                if self.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
+                if role_name != "admin": raise ValueError("Brak uprawnień")
                 user_id = target_user_id
 
             if not self.user_exists(user_id): raise ValueError("Użytkownik nie istnieje")
@@ -748,10 +751,10 @@ class DBManager:
         
     def change_password(self, user_id, session_token, new_password, repeated_password, target_user_id=None):
         try:
-            self.validate_access(user_id, session_token)
+            role_name = self.get_role(user_id, session_token)
             
             if target_user_id is not None and target_user_id != user_id:
-                if self.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
+                if role_name != "admin": raise ValueError("Brak uprawnień")
                 if not self.user_exists(target_user_id): raise ValueError("Użytkownik docelowy nie istnieje")
                 if self.is_blocked(target_user_id): raise ValueError("Użytkownik docelowy zablokowany")
                 user_id = target_user_id
@@ -927,8 +930,10 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
         
-    def get_role(self, user_id):
+    def get_role(self, user_id, session_token):
         try:
+            self.validate_access(user_id, session_token)
+
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""

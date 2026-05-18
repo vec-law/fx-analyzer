@@ -71,9 +71,6 @@ class LoginPanel(QWidget):
             user_name = self.user_name_input.text()
             password = self.password_input.text()
 
-            if not user_name or not password:
-                raise ValueError("Żadne z pól (login, hasło) nie może być puste")
-
             response = requests.post(
                 self.api_url + "/auth/login",
                 json={"user_name": user_name, "password": password}
@@ -93,6 +90,8 @@ class LoginPanel(QWidget):
 
             self.user_logged_in.emit(self.user_id, self.session_token)
 
+        except requests.exceptions.ConnectionError:
+            show_message(self.login_message, "Nie można połączyć się z serwerem")
         except Exception as e:
             show_message(self.login_message, str(e))
 
@@ -121,6 +120,8 @@ class LoginPanel(QWidget):
 
             self.user_logged_out.emit()
 
+        except requests.exceptions.ConnectionError:
+                show_message(self.login_message, "Nie można połączyć się z serwerem")
         except Exception as e:
             show_message(self.login_message, str(e))
 
