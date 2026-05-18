@@ -101,7 +101,10 @@ class LoginPanel(QWidget):
 
             response = requests.delete(
                 self.api_url + "/auth/logout",
-                headers={"Authorization": f"Bearer {str(self.session_token)}", "X-User-ID": f"{self.user_id}"}
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}",
+                    "X-User-ID": f"{self.user_id}"
+                }
             )
 
             if response.status_code != 200:
