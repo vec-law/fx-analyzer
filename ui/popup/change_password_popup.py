@@ -1,15 +1,20 @@
+import requests
+import os
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton
 from PyQt6.QtCore import pyqtSignal
-from api.db_manager import DBManager
 from ui.utils import show_message
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class ChangePasswordPopup(QWidget):
     password_changed = pyqtSignal()
 
-    def __init__(self, user_id, db_manager: DBManager):
+    def __init__(self, user_id, session_token):
         super().__init__()
         self.user_id = user_id
-        self.db_manager = db_manager
+        self.session_token = session_token
+        self.api_url = os.getenv("API_URL")
         self.init_ui()
     
     def init_ui(self):
@@ -51,15 +56,23 @@ class ChangePasswordPopup(QWidget):
             new_password = self.new_password_input.text()
             repeated_password = self.repeat_password_input.text()
 
-            if not new_password or not repeated_password or new_password != repeated_password:
-                raise ValueError("Hasła nie mogą być puste i muszą być takie same")
-            
-            self.new_password_input.clear()
-            self.repeat_password_input.clear()
-            
-            self.db_manager.change_password(self.user_id, new_password)
+            response = requests.post(
+                self.api_url + "/auth/change_password",
+                json={
+                    "user_id": self.user_id,
+                    "new_password": new_password,
+                    "repeated_password": repeated_password,
+                    "session_token": str(self.session_token)
+                }
+            )
 
-            self.password_changed.emit()
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                self.new_password_input.clear()
+                self.repeat_password_input.clear()
+
             self.close()
 
         except Exception as e:

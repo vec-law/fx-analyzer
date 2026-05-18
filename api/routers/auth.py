@@ -16,6 +16,13 @@ class LogoutRequest(BaseModel):
     session_token: str
     target_user_id: Optional[int] = None
 
+class ChangePasswordRequest(BaseModel):
+    user_id: int
+    session_token: str
+    new_password: str
+    repeated_password: str
+    target_user_id: Optional[int] = None
+
 @router.post("/auth/login")
 def login(request: LoginRequest, db_manager = Depends(get_db_manager)):
     try:
@@ -45,4 +52,21 @@ def logout(request: LogoutRequest, db_manager = Depends(get_db_manager)):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/auth/change_password")
+def change_password(request: ChangePasswordRequest, db_manager = Depends(get_db_manager)):
+    try:
+        return {
+            "success": db_manager.change_password(
+                request.user_id,
+                UUID(request.session_token),
+                request.new_password,
+                request.repeated_password,
+                request.target_user_id
+            )
+        }
 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

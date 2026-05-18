@@ -746,6 +746,36 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
         
+    def change_password(self, user_id, session_token, new_password, repeated_password, target_user_id=None):
+        try:
+            self.validate_access(user_id, session_token)
+            
+            if target_user_id is not None and target_user_id != user_id:
+                if self.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
+                if not self.user_exists(target_user_id): raise ValueError("Użytkownik docelowy nie istnieje")
+                if self.is_blocked(target_user_id): raise ValueError("Użytkownik docelowy zablokowany")
+                user_id = target_user_id
+
+            if not new_password or not repeated_password or new_password != repeated_password:
+                raise ValueError("Hasła nie mogą być puste i muszą być takie same")
+
+            new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+        
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        UPDATE app_user
+                        SET password_hash = %s
+                        WHERE id = %s
+                    """, (new_password_hash, user_id))
+                    conn.commit()
+                    return True
+                
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+        
     def get_session_token(self, user_id):
         try:
             with psycopg2.connect(**self.config) as conn:
@@ -801,24 +831,7 @@ class DBManager:
             raise e
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
-        
-    def change_password(self, user_id, new_password):
-        try:
-            new_password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-        
-            with psycopg2.connect(**self.config) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("""
-                        UPDATE app_user
-                        SET password_hash = %s
-                        WHERE id = %s
-                    """, (new_password_hash, user_id))
-                    conn.commit()
-        except ValueError as e:
-            raise e
-        except Exception as e:
-            raise Exception(f"Błąd bazy danych: {str(e)}")
-        
+               
     def get_users(self, user_id, session_token):
         try:
             self.validate_access(user_id, session_token, "admin")
