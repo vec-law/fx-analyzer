@@ -88,15 +88,28 @@ def change_password(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
+        user_id = int(x_user_id)
+        
         target_user_id = int(x_target_user_id) if x_target_user_id else None
+
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if target_user_id is not None and target_user_id != user_id:
+            if db_manager.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
+            user_id = target_user_id
+
+        if session_token != db_manager.get_session_token(user_id):
+            raise ValueError("Brak dostępu")
+        
+        if not request.new_password or not request.repeated_password or \
+            request.new_password != request.repeated_password:
+            raise ValueError("Hasła nie mogą być puste i muszą być takie same")
 
         return {
             "success": db_manager.change_password(
-                int(x_user_id),
-                session_token,
-                request.new_password,
-                request.repeated_password,
-                target_user_id
+                user_id,
+                request.new_password
             )
         }
 
