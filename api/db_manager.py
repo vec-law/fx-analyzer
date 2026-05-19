@@ -689,17 +689,8 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
     
-    def login_user(self, user_name, password):
-        try:
-            if not user_name or not password:
-                raise ValueError("Żadne z pól (login, hasło) nie może być puste")
-
-            if not (user_id := self.get_user_id(user_name)):
-                raise ValueError(f"Użytkownik {user_name} nie jest zarejestrowany")
-            
-            if self.is_blocked(user_id):
-                raise ValueError(f"Użytkownik {user_name} jest zablokowany")
-            
+    def login_user(self, user_id, user_name, password):
+        try:           
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
@@ -707,9 +698,6 @@ class DBManager:
                         WHERE app_user.name = %s
                     """, (user_name, ))
                     result = cur.fetchone()
-
-                    if result is None:
-                        raise ValueError(f"Podano nieprawidłowe dane logowania")
 
                     password_hash = result[0]
                     password_hash = bytes(password_hash)
@@ -727,8 +715,7 @@ class DBManager:
 
                     conn.commit()
                     
-                    return user_id, session_token
-        
+                    return session_token
         except ValueError as e:
             raise e
         except Exception as e:

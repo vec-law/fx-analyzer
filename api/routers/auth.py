@@ -17,7 +17,16 @@ class ChangePasswordRequest(BaseModel):
 @router.post("/auth/login")
 def login(request: LoginRequest, db_manager = Depends(get_db_manager)):
     try:
-        user_id, session_token = db_manager.login_user(request.user_name, request.password)
+        if not request.user_name or not request.password:
+            raise ValueError("Żadne z pól (login, hasło) nie może być puste")
+        
+        if not (user_id := db_manager.get_user_id(request.user_name)):
+            raise ValueError(f"Użytkownik {request.user_name} nie jest zarejestrowany")
+        
+        if db_manager.is_blocked(user_id):
+            raise ValueError(f"Użytkownik {request.user_name} jest zablokowany")
+
+        session_token = db_manager.login_user(user_id, request.user_name, request.password)
         return {
             "user_id": user_id,
             "session_token": str(session_token)
