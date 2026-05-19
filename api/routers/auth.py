@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import Optional
 from api.dependencies import get_db_manager
 from uuid import UUID
+from api.db_manager import DBManager
+from api.utils import validate_actor
 
 router = APIRouter()
 
@@ -15,7 +17,7 @@ class ChangePasswordRequest(BaseModel):
     repeated_password: str
 
 @router.post("/auth/login")
-def login(request: LoginRequest, db_manager = Depends(get_db_manager)):
+def login(request: LoginRequest, db_manager: DBManager = Depends(get_db_manager)):
     try:
         if not request.user_name or not request.password:
             raise ValueError("Żadne z pól (login, hasło) nie może być puste")
@@ -42,27 +44,15 @@ def logout(
     authorization: str = Header(...),
     x_user_id: str = Header(...),
     x_target_user_id: str = Header(None),
-    db_manager = Depends(get_db_manager)
+    db_manager: DBManager = Depends(get_db_manager)
 ):
     try:
-        if authorization.startswith("Bearer "):
-            session_token = UUID(authorization.removeprefix("Bearer "))
-        else:
-            raise ValueError("Nieprawidłowy format nagłówka Authorization")
-        
-        user_id = int(x_user_id)
-        
-        target_user_id = int(x_target_user_id) if x_target_user_id else None
-
-        if not db_manager.user_exists(user_id):
-            raise ValueError("Użytkownik nie istnieje")
-        
-        if target_user_id is not None and target_user_id != user_id:
-            if db_manager.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
-            user_id = target_user_id
-
-        if session_token != db_manager.get_session_token(user_id):
-            raise ValueError("Brak dostępu")
+        user_id = validate_actor(
+            authorization,
+            x_user_id,
+            x_target_user_id,
+            db_manager
+        )
 
         return {
             "success": db_manager.logout_user(
@@ -80,27 +70,15 @@ def change_password(
     authorization: str = Header(...),
     x_user_id: str = Header(...),
     x_target_user_id: str = Header(None),
-    db_manager = Depends(get_db_manager)
+    db_manager: DBManager = Depends(get_db_manager)
     ):
     try:
-        if authorization.startswith("Bearer "):
-            session_token = UUID(authorization.removeprefix("Bearer "))
-        else:
-            raise ValueError("Nieprawidłowy format nagłówka Authorization")
-        
-        user_id = int(x_user_id)
-        
-        target_user_id = int(x_target_user_id) if x_target_user_id else None
-
-        if not db_manager.user_exists(user_id):
-            raise ValueError("Użytkownik nie istnieje")
-        
-        if target_user_id is not None and target_user_id != user_id:
-            if db_manager.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
-            user_id = target_user_id
-
-        if session_token != db_manager.get_session_token(user_id):
-            raise ValueError("Brak dostępu")
+        user_id = validate_actor(
+            authorization,
+            x_user_id,
+            x_target_user_id,
+            db_manager
+        )
         
         if not request.new_password or not request.repeated_password or \
             request.new_password != request.repeated_password:
