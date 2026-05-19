@@ -108,13 +108,11 @@ class UserManagementTab(BaseTab):
     def on_add_user(self):
         try:
             show_message(self.message_label, "")
-            
-            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
 
-            self.add_user_popup = AddUserPopup(self.db_manager)
+            self.add_user_popup = AddUserPopup(self.user_id, self.session_token)
 
             self.add_user_popup.user_added.connect(
-                lambda: self.on_action_success("Dodano użytkownika")
+                lambda: self.on_action_success()
             )
 
             self.add_user_popup.show()
@@ -139,7 +137,7 @@ class UserManagementTab(BaseTab):
             )
 
             self.del_user_popup.user_deleted.connect(
-                lambda: self.on_action_success("Usunięto użytkownika")
+                lambda: self.on_action_success()
             )
             
             self.del_user_popup.show()
@@ -199,7 +197,7 @@ class UserManagementTab(BaseTab):
             self.change_password_popup = ChangePasswordPopup(selected_user_id, self.db_manager)
 
             self.change_password_popup.password_changed.connect(
-                lambda: self.on_action_success("Zmieniono hasło użytkownika")
+                lambda: self.on_action_success()
             )
             
             self.change_password_popup.show()
@@ -214,9 +212,8 @@ class UserManagementTab(BaseTab):
 
         return int(self.user_table.item(row_index, 0).text())
     
-    def on_action_success(self, message):
+    def on_action_success(self):
         self.on_load_users()
-        show_message(self.message_label, message, True)
 
     def set_session(self, user_id, session_token):
         super().set_session(user_id, session_token)

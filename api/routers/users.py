@@ -4,6 +4,12 @@ from typing import Optional
 from api.dependencies import get_db_manager
 from uuid import UUID
 
+class AddUserRequest(BaseModel):
+    user_name: str
+    password: str
+    repeated_password: str
+    is_admin: bool
+
 router = APIRouter()
 
 @router.get("/users/role")
@@ -49,6 +55,35 @@ def get_users(
             )
         }
 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/users")
+def add_user(
+    request: AddUserRequest,
+    authorization: str = Header(...),
+    x_user_id: str = Header(...),
+    db_manager = Depends(get_db_manager)
+    ):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+
+        return {
+            "success": db_manager.add_user(
+                int(x_user_id),
+                session_token,
+                request.user_name,
+                request.password,
+                request.repeated_password,
+                request.is_admin
+            )
+        }
+    
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

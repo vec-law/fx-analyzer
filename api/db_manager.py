@@ -587,10 +587,19 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy odczycie wyniku: {str(e)}")
 
-    def add_user(self, user_name, password, is_admin=False):
-        try:
+    def add_user(self, user_id, session_token, user_name, password, repeated_password, is_admin):
+        try:    
+            if self.get_role(user_id, session_token) != "admin":
+                raise ValueError("Brak uprawnień")
+            
+            if not (user_name and password and repeated_password):
+                raise ValueError("Żadne z pól nie może być puste")
+
             if self.get_user_id(user_name):
-                raise ValueError(f"Użytkownik {user_name} jest już zarejestrowany")
+                raise ValueError(f"Użytkownik {user_name} już istnieje")
+            
+            if password != repeated_password:
+                raise ValueError("Hasła nie mogą być różne")
             
             password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
@@ -603,6 +612,8 @@ class DBManager:
                         VALUES (%s, %s, (SELECT id FROM role WHERE name = %s))
                     """, (user_name, password_hash, user_type))
                     conn.commit()
+                    return True
+                
         except ValueError as e:
             raise e
         except Exception as e:
