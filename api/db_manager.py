@@ -721,16 +721,8 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
 
-    def logout_user(self, user_id, session_token, target_user_id=None):
+    def logout_user(self, user_id):
         try:
-            role_name = self.get_role(user_id, session_token)
-
-            if target_user_id is not None and target_user_id != user_id:
-                if role_name != "admin": raise ValueError("Brak uprawnień")
-                user_id = target_user_id
-
-            if not self.user_exists(user_id): raise ValueError("Użytkownik nie istnieje")
-            
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
@@ -740,7 +732,7 @@ class DBManager:
                     """, (user_id, ))
                     conn.commit()
 
-                    return user_id
+                    return True
         
         except ValueError as e:
             raise e
@@ -930,10 +922,8 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych: {str(e)}")
         
-    def get_role(self, user_id, session_token):
+    def get_role(self, user_id):
         try:
-            self.validate_access(user_id, session_token)
-
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""

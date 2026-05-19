@@ -50,16 +50,25 @@ def logout(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
+        user_id = int(x_user_id)
+        
         target_user_id = int(x_target_user_id) if x_target_user_id else None
 
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if target_user_id is not None and target_user_id != user_id:
+            if db_manager.get_role(user_id) != "admin": raise ValueError("Brak uprawnień")
+            user_id = target_user_id
+
+        if session_token != db_manager.get_session_token(user_id):
+            raise ValueError("Brak dostępu")
+
         return {
-            "user_id": db_manager.logout_user(
-                int(x_user_id),
-                session_token,
-                target_user_id
+            "success": db_manager.logout_user(
+                user_id
             )
         }
-
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

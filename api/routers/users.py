@@ -26,8 +26,7 @@ def get_role(
         
         return {
             "role_name": db_manager.get_role(
-                int(x_user_id),
-                session_token
+                int(x_user_id)
             )
         }
 
