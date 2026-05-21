@@ -4,8 +4,8 @@ from api.db_manager import DBManager
 def validate_actor(
         authorization: str,
         x_user_id: str,
-        x_target_user_id: str | None,
-        db_manager: DBManager
+        db_manager: DBManager,
+        x_target_user_id: str | None = None
 ):
     try:
         if authorization.startswith("Bearer "):

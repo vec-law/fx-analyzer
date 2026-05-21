@@ -50,8 +50,8 @@ def logout(
         user_id = validate_actor(
             authorization,
             x_user_id,
-            x_target_user_id,
-            db_manager
+            db_manager,
+            x_target_user_id
         )
 
         return {
@@ -76,8 +76,8 @@ def change_password(
         user_id = validate_actor(
             authorization,
             x_user_id,
-            x_target_user_id,
-            db_manager
+            db_manager,
+            x_target_user_id
         )
         
         if not request.new_password or not request.repeated_password or \
