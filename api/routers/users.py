@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 from api.dependencies import get_db_manager
 from uuid import UUID
+from api.utils import validate_actor
 
 class AddUserRequest(BaseModel):
     user_name: str
@@ -19,14 +20,15 @@ def get_role(
     db_manager = Depends(get_db_manager)
     ):
     try:
-        if authorization.startswith("Bearer "):
-            session_token = UUID(authorization.removeprefix("Bearer "))
-        else:
-            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        user_id = validate_actor(
+            authorization,
+            x_user_id,
+            db_manager
+        )
         
         return {
             "role_name": db_manager.get_role(
-                int(x_user_id)
+                user_id
             )
         }
 
