@@ -18,6 +18,7 @@ class UserManagementTab(BaseTab):
 
         self.db_manager = db_manager
         self.api_url = os.getenv("API_URL")
+        self.selected_user_id = None
         self.init_ui()
 
     def init_ui(self):
@@ -71,6 +72,9 @@ class UserManagementTab(BaseTab):
         self.unblock_user_button.clicked.connect(self.on_unblock_user)
         self.change_password_button.clicked.connect(self.on_change_password)
 
+        self.user_table.cellClicked.connect(self._on_cell_clicked)
+        self.user_table.mousePressEvent = self._on_table_mouse_press
+
     def on_load_users(self):
         try:
             show_message(self.message_label, "")
@@ -99,8 +103,9 @@ class UserManagementTab(BaseTab):
                     self.user_table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
             
             self.user_table.setSortingEnabled(True)
+
             self.user_table.clearSelection()
-            self.user_table.setCurrentCell(-1, -1)
+            self.selected_user_id = None
 
         except Exception as e:
             show_message(self.message_label, str(e))
@@ -128,12 +133,11 @@ class UserManagementTab(BaseTab):
 
             if selected_user_id is None:
                 raise ValueError("Nie wybrano żadnego użytkownika")
-            
-            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
-            
+
             self.del_user_popup = DelUserPopup(
-                selected_user_id,
-                self.db_manager
+                self.user_id,
+                self.session_token,
+                selected_user_id
             )
 
             self.del_user_popup.user_deleted.connect(
@@ -204,13 +208,6 @@ class UserManagementTab(BaseTab):
 
         except Exception as e:
             show_message(self.message_label, str(e))
-
-    def get_selected_user_id(self):
-        row_index = self.user_table.currentRow()
-
-        if row_index == -1: return None
-
-        return int(self.user_table.item(row_index, 0).text())
     
     def on_action_success(self):
         self.on_load_users()
@@ -218,3 +215,15 @@ class UserManagementTab(BaseTab):
     def set_session(self, user_id, session_token):
         super().set_session(user_id, session_token)
         self.on_load_users()
+
+    def get_selected_user_id(self):
+        return self.selected_user_id
+
+    def _on_cell_clicked(self, row, column):
+        item = self.user_table.item(row, 0)
+        if item: self.selected_user_id = int(item.text())
+
+    def _on_table_mouse_press(self, event):
+        if not self.user_table.indexAt(event.pos()).isValid():
+            self.selected_user_id = None
+        QTableWidget.mousePressEvent(self.user_table, event)

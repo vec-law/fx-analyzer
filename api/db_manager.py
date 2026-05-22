@@ -609,13 +609,6 @@ class DBManager:
         
     def del_user(self, user_id):
         try:
-            if not user_id:
-                raise ValueError("Błąd: Nie podano ID użytkownika")
-            
-            # self.stop_user_jobs(user_id)  # TODO: zaimplementować po ukończeniu training i prediction tab
-            
-            self.logout_user(self.get_user_name(user_id))
-
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("DELETE FROM app_user WHERE id = %s", (user_id, ))
@@ -630,14 +623,7 @@ class DBManager:
             raise Exception(f"Błąd bazy danych: {str(e)}")
         
     def block_user(self, user_id):
-        try:
-            if not user_id:
-                raise ValueError("Błąd: Nie podano ID użytkownika")
-            
-            # self.stop_user_jobs(user_id)  # TODO: zaimplementować po ukończeniu training i prediction tab
-            
-            self.logout_user(self.get_user_name(user_id))
-                 
+        try:                
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""

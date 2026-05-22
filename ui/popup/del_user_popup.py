@@ -1,16 +1,22 @@
+import requests
+import os
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import pyqtSignal
-from api.db_manager import DBManager
 from ui.utils import show_message
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class DelUserPopup(QWidget):
     user_deleted = pyqtSignal()
 
-    def __init__(self, user_id, db_manager: DBManager):
+    def __init__(self, user_id, session_token, target_user_id):
         super().__init__()
-        
-        self.db_manager = db_manager
+
+        self.api_url = os.getenv("API_URL")
         self.user_id = user_id
+        self.session_token = session_token
+        self.target_user_id = target_user_id
 
         self.init_ui()
     
@@ -21,7 +27,7 @@ class DelUserPopup(QWidget):
         layout = QVBoxLayout()
 
         self.confirm_label = QLabel(
-            f"Czy na pewno chcesz usunąć użytkownika {self.db_manager.get_user_name(self.user_id)}?"
+            f"Czy na pewno chcesz usunąć użytkownika?"
         )
         layout.addWidget(self.confirm_label)
 
@@ -48,9 +54,21 @@ class DelUserPopup(QWidget):
         try:
             show_message(self.del_user_message, "")
 
-            self.db_manager.del_user(self.user_id)
+            response = requests.delete(
+                self.api_url + "/users",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}",
+                    "X-User-ID": f"{self.user_id}",
+                    "X-Target-User-ID": f"{self.target_user_id}"
+                }
+            )
 
-            self.user_deleted.emit()
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                self.user_deleted.emit()
+
             self.close()
 
         except Exception as e:
