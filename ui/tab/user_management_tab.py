@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTab
 from PyQt6.QtCore import Qt
 from ui.utils import show_message
 from ui.tab.base_tab import BaseTab
-from api.db_manager import DBManager
 from ui.popup.change_password_popup import ChangePasswordPopup
 from ui.popup.add_user_popup import AddUserPopup
 from ui.popup.del_user_popup import DelUserPopup
@@ -13,10 +12,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class UserManagementTab(BaseTab):
-    def __init__(self, db_manager: DBManager):
+    def __init__(self):
         super().__init__()
 
-        self.db_manager = db_manager
         self.api_url = os.getenv("API_URL")
         self.selected_user_id = None
         self.init_ui()
@@ -157,13 +155,20 @@ class UserManagementTab(BaseTab):
 
             if selected_user_id is None:
                 raise ValueError("Nie wybrano żadnego użytkownika")
+
+            response = requests.patch(
+                self.api_url + f"/users/{selected_user_id}/block",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}",
+                    "X-User-ID": f"{self.user_id}"
+                }
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
             
-            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
-
-            user_name = self.db_manager.get_user_name(selected_user_id)
-            self.db_manager.block_user(selected_user_id)
-
-            self.on_action_success(f"Zablokowano użytkownika {user_name}")
+            if (response := response.json()) is not None:
+                self.on_action_success()
 
         except Exception as e:
             show_message(self.message_label, str(e))
@@ -176,13 +181,20 @@ class UserManagementTab(BaseTab):
 
             if selected_user_id is None:
                 raise ValueError("Nie wybrano żadnego użytkownika")
+
+            response = requests.patch(
+                self.api_url + f"/users/{selected_user_id}/unblock",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}",
+                    "X-User-ID": f"{self.user_id}"
+                }
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
             
-            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
-
-            user_name = self.db_manager.get_user_name(selected_user_id)
-            self.db_manager.unblock_user(selected_user_id)
-
-            self.on_action_success(f"Odblokowano użytkownika {user_name}")
+            if (response := response.json()) is not None:
+                self.on_action_success()
 
         except Exception as e:
             show_message(self.message_label, str(e))
@@ -196,9 +208,11 @@ class UserManagementTab(BaseTab):
             if selected_user_id is None:
                 raise ValueError("Nie wybrano żadnego użytkownika")
             
-            self.db_manager.validate_access(self.user_id, self.session_token, "admin")
-            
-            self.change_password_popup = ChangePasswordPopup(selected_user_id, self.db_manager)
+            self.change_password_popup = ChangePasswordPopup(
+                selected_user_id,
+                self.session_token,
+                self.user_id
+            )
 
             self.change_password_popup.password_changed.connect(
                 lambda: self.on_action_success()

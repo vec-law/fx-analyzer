@@ -642,10 +642,7 @@ class DBManager:
             raise Exception(f"Błąd bazy danych: {str(e)}")
         
     def unblock_user(self, user_id):
-        try:
-            if not user_id:
-                raise ValueError("Błąd: Nie podano ID użytkownika")
-                 
+        try:                
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""

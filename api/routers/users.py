@@ -196,7 +196,7 @@ def del_user(
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
         if not db_manager.user_exists(user_id):
-            raise ValueError("Usuwany użytkownik nie istnieje")
+            raise ValueError("Użytkownik nie istnieje")
         
         if not requester_id.isdigit():
             raise ValueError("Nieprawidłowy identyfikator")
@@ -227,3 +227,92 @@ def del_user(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/users/{user_id}/block")
+def block_user(
+    user_id: int,
+    authorization: str = Header(...),
+    requester_id: str = Header(..., alias="x-user-id"),
+    db_manager: DBManager = Depends(get_db_manager)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if not requester_id.isdigit():
+            raise ValueError("Nieprawidłowy identyfikator")
+        
+        if (requester_id := int(requester_id)) == user_id:
+            raise ValueError("Nieprawidłowa operacja")
+        
+        if not db_manager.user_exists(requester_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if db_manager.is_blocked(requester_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if session_token != db_manager.get_session_token(requester_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+ 
+        if db_manager.get_role(requester_id) != "admin":
+            raise HTTPException(status_code=403, detail="Brak uprawnień")
+    
+        db_manager.block_user(user_id)
+        db_manager.logout_user(user_id)
+        # TODO: zakończyć wszystkie zadania treningu i predykcji
+            
+        return {"success": True}
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/users/{user_id}/unblock")
+def unblock_user(
+    user_id: int,
+    authorization: str = Header(...),
+    requester_id: str = Header(..., alias="x-user-id"),
+    db_manager: DBManager = Depends(get_db_manager)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if not requester_id.isdigit():
+            raise ValueError("Nieprawidłowy identyfikator")
+        
+        if (requester_id := int(requester_id)) == user_id:
+            raise ValueError("Nieprawidłowa operacja")
+        
+        if not db_manager.user_exists(requester_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if db_manager.is_blocked(requester_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if session_token != db_manager.get_session_token(requester_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+ 
+        if db_manager.get_role(requester_id) != "admin":
+            raise HTTPException(status_code=403, detail="Brak uprawnień")
+    
+        db_manager.unblock_user(user_id)
+            
+        return {"success": True}
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    

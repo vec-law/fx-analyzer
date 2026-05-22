@@ -23,7 +23,7 @@ class GUI(QWidget):
 
         self.tabs = QTabWidget()
 
-        self.user_management_tab = UserManagementTab(self.db_manager)
+        self.user_management_tab = UserManagementTab()
         self.training_tab = TrainingTab(self.db_manager, self.tabs)
         self.prediction_tab = PredictionTab(self.db_manager, self.tabs)
 

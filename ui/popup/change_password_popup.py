@@ -10,10 +10,11 @@ load_dotenv()
 class ChangePasswordPopup(QWidget):
     password_changed = pyqtSignal()
 
-    def __init__(self, user_id, session_token):
+    def __init__(self, user_id, session_token, requester_id=None):
         super().__init__()
         self.user_id = user_id
         self.session_token = session_token
+        self.requester_id = requester_id
         self.api_url = os.getenv("API_URL")
         self.init_ui()
     
@@ -56,14 +57,16 @@ class ChangePasswordPopup(QWidget):
             new_password = self.new_password_input.text()
             repeated_password = self.repeat_password_input.text()
 
+            headers = {"Authorization": f"Bearer {str(self.session_token)}"}
+            if self.requester_id is not None:
+                headers["X-User-ID"] = str(self.requester_id)
+
             response = requests.patch(
                 self.api_url + f"/users/{self.user_id}/password",
-                headers={
-                    "Authorization": f"Bearer {str(self.session_token)}"
-                },
+                headers=headers,
                 json={
                     "new_password": new_password,
-                    "repeated_password": repeated_password,
+                    "repeated_password": repeated_password
                 }
             )
 
