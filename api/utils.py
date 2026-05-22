@@ -1,6 +1,25 @@
 from uuid import UUID
 from api.db_manager import DBManager
 
+def get_actor_role(
+    authorization: str,
+    x_user_id: str,
+    db_manager : DBManager
+    ):
+    try:
+        user_id = validate_actor(
+            authorization,
+            x_user_id,
+            db_manager
+        )
+        
+        return db_manager.get_role(user_id)
+    
+    except ValueError as e:
+        raise e
+    except Exception as e:
+        raise e
+
 def validate_actor(
         authorization: str,
         x_user_id: str,
