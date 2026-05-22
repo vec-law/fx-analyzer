@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
-from typing import Optional
 from api.dependencies import get_db_manager
-from uuid import UUID
-from api.utils import validate_actor, get_actor_role
+from api.utils import get_actor_role, actor_is_admin
 
 class AddUserRequest(BaseModel):
     user_name: str
@@ -40,22 +38,14 @@ def get_users(
     db_manager = Depends(get_db_manager)
     ):
     try:
-        if get_actor_role(
-            authorization,
-            x_user_id,
-            db_manager
-        ) != "admin":
-            raise ValueError("Brak uprawnień")
-
-        return {
-            "users": db_manager.get_users()
-        }
+        if actor_is_admin(authorization, x_user_id, db_manager):
+            return {"users": db_manager.get_users()}
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.post("/users")
 def add_user(
     request: AddUserRequest,
@@ -64,21 +54,20 @@ def add_user(
     db_manager = Depends(get_db_manager)
     ):
     try:
-        if authorization.startswith("Bearer "):
-            session_token = UUID(authorization.removeprefix("Bearer "))
-        else:
-            raise ValueError("Nieprawidłowy format nagłówka Authorization")
-
-        return {
-            "success": db_manager.add_user(
-                int(x_user_id),
-                session_token,
-                request.user_name,
-                request.password,
-                request.repeated_password,
-                request.is_admin
-            )
-        }
+        if actor_is_admin(authorization, x_user_id, db_manager):
+            if not (request.user_name and request.password and request.repeated_password):
+                raise ValueError("Żadne z pól (login, hasła) nie może być puste")
+            
+            if request.password != request.repeated_password:
+                raise ValueError("Hasła muszą być takie same")
+            
+            return {
+                "success": db_manager.add_user(
+                    request.user_name,
+                    request.password,
+                    request.is_admin
+                )
+            }
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

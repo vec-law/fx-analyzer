@@ -1,6 +1,25 @@
 from uuid import UUID
 from api.db_manager import DBManager
 
+def actor_is_admin(
+    authorization: str,
+    x_user_id: str,
+    db_manager : DBManager
+    ):
+    try:
+        if get_actor_role(
+            authorization,
+            x_user_id,
+            db_manager
+        ) != "admin":
+            raise ValueError("Brak uprawnień")
+        return True
+        
+    except ValueError as e:
+        raise e
+    except Exception as e:
+        raise e
+
 def get_actor_role(
     authorization: str,
     x_user_id: str,
@@ -12,7 +31,6 @@ def get_actor_role(
             x_user_id,
             db_manager
         )
-        
         return db_manager.get_role(user_id)
     
     except ValueError as e:
