@@ -51,15 +51,10 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd podczas pobierania listy treningów: {str(e)}")
 
-    def add_training(self, config, user_id, session_token):
+    def add_training(self, user_id, config):
         train_uuid = str(uuid.uuid4())
 
         try:
-            self.validate_access(user_id, session_token, "user")
-            
-            if not config.get('features') or not config.get('targets') or not config.get('architectures'):
-                raise ValueError("Błąd walidacji: Brak Targetów, Featurów lub Architektury.")
-
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
@@ -71,9 +66,9 @@ class DBManager:
                             (SELECT id FROM data_source WHERE name = %s))
                     """, (
                         train_uuid, user_id,
-                        config['instrument']['name'],
-                        config['timeframe']['name'],
-                        config['data_source']
+                        config['instrument_name'],
+                        config['timeframe_name'],
+                        config['data_source_name']
                     ))
 
                     cur.execute("""
@@ -81,12 +76,12 @@ class DBManager:
                         VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (
                         train_uuid,
-                        config['parameter_set']['all_samples'],
-                        config['parameter_set']['test_samples'],
-                        config['parameter_set']['seed'],
-                        config['parameter_set']['epochs'],
-                        config['parameter_set']['train_noise'],
-                        config['parameter_set']['learning_rate']
+                        config['all_samples'],
+                        config['test_samples'],
+                        config['seed'],
+                        config['epochs'],
+                        config['train_noise'],
+                        config['learning_rate']
                     ))
 
                     for feature in config['features']:

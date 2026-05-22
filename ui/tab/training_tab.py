@@ -222,17 +222,15 @@ class TrainingTab(BaseTab):
                     raise ValueError(f"Pole '{field}' nie może być puste")
                 
             train_config = {
-                "instrument": {"name": field_values["instrument_name"]},
-                "timeframe": {"name": field_values["timeframe_name"]},
-                "data_source": field_values["data_source"],
-                "parameter_set": {
-                    "all_samples": int(field_values["all_samples"]),
-                    "test_samples": int(field_values["test_samples"]),
-                    "seed": int(field_values["seed"]),
-                    "epochs": int(field_values["epochs"]),
-                    "train_noise": float(field_values["train_noise"]),
-                    "learning_rate": float(field_values["learning_rate"]),
-                },
+                "instrument_name": field_values["instrument_name"],
+                "timeframe_name": field_values["timeframe_name"],
+                "data_source_name": field_values["data_source"],
+                "all_samples": int(field_values["all_samples"]),
+                "test_samples": int(field_values["test_samples"]),
+                "seed": int(field_values["seed"]),
+                "epochs": int(field_values["epochs"]),
+                "train_noise": float(field_values["train_noise"]),
+                "learning_rate": float(field_values["learning_rate"]),
                 "features": [],
                 "targets": [],
                 "architectures": []
@@ -257,7 +255,7 @@ class TrainingTab(BaseTab):
                     continue
                 parts = target_str.split(":")
                 if len(parts) != 2:
-                    raise ValueError("Format targetu to 'nazwa_kolumny:shift' (np. close:1)")
+                    raise ValueError("Format targetu to 'nazwa_kolumny:shift'")
                 train_config["targets"].append({
                     "column": parts[0].strip(),
                     "shift": int(parts[1].strip())
@@ -266,7 +264,20 @@ class TrainingTab(BaseTab):
             for architecture in field_values["architectures"].split(","):
                 train_config["architectures"].append(architecture.strip())
 
-            new_uuid = self.db_manager.add_training(train_config, self.user_id, self.session_token)
+            response = requests.post(
+                self.api_url + f"/users/{self.user_id}/trainings",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}"
+                },
+                json=train_config
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                new_uuid = response["train_uuid"]
+
             self.table.clearSelection()
             self.last_clicked_uuid = new_uuid
             self.on_load_training_tasks(show_log=False)
