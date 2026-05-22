@@ -94,3 +94,31 @@ def add_training(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.delete("/users/{user_id}/trainings/{train_uuid}")
+def del_training(
+    user_id: int,
+    train_uuid: UUID,
+    authorization: str = Header(...),
+    db_manager: DBManager = Depends(get_db_manager)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        if db_manager.is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if session_token != db_manager.get_session_token(user_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+            
+        return {"success": db_manager.del_training(train_uuid)}
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

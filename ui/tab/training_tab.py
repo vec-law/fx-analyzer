@@ -72,6 +72,7 @@ class TrainingTab(BaseTab):
         self.table.setHorizontalHeaderLabels(["UUID Treningu", "Instrument", "Interwał", "Status", "Utworzono"])
         self.table.setSelectionBehavior(self.table.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(self.table.SelectionMode.SingleSelection)
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.console = QTextEdit()
         self.console.setReadOnly(True)
 
@@ -300,16 +301,26 @@ class TrainingTab(BaseTab):
             return
         
         try:
-            self.db_manager.del_training(self.last_clicked_uuid, self.user_id, self.session_token)
-            self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
-            self.on_load_training_tasks(show_log=False)
+            response = requests.delete(
+                self.api_url + f"/users/{self.user_id}/trainings/{self.last_clicked_uuid}",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}"
+                }
+            )
 
-            if self.table.rowCount() > 0:
-                self.table.selectRow(0)
-                item = self.table.item(0, 0)
-                self.last_clicked_uuid = item.text() if item else None
-            else:
-                self.last_clicked_uuid = None
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
+                self.on_load_training_tasks(show_log=False)
+
+                if self.table.rowCount() > 0:
+                    self.table.selectRow(0)
+                    item = self.table.item(0, 0)
+                    self.last_clicked_uuid = item.text() if item else None
+                else:
+                    self.last_clicked_uuid = None
 
         except Exception as e:
             self.log_to_console(f"Błąd usuwania: {e}")

@@ -135,13 +135,8 @@ class DBManager:
         except Exception as e:
             raise Exception(f"Błąd bazy danych przy dodawaniu zadania: {str(e)}")
         
-    def del_training(self, train_uuid, user_id, session_token):
+    def del_training(self, train_uuid):
         try:
-            self.validate_access(user_id, session_token, "user")
-
-            if not train_uuid:
-                raise ValueError("Błąd: Nie podano UUID treningu do usunięcia")
-
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("DELETE FROM training WHERE train_uuid = %s", (train_uuid,))
