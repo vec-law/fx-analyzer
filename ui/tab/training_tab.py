@@ -1,9 +1,15 @@
+import requests
+import os
 from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
 from ui.tab.base_tab import BaseTab
 from src.worker.training_worker import TrainingWorker
 from api.db_manager import DBManager
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class TrainingTab(BaseTab):
     PARAM_MAP = {
@@ -21,6 +27,9 @@ class TrainingTab(BaseTab):
     def __init__(self, db_manager: DBManager, tab_widget=None):
         super().__init__()
         self.db_manager = db_manager
+
+        self.api_url = os.getenv("API_URL")
+
         self.tab_widget = tab_widget
         self.last_clicked_uuid = None
         self.thread = None
@@ -95,7 +104,7 @@ class TrainingTab(BaseTab):
             self.table.setItem(row, 1, QTableWidgetItem(t["instrument"]))
             self.table.setItem(row, 2, QTableWidgetItem(t["timeframe_name"]))
             self.table.setItem(row, 3, QTableWidgetItem(t["status"]))
-            self.table.setItem(row, 4, QTableWidgetItem(t["created_at"].strftime("%Y-%m-%d %H:%M:%S")))
+            self.table.setItem(row, 4, QTableWidgetItem(str(t["created_at"])))
         self.table.resizeColumnsToContents()
 
     def on_clear_console(self):
@@ -161,14 +170,26 @@ class TrainingTab(BaseTab):
 
     def on_load_training_tasks(self, show_log=True):
         try:
-            tasks = self.db_manager.get_trainings(self.user_id, self.session_token)
-            if not tasks:
+            response = requests.get(
+                self.api_url + f"/users/{self.user_id}/trainings",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}",
+                }
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                trainings = response["trainings"]
+
+            if not trainings:
                 self.table.setRowCount(0)
                 if show_log:
                     self.log_to_console("Brak zadań w bazie.")
                 return
             
-            self.fill_tasks_table(tasks)
+            self.fill_tasks_table(trainings)
             
             if not self.last_clicked_uuid and self.table.rowCount() > 0:
                 self.table.selectRow(0)

@@ -13,10 +13,8 @@ class DBManager:
     def __init__(self, db_config):
         self.config = db_config
 
-    def get_trainings(self, user_id, session_token):
+    def get_trainings(self, user_id):
         try:
-            self.validate_access(user_id, session_token, "user")
-
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
