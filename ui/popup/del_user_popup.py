@@ -10,13 +10,13 @@ load_dotenv()
 class DelUserPopup(QWidget):
     user_deleted = pyqtSignal()
 
-    def __init__(self, user_id, session_token, target_user_id):
+    def __init__(self, user_id, session_token, selected_user_id):
         super().__init__()
 
         self.api_url = os.getenv("API_URL")
         self.user_id = user_id
         self.session_token = session_token
-        self.target_user_id = target_user_id
+        self.selected_user_id = selected_user_id
 
         self.init_ui()
     
@@ -55,11 +55,10 @@ class DelUserPopup(QWidget):
             show_message(self.del_user_message, "")
 
             response = requests.delete(
-                self.api_url + "/users",
+                self.api_url + f"/users/{self.selected_user_id}",
                 headers={
                     "Authorization": f"Bearer {str(self.session_token)}",
-                    "X-User-ID": f"{self.user_id}",
-                    "X-Target-User-ID": f"{self.target_user_id}"
+                    "X-User-ID": f"{self.user_id}"
                 }
             )
 

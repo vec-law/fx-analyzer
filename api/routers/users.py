@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from api.dependencies import get_db_manager
-from api.utils import get_actor_role, actor_is_admin
 from api.db_manager import DBManager
+from uuid import UUID
 
 class AddUserRequest(BaseModel):
     user_name: str
@@ -10,22 +10,88 @@ class AddUserRequest(BaseModel):
     repeated_password: str
     is_admin: bool
 
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+    repeated_password: str
+
 router = APIRouter()
 
-@router.get("/users/role")
-def get_role(
+@router.patch("/users/{user_id}/password")
+def change_password(
+    user_id: int,
+    request: ChangePasswordRequest,
     authorization: str = Header(...),
-    x_user_id: str = Header(...),
-    db_manager : DBManager = Depends(get_db_manager)
+    requester_id: str | None = Header(None, alias="x-user-id"),
+    db_manager: DBManager = Depends(get_db_manager)
     ):
     try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        if db_manager.is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+
+        if requester_id is None:
+            requester_id = user_id
+        else:
+            if not requester_id.isdigit():
+                raise ValueError("Nieprawidłowy identyfikator")
+            
+            if (requester_id := int(requester_id)) != user_id:
+                if not db_manager.user_exists(requester_id):
+                    raise ValueError("Użytkownik nie istnieje")
+                if db_manager.is_blocked(requester_id):
+                    raise ValueError("Użytkownik zablokowany")
+                
+                if db_manager.get_role(requester_id) != "admin":
+                    raise HTTPException(status_code=403, detail="Brak uprawnień")
+        
+        if session_token != db_manager.get_session_token(requester_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        if not request.new_password or not request.repeated_password or \
+            request.new_password != request.repeated_password:
+            raise ValueError("Hasła nie mogą być puste i muszą być takie same")
+
         return {
-            "role_name": get_actor_role(
-                authorization,
-                x_user_id,
-                db_manager
+            "success": db_manager.change_password(
+                user_id,
+                request.new_password
             )
         }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/users/{user_id}/role")
+def get_role(
+    user_id: int,
+    authorization: str = Header(...),
+    db_manager: DBManager = Depends(get_db_manager)
+    ):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if session_token != db_manager.get_session_token(user_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        if db_manager.is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+
+        return {"role_name": db_manager.get_role(user_id)}
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -35,12 +101,31 @@ def get_role(
 @router.get("/users")
 def get_users(
     authorization: str = Header(...),
-    x_user_id: str = Header(...),
-    db_manager = Depends(get_db_manager)
+    requester_id: str = Header(..., alias="x-user-id"),
+    db_manager : DBManager = Depends(get_db_manager)
     ):
     try:
-        if actor_is_admin(authorization, x_user_id, db_manager):
-            return {"users": db_manager.get_users()}
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not requester_id.isdigit():
+            raise ValueError("Nieprawidłowy identyfikator")
+        
+        if not db_manager.user_exists(requester_id := int(requester_id)):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if session_token != db_manager.get_session_token(requester_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        if db_manager.is_blocked(requester_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if db_manager.get_role(requester_id) != "admin":
+            raise HTTPException(status_code=403, detail="Brak uprawnień")
+
+        return {"users": db_manager.get_users()}
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -51,54 +136,92 @@ def get_users(
 def add_user(
     request: AddUserRequest,
     authorization: str = Header(...),
-    x_user_id: str = Header(...),
+    requester_id: str = Header(..., alias="x-user-id"),
     db_manager : DBManager = Depends(get_db_manager)
     ):
     try:
-        if actor_is_admin(authorization, x_user_id, db_manager):
-            if not (request.user_name and request.password and request.repeated_password):
-                raise ValueError("Żadne z pól (login, hasła) nie może być puste")
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not requester_id.isdigit():
+            raise ValueError("Nieprawidłowy identyfikator")
+        
+        if not db_manager.user_exists(requester_id := int(requester_id)):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if session_token != db_manager.get_session_token(requester_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        if db_manager.is_blocked(requester_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if db_manager.get_role(requester_id) != "admin":
+            raise HTTPException(status_code=403, detail="Brak uprawnień")
+        
+        if not (request.user_name and request.password and request.repeated_password):
+            raise ValueError("Żadne z pól (login, hasła) nie może być puste")
             
-            if db_manager.get_user_id(request.user_name):
-                raise ValueError(f"Użytkownik {request.user_name} już istnieje")
+        if db_manager.get_user_id(request.user_name):
+            raise ValueError(f"Użytkownik {request.user_name} już istnieje")
             
-            if request.password != request.repeated_password:
-                raise ValueError("Hasła muszą być takie same")
+        if request.password != request.repeated_password:
+            raise ValueError("Hasła muszą być takie same")
             
-            return {
-                "success": db_manager.add_user(
-                    request.user_name,
-                    request.password,
-                    request.is_admin
-                )
-            }
+        return {
+            "success": db_manager.add_user(
+                request.user_name,
+                request.password,
+                request.is_admin
+            )
+        }
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.delete("/users")
+@router.delete("/users/{user_id}")
 def del_user(
+    user_id: int,
     authorization: str = Header(...),
-    x_user_id: str = Header(...),
-    x_target_user_id: str = Header(...),
+    requester_id: str = Header(..., alias="x-user-id"),
     db_manager: DBManager = Depends(get_db_manager)
 ):
     try:
-        if actor_is_admin(authorization, x_user_id, db_manager):
-            if x_target_user_id == x_user_id:
-                raise ValueError("Niedozwolona operacja")
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Usuwany użytkownik nie istnieje")
+        
+        if not requester_id.isdigit():
+            raise ValueError("Nieprawidłowy identyfikator")
+        
+        if (requester_id := int(requester_id)) == user_id:
+            raise ValueError("Nieprawidłowa operacja")
+        
+        if not db_manager.user_exists(requester_id):
+            raise ValueError("Użytkownik nie istnieje")
+        
+        if db_manager.is_blocked(requester_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if session_token != db_manager.get_session_token(requester_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+ 
+        if db_manager.get_role(requester_id) != "admin":
+            raise HTTPException(status_code=403, detail="Brak uprawnień")
+    
+        db_manager.block_user(user_id)
+        db_manager.logout_user(user_id)
+        # TODO: zakończyć wszystkie zadania treningu i predykcji
+        db_manager.del_user(user_id)
             
-            if not db_manager.user_exists(target_user_id := int(x_target_user_id)):
-                raise ValueError("Użytkownik nie istnieje")
-            
-            db_manager.block_user(target_user_id)
-            db_manager.logout_user(target_user_id)
-            # TODO: zakończyć wszystkie zadania treningu i predykcji
-            db_manager.del_user(target_user_id)
-            
-            return {"success": True}
+        return {"success": True}
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
