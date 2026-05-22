@@ -14,7 +14,7 @@ load_dotenv()
 class TrainingTab(BaseTab):
     PARAM_MAP = {
         "Instrument": "instrument_name", "Interwał": "timeframe_name",
-        "Źródło danych": "data_source", "Liczba próbek": "all_samples",
+        "Źródło danych": "data_source_name", "Liczba próbek": "all_samples",
         "Liczba próbek testowych": "test_samples", "Losowość": "seed",
         "Liczba epok": "epochs", "Współczynnik szumu": "train_noise",
         "Współczynnik uczenia": "learning_rate", "Cechy": "features",
@@ -212,6 +212,8 @@ class TrainingTab(BaseTab):
         self.console.clear()
         self.table.setRowCount(0)
         self.last_clicked_uuid = None
+        for field in self.param_fields.values():
+            field.clear()
 
     def on_add_task(self):
         try:
@@ -225,7 +227,7 @@ class TrainingTab(BaseTab):
             train_config = {
                 "instrument_name": field_values["instrument_name"],
                 "timeframe_name": field_values["timeframe_name"],
-                "data_source_name": field_values["data_source"],
+                "data_source_name": field_values["data_source_name"],
                 "all_samples": int(field_values["all_samples"]),
                 "test_samples": int(field_values["test_samples"]),
                 "seed": int(field_values["seed"]),
@@ -329,27 +331,35 @@ class TrainingTab(BaseTab):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie wybrano zadania")
             return
+        
         try:
-            train_config = self.db_manager.get_training_config(
-                self.last_clicked_uuid, self.user_id, self.session_token
+            response = requests.get(
+                self.api_url + f"/users/{self.user_id}/trainings/{self.last_clicked_uuid}/config",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}"
+                }
             )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                train_config = response["config"]
             
-            self.param_fields["instrument_name"].setText(train_config["instrument"]["name"])
-            self.param_fields["timeframe_name"].setText(train_config["timeframe"]["name"])
-            self.param_fields["data_source"].setText(train_config["data_source"])
+                self.param_fields["instrument_name"].setText(train_config["instrument_name"])
+                self.param_fields["timeframe_name"].setText(train_config["timeframe_name"])
+                self.param_fields["data_source_name"].setText(train_config["data_source_name"])
+                self.param_fields["all_samples"].setText(str(train_config["all_samples"]))
+                self.param_fields["test_samples"].setText(str(train_config["test_samples"]))
+                self.param_fields["seed"].setText(str(train_config["seed"]))
+                self.param_fields["epochs"].setText(str(train_config["epochs"]))
+                self.param_fields["train_noise"].setText(str(train_config["train_noise"]))
+                self.param_fields["learning_rate"].setText(str(train_config["learning_rate"]))
+                self.param_fields["features"].setText(", ".join(train_config["features"]))
+                self.param_fields["targets"].setText(", ".join(train_config["targets"]))
+                self.param_fields["architectures"].setText(", ".join(train_config["architectures"]))
 
-            ps = train_config["parameter_set"]
-            self.param_fields["all_samples"].setText(str(ps["all_samples"]))
-            self.param_fields["test_samples"].setText(str(ps["test_samples"]))
-            self.param_fields["seed"].setText(str(ps["seed"]))
-            self.param_fields["epochs"].setText(str(ps["epochs"]))
-            self.param_fields["train_noise"].setText(str(ps["train_noise"]))
-            self.param_fields["learning_rate"].setText(str(ps["learning_rate"]))
-            self.param_fields["features"].setText(", ".join(train_config["feature_names"]))
-            self.param_fields["targets"].setText(", ".join(train_config["target_names"]))
-            self.param_fields["architectures"].setText(", ".join(train_config["architectures"]))
-
-            self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
+                self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
         except Exception as e:
             self.log_to_console(f"Błąd parametrów: {e}")
 
