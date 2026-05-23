@@ -3,37 +3,34 @@ import os
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QTabWidget
 from ui.tab.user_management_tab import UserManagementTab
 from ui.tab.training_tab import TrainingTab
-from ui.tab.prediction_tab import PredictionTab
 from ui.login_panel import LoginPanel
-from db.manager import DatabaseManager
 from ui.utils import show_message
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class GUI(QWidget):
-    def __init__(self, db_manager: DatabaseManager):
+    def __init__(self):
         super().__init__()
-        self.db_manager = db_manager
         self.api_url = os.getenv("API_URL")
         self.init_ui()
 
     def init_ui(self):
         self.login_panel = LoginPanel()
-
         self.tabs = QTabWidget()
 
         self.user_management_tab = UserManagementTab()
-        self.training_tab = TrainingTab(self.db_manager, self.tabs)
-        self.prediction_tab = PredictionTab(self.db_manager, self.tabs)
+        self.training_tab = TrainingTab(self.tabs)
+
+        # TODO: PredictionTab nie jest jeszcze zaimplementowany
+        # self.prediction_tab = PredictionTab(self.tabs)
+        # self.tabs.addTab(self.prediction_tab, "Predykcja wartości docelowych")
 
         self.tabs.addTab(self.user_management_tab, "Zarządzanie użytkownikami")
         self.tabs.addTab(self.training_tab, "Trening modeli")
-        self.tabs.addTab(self.prediction_tab, "Predykcja wartości docelowych")
 
         self.tabs.setTabVisible(0, False)
         self.tabs.setTabVisible(1, False)
-        self.tabs.setTabVisible(2, False)
 
         layout = QHBoxLayout()
         layout.addWidget(self.login_panel)
@@ -45,7 +42,6 @@ class GUI(QWidget):
 
         self.login_panel.user_logged_in.connect(self.on_user_logged_in)
         self.login_panel.user_logged_out.connect(self.on_user_logged_out)
-
         self.login_panel.user_logged_out.connect(self.user_management_tab.clear_session)
         self.login_panel.user_logged_out.connect(self.training_tab.clear_session)
 
@@ -53,9 +49,7 @@ class GUI(QWidget):
         try:
             response = requests.get(
                 self.api_url + f"/users/{user_id}/role",
-                headers={
-                    "Authorization": f"Bearer {str(session_token)}"
-                }
+                headers={"Authorization": f"Bearer {str(session_token)}"}
             )
 
             if response.status_code != 200:
@@ -68,13 +62,11 @@ class GUI(QWidget):
                 self.user_management_tab.set_session(user_id, session_token)
                 self.tabs.setTabVisible(0, True)
                 self.tabs.setTabVisible(1, False)
-                self.tabs.setTabVisible(2, False)
                 
             elif role_name == 'user':
                 self.training_tab.set_session(user_id, session_token)
                 self.tabs.setTabVisible(0, False)
                 self.tabs.setTabVisible(1, True)
-                self.tabs.setTabVisible(2, True)
 
         except requests.exceptions.ConnectionError:
             show_message(self.login_panel.login_message, "Nie można połączyć się z serwerem")
@@ -84,4 +76,3 @@ class GUI(QWidget):
     def on_user_logged_out(self):
         self.tabs.setTabVisible(0, False)
         self.tabs.setTabVisible(1, False)
-        self.tabs.setTabVisible(2, False)

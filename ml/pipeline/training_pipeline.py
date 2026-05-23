@@ -5,11 +5,11 @@ from ml.data_extractor import DataExtractor
 from ml.preprocessor import Preprocessor
 import torch
 from ml.model.model_manager import ModelManager
+from db.manager import DatabaseManager
 
 class TrainingPipeline:
-    def __init__(self, config: dict, log_signal, db_manager, train_uuid):
+    def __init__(self, config: dict, db_manager : DatabaseManager, train_uuid):
         self.config = config
-        self.log_signal = log_signal
         self.model_manager = None
         self.db_manager = db_manager
         self.train_uuid = train_uuid
@@ -31,7 +31,7 @@ class TrainingPipeline:
         f_name = inspect.currentframe().f_code.co_name
         try:
             self.db_manager.update_training_status(self.train_uuid, 'running')
-            self.log_signal.emit(f"[{f_name}] Rozpoczynanie treningu")
+            self.db_manager.add_log(self.train_uuid, f"[{f_name}] Rozpoczynanie treningu")
 
             loader = Loader(self.config, log_signal=self.log_signal)
 

@@ -1,12 +1,8 @@
 import requests
 import os
-from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
 from ui.tab.base_tab import BaseTab
-from ml.worker.training_worker import TrainingWorker
-from db.manager import DatabaseManager
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,16 +20,14 @@ class TrainingTab(BaseTab):
     def log_to_console(self, message: str):
         self.console.append(message)
 
-    def __init__(self, db_manager: DatabaseManager, tab_widget=None):
+    def __init__(self, tab_widget=None):
         super().__init__()
-        self.db_manager = db_manager
-
         self.api_url = os.getenv("API_URL")
-
         self.tab_widget = tab_widget
         self.last_clicked_uuid = None
-        self.thread = None
-        self.worker = None
+        # TODO: worker nie jest jeszcze zaimplementowany
+        # self.thread = None
+        # self.worker = None
         self.init_ui()
         self.init_actions()
 
@@ -112,54 +106,12 @@ class TrainingTab(BaseTab):
         self.console.clear()
 
     def on_run_task(self):
-        if not self.last_clicked_uuid:
-            self.log_to_console("Nie zaznaczono zadania")
-            return
-
-        if self.thread and self.thread.isRunning():
-            self.log_to_console("Zadanie już działa")
-            return
-        
-        try:
-            current_status = self.db_manager.get_training_status(self.last_clicked_uuid)
-            if current_status == 'completed':
-                self.log_to_console(f"Zadanie {self.last_clicked_uuid} jest już ukończone. Nie można go uruchomić ponownie.")
-                return
-            if current_status == 'running':
-                self.log_to_console(f"Zadanie {self.last_clicked_uuid} jest już w trakcie wykonywania.")
-                return
-        except Exception as e:
-            self.log_to_console(f"Błąd sprawdzania statusu: {e}")
-            return
-
-        self.thread = QThread()
-        self.worker = TrainingWorker(self.db_manager, self.last_clicked_uuid)
-        self.worker.log_signal.connect(self.log_to_console)
-        self.worker.moveToThread(self.thread)
-
-        self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.destroyed.connect(lambda: setattr(self, 'thread', None))
-        self.thread.destroyed.connect(lambda: setattr(self, 'worker', None))
-
-        self.thread.finished.connect(lambda: self.set_running_ui(False))
-        self.thread.finished.connect(lambda: self.on_load_training_tasks(show_log=False))
-
-        self.db_manager.update_training_status(self.last_clicked_uuid, 'running')
-        self.on_load_training_tasks(show_log=False)
-
-        self.set_running_ui(True)
-        self.thread.start()
+        # TODO: worker nie jest jeszcze zaimplementowany
+        self.log_to_console("Uruchamianie treningu nie jest jeszcze zaimplementowane")
 
     def on_stop_task(self):
-        if self.worker and self.thread and self.thread.isRunning():
-            try:
-                self.log_to_console("Zatrzymywanie treningu...")
-                self.worker.stop()
-            except Exception as e:
-                self.log_to_console(f"Błąd podczas zatrzymywania: {e}")
+        # TODO: worker nie jest jeszcze zaimplementowany
+        self.log_to_console("Zatrzymywanie treningu nie jest jeszcze zaimplementowane")
 
     def set_running_ui(self, running: bool):
         for btn in [self.add_task_btn, self.remove_task_btn, 
@@ -173,9 +125,7 @@ class TrainingTab(BaseTab):
         try:
             response = requests.get(
                 self.api_url + f"/users/{self.user_id}/trainings",
-                headers={
-                    "Authorization": f"Bearer {str(self.session_token)}",
-                }
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
             )
 
             if response.status_code != 200:
@@ -269,9 +219,7 @@ class TrainingTab(BaseTab):
 
             response = requests.post(
                 self.api_url + f"/users/{self.user_id}/trainings",
-                headers={
-                    "Authorization": f"Bearer {str(self.session_token)}"
-                },
+                headers={"Authorization": f"Bearer {str(self.session_token)}"},
                 json=train_config
             )
 
@@ -305,9 +253,7 @@ class TrainingTab(BaseTab):
         try:
             response = requests.delete(
                 self.api_url + f"/users/{self.user_id}/trainings/{self.last_clicked_uuid}",
-                headers={
-                    "Authorization": f"Bearer {str(self.session_token)}"
-                }
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
             )
 
             if response.status_code != 200:
@@ -335,9 +281,7 @@ class TrainingTab(BaseTab):
         try:
             response = requests.get(
                 self.api_url + f"/users/{self.user_id}/trainings/{self.last_clicked_uuid}/config",
-                headers={
-                    "Authorization": f"Bearer {str(self.session_token)}"
-                }
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
             )
 
             if response.status_code != 200:
@@ -362,4 +306,3 @@ class TrainingTab(BaseTab):
                 self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
         except Exception as e:
             self.log_to_console(f"Błąd parametrów: {e}")
-

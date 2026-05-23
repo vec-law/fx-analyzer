@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Header, Depends, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
-from api.dependencies import get_db_manager
-from db.manager import DatabaseManager
 from uuid import UUID
+from db.queries.users import user_exists, is_blocked, get_session_token
+from db.queries.trainings import (
+    get_user_trainings, add_training, del_training,
+    get_training_config, get_training_status, update_training_status
+)
 
 router = APIRouter()
 
@@ -23,8 +26,7 @@ class AddTrainingRequest(BaseModel):
 @router.get("/users/{user_id}/trainings")
 def get_trainings(
     user_id: int,
-    authorization: str = Header(...),
-    db_manager: DatabaseManager = Depends(get_db_manager)
+    authorization: str = Header(...)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -32,28 +34,25 @@ def get_trainings(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
-        if not db_manager.user_exists(user_id):
+        if not user_exists(user_id):
             raise ValueError("Użytkownik nie istnieje")
-        if db_manager.is_blocked(user_id):
+        if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        
-        if session_token != db_manager.get_session_token(user_id):
+        if session_token != get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        return {"trainings": db_manager.get_user_trainings(user_id)}
+        return {"trainings": get_user_trainings(user_id)}
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/users/{user_id}/trainings")
-def add_training(
+def add_training_endpoint(
     user_id: int,
     request: AddTrainingRequest,
-    authorization: str = Header(...),
-    db_manager: DatabaseManager = Depends(get_db_manager)
+    authorization: str = Header(...)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -61,12 +60,11 @@ def add_training(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
-        if not db_manager.user_exists(user_id):
+        if not user_exists(user_id):
             raise ValueError("Użytkownik nie istnieje")
-        if db_manager.is_blocked(user_id):
+        if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        
-        if session_token != db_manager.get_session_token(user_id):
+        if session_token != get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         if not request.features or not request.targets or not request.architectures:
@@ -87,20 +85,18 @@ def add_training(
             "architectures": request.architectures
         }
         
-        return {"train_uuid": db_manager.add_training(user_id, config)}
+        return {"train_uuid": add_training(user_id, config)}
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.delete("/users/{user_id}/trainings/{train_uuid}")
-def del_training(
+def del_training_endpoint(
     user_id: int,
     train_uuid: UUID,
-    authorization: str = Header(...),
-    db_manager: DatabaseManager = Depends(get_db_manager)
+    authorization: str = Header(...)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -108,28 +104,25 @@ def del_training(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
-        if not db_manager.user_exists(user_id):
+        if not user_exists(user_id):
             raise ValueError("Użytkownik nie istnieje")
-        if db_manager.is_blocked(user_id):
+        if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        
-        if session_token != db_manager.get_session_token(user_id):
+        if session_token != get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
             
-        return {"success": db_manager.del_training(train_uuid)}
+        return {"success": del_training(train_uuid)}
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.get("/users/{user_id}/trainings/{train_uuid}/config")
-def get_training_config(
+def get_training_config_endpoint(
     user_id: int,
     train_uuid: UUID,
-    authorization: str = Header(...),
-    db_manager: DatabaseManager = Depends(get_db_manager)
+    authorization: str = Header(...)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -137,28 +130,25 @@ def get_training_config(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
-        if not db_manager.user_exists(user_id):
+        if not user_exists(user_id):
             raise ValueError("Użytkownik nie istnieje")
-        if db_manager.is_blocked(user_id):
+        if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        
-        if session_token != db_manager.get_session_token(user_id):
+        if session_token != get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        return {"config": db_manager.get_training_config(train_uuid)}
+        return {"config": get_training_config(train_uuid)}
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.post("/users/{user_id}/trainings/{train_uuid}/run")
 def run_training(
     user_id: int,
     train_uuid: UUID,
-    authorization: str = Header(...),
-    db_manager: DatabaseManager = Depends(get_db_manager)
+    authorization: str = Header(...)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -166,18 +156,17 @@ def run_training(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
-        if not db_manager.user_exists(user_id):
+        if not user_exists(user_id):
             raise ValueError("Użytkownik nie istnieje")
-        if db_manager.is_blocked(user_id):
+        if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        
-        if session_token != db_manager.get_session_token(user_id):
+        if session_token != get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        status = db_manager.get_training_status(train_uuid)
+        status = get_training_status(train_uuid)
         
         if status in ("created", "pending", "failed"):
-            db_manager.update_training_status(train_uuid, "pending")
+            update_training_status(train_uuid, "pending")
         else:
             raise ValueError("Nie można uruchomić treningu o tym statusie")
 
@@ -185,16 +174,14 @@ def run_training(
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
 @router.patch("/users/{user_id}/trainings/{train_uuid}/stop")
 def stop_training(
     user_id: int,
     train_uuid: UUID,
-    authorization: str = Header(...),
-    db_manager: DatabaseManager = Depends(get_db_manager)
+    authorization: str = Header(...)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -202,18 +189,17 @@ def stop_training(
         else:
             raise ValueError("Nieprawidłowy format nagłówka Authorization")
         
-        if not db_manager.user_exists(user_id):
+        if not user_exists(user_id):
             raise ValueError("Użytkownik nie istnieje")
-        if db_manager.is_blocked(user_id):
+        if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        
-        if session_token != db_manager.get_session_token(user_id):
+        if session_token != get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        status = db_manager.get_training_status(train_uuid)
+        status = get_training_status(train_uuid)
         
         if status == "running":
-            db_manager.update_training_status(train_uuid, "stopping")
+            update_training_status(train_uuid, "stopping")
         else:
             raise ValueError("Trening nie jest uruchomiony")
 
@@ -221,6 +207,5 @@ def stop_training(
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
