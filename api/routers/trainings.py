@@ -110,6 +110,9 @@ def del_training_endpoint(
             raise ValueError("Użytkownik zablokowany")
         if session_token != get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        if get_training_status(train_uuid) in ("running", "stopping"):
+            raise ValueError("Nie można usunąć treningu który jest uruchomiony")
             
         return {"success": del_training(train_uuid)}
     

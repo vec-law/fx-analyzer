@@ -155,7 +155,11 @@ def get_training_config(train_uuid):
             with conn.cursor() as cur:
                 config = {
                     'instrument_name': None,
+                    'instrument_ticker': None,
                     'timeframe_name': None,
+                    'timeframe_range': None,
+                    'timeframe_check_period': None,
+                    'timeframe_min_count': None,
                     "data_source_name": None,
                     "all_samples": None,
                     "test_samples": None,
@@ -163,12 +167,11 @@ def get_training_config(train_uuid):
                     "epochs": None,
                     "train_noise": None,
                     "learning_rate": None,
-                    'instrument_ticker': None,
-                    'timeframe_range': None,
                     'features': [],
                     'targets': [],
                     'architectures': [],
-                    'base_columns': []
+                    'base_columns': [],
+                    'calculated_columns': []
                 }
                 cur.execute("""
                     SELECT
@@ -176,13 +179,15 @@ def get_training_config(train_uuid):
                         instrument.ticker,
                         timeframe.name,
                         timeframe.range,
+                        timeframe.check_period,
+                        timeframe.min_count,
                         data_source.name,
                         all_samples,
                         test_samples,
                         seed,
                         epochs,
                         train_noise,
-                        learning_rate   
+                        learning_rate
                     FROM training
                     JOIN instrument ON training.instrument_id = instrument.id
                     JOIN timeframe ON training.timeframe_id = timeframe.id
@@ -197,13 +202,15 @@ def get_training_config(train_uuid):
                 config["instrument_ticker"] = result[1]
                 config["timeframe_name"] = result[2]
                 config["timeframe_range"] = result[3]
-                config["data_source_name"] = result[4]
-                config["all_samples"] = result[5]
-                config["test_samples"] = result[6]
-                config["seed"] = result[7]
-                config["epochs"] = result[8]
-                config["train_noise"] = result[9]
-                config["learning_rate"] = result[10]
+                config["timeframe_check_period"] = result[4]
+                config["timeframe_min_count"] = result[5]
+                config["data_source_name"] = result[6]
+                config["all_samples"] = result[7]
+                config["test_samples"] = result[8]
+                config["seed"] = result[9]
+                config["epochs"] = result[10]
+                config["train_noise"] = result[11]
+                config["learning_rate"] = result[12]
                 cur.execute("""
                     SELECT feature_type.name, feature_def.feature_periods, feature_def.shift
                     FROM feature_def
@@ -239,6 +246,8 @@ def get_training_config(train_uuid):
                 config['architectures'] = [row[0] for row in cur.fetchall()]
                 cur.execute("SELECT name FROM base_column ORDER BY id")
                 config['base_columns'] = [row[0] for row in cur.fetchall()]
+                cur.execute("SELECT name FROM calculated_column ORDER BY id")
+                config['calculated_columns'] = [row[0] for row in cur.fetchall()]
                 return config
     except ValueError as e:
         raise e

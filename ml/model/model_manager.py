@@ -6,10 +6,10 @@ import torch.nn.functional as F
 from safetensors.torch import save
 from safetensors.torch import load
 import ml.model.architecture as archs
+from db.queries.trainings import add_training_log
 
 class ModelManager:
-    def __init__(self, log_signal):
-        self.log_signal = log_signal
+    def __init__(self):
         self._stop_requested = False
 
     def stop(self):
@@ -17,180 +17,112 @@ class ModelManager:
 
     def create_model(self, x_num, y_num, params, arch, device):
         f_name = inspect.currentframe().f_code.co_name
-        self.log_signal.emit(f"[{f_name}] Tworzenie modelu...")
-
         torch.manual_seed(params['seed'])
         if device.type == 'cuda':
             torch.cuda.manual_seed_all(params['seed'])
 
         model = self._get_model(arch, x_num, y_num)
-
         if model is None:
-            self.log_signal.emit(f"[{f_name}] Nie utworzono modelu: {arch}")
             return None, None, None
         model.to(device)
 
         optimizer = optim.Adam(model.parameters(), lr=params['learning_rate'], weight_decay=1e-2)
         loss_function = nn.MSELoss()
 
-        self.log_signal.emit(f"[{f_name}] Utworzono model: {arch}")
         return model, optimizer, loss_function
 
     def _get_model(self, class_name, x_num, y_num):
         f_name = inspect.currentframe().f_code.co_name
         try:
             model_class = getattr(archs, class_name)
-
             if isinstance(model_class, type) and issubclass(model_class, nn.Module):
                 return model_class(x_num, y_num)
-            
-            error_msg = f"nie jest klasą nn.Module" if isinstance(model_class, type) else "nie jest klasą"
-            self.log_signal.emit(f"[{f_name}] Błąd: {class_name} {error_msg}")
             return None
-                
         except AttributeError:
-            self.log_signal.emit(f"[{f_name}] Błąd: Model {class_name} nie istnieje w architecture.py")
             return None
         
-    def train_model(
-            self,
-            model,
-            optimizer,
-            loss_function,
-            ten_train_norm_x,
-            ten_train_norm_y,
-            params,
-            device
-        ):
+    def train_model(self, model, optimizer, loss_function, ten_train_norm_x, ten_train_norm_y, params, device, train_uuid):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None or optimizer is None or loss_function is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu, optymalizatora lub funkcji kosztu")
                 return None
             if ten_train_norm_x is None or ten_train_norm_y is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak tensorów")
                 return None
-            if params is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak parametrów")
-                return None
-            if device is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: nie określono urządzenia")
+            if params is None or device is None:
                 return None
 
             model.train()
-
-            self.log_signal.emit(f"[{f_name}] Rozpoczęto uczenie modelu")
 
             for epoch in range(params['epochs']):
                 if self._stop_requested:
                     return None
                 
                 optimizer.zero_grad()
-                
                 noise = (torch.randn_like(ten_train_norm_x) * params['train_noise']).to(device)
                 ten_train_norm_p = model(ten_train_norm_x + noise)
-                
                 loss = loss_function(ten_train_norm_p, ten_train_norm_y)
                 loss.backward()
                 optimizer.step()
-                
-                if (epoch + 1) % 100 == 0:
-                    self.log_signal.emit(f"[{f_name}] Epoch: {epoch+1}/{params['epochs']}, Loss: {loss.item():.6f}")
 
-            self.log_signal.emit(f"[{f_name}] Zakończono uczenie modelu")
+                if (epoch + 1) % 100 == 0:
+                    add_training_log(train_uuid, f"Epoch: {epoch+1}/{params['epochs']}, Loss: {loss.item():.6f}")
 
             return model
         
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
         
-    def predict(
-            self,
-            model,
-            ten_norm_x,
-        ):
+    def predict(self, model, ten_norm_x):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            if model is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu")
-                return None
-            if ten_norm_x is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak tensorów")
+            if model is None or ten_norm_x is None:
                 return None
             
             model.eval()
             with torch.no_grad():
-                ten_norm_p = model(ten_norm_x)
-                self.log_signal.emit(f"[{f_name}] Obliczono predykcję")
-                return ten_norm_p
+                return model(ten_norm_x)
             
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
         
-    def evaluate_model(
-            self,
-            model,
-            loss_function,
-            ten_test_norm_x,
-            ten_test_norm_y,
-        ):
+    def evaluate_model(self, model, loss_function, ten_test_norm_x, ten_test_norm_y):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None or loss_function is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu lub funkcji kosztu")
                 return None, None
             if ten_test_norm_x is None or ten_test_norm_y is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak tensorów")
                 return None, None
 
             ten_test_norm_p = self.predict(model, ten_test_norm_x)
-
             mse_loss = loss_function(ten_test_norm_p, ten_test_norm_y).item()
             mae_loss = F.l1_loss(ten_test_norm_p, ten_test_norm_y).item()
-
-            self.log_signal.emit(f"[{f_name}] Obliczono błąd MSE: {mse_loss:.6f}")
-            self.log_signal.emit(f"[{f_name}] Obliczono błąd MAE: {mae_loss:.6f}")
             
             return mse_loss, mae_loss
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None, None
+            raise Exception(f"[{f_name}] Błąd: {e}")
 
     def get_model_weights(self, model):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu")
                 return None
             
             state_dict = model.state_dict()
-            cpu_state_dict = {}
-            
-            for key, value in state_dict.items():
-                cpu_state_dict[key] = value.cpu()
-            
-            weights = save(cpu_state_dict)
-            return weights
+            cpu_state_dict = {key: value.cpu() for key, value in state_dict.items()}
+            return save(cpu_state_dict)
+
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
         
     def set_model_weights(self, model, weights):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None or weights is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: brak modelu lub wag")
                 return False
-
             state_dict = load(weights)
             model.load_state_dict(state_dict)
-            
-            self.log_signal.emit(f"[{f_name}] Załadowano wagi modelu")
             return True
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd podczas ładowania wag: {e}")
-            return False
+            raise Exception(f"[{f_name}] Błąd: {e}")

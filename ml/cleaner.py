@@ -1,31 +1,28 @@
 import inspect
 
 class Cleaner:
-    def __init__(self, config: dict, log_signal):
+    def __init__(self, config: dict):
         self.config = config
-        self.log_signal = log_signal
 
     def clean_data(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
             
             df = df.dropna().copy()
             df = df[df['datetime'].dt.dayofweek < 5]
             
             if df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych po usunięciu weekendów")
                 return None
 
-            if self.config['timeframe']['check_period'] is not None and self.config['timeframe']['min_count'] is not None:
-                periods = df['datetime'].dt.to_period(self.config['timeframe']['check_period'])
+            if self.config['timeframe_check_period'] is not None and self.config['timeframe_min_count'] is not None:
+                periods = df['datetime'].dt.to_period(self.config['timeframe_check_period'])
                 counts = periods.value_counts()
                 current_period = periods.iloc[-1]
 
                 invalid_periods = counts[
-                    (counts < self.config['timeframe']['min_count']) & (counts.index != current_period)
+                    (counts < self.config['timeframe_min_count']) & (counts.index != current_period)
                 ].index
 
                 if not invalid_periods.empty:
@@ -34,15 +31,11 @@ class Cleaner:
                     last_invalid_idx = df[is_invalid].index[-1]
                     
                     df = df.loc[last_invalid_idx:].iloc[1:].copy()
-                    self.log_signal.emit(f"[{f_name}] Odcięto historię do {last_invalid_date} do indeksu {last_invalid_idx}")
 
             if df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych po usunięciu luk")
                 return None
 
-            self.log_signal.emit(f"[{f_name}] Pozostawiono {df.shape[0]} rekordów")            
             return df
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")

@@ -2,15 +2,13 @@ import inspect
 import pandas as pd
 
 class DataExtractor:
-    def __init__(self, config: dict, log_signal):
+    def __init__(self, config: dict):
         self.config = config
-        self.log_signal = log_signal
 
     def add_calculated_columns(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
             
             c_cols = []
@@ -37,27 +35,37 @@ class DataExtractor:
                     c_cols.append(series)
 
                 else:
-                    self.log_signal.emit(f"[{f_name}] Brak wzoru dla obliczanej kolumny")
-                    return None
+                    raise ValueError(f"Brak wzoru dla obliczanej kolumny: {col_name}")
             
             df = pd.concat([df] + c_cols, axis=1).copy()
-            self.log_signal.emit(f"[{f_name}] Dodano obliczane kolumny")            
             return df
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
 
     def add_features(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
+            
+            feautures = []
+            for feature in self.config["features"]:
+                f_str = feature.strip()
+                if not f_str:
+                    continue
+                parts = f_str.split(":")
+                if len(parts) != 3:
+                    raise ValueError(f"Format feature: typ:parametry:shift")
+                feautures.append({
+                    "feature_type": parts[0].strip(),
+                    "feature_periods": [int(p.strip()) for p in parts[1].split("-") if p.strip()],
+                    "shift": int(parts[2].strip())
+                })
             
             f_cols = []
             
-            for f, col_name in zip(self.config["features"], self.config["feature_names"]):
+            for f, col_name in zip(feautures, self.config["features"]):
                 f_type = f["feature_type"]
                 periods = f["feature_periods"]
                 shift = f["shift"]
@@ -87,54 +95,58 @@ class DataExtractor:
                     f_cols.append(series)
 
                 else:
-                    self.log_signal.emit(f"[{f_name}] Brak wzoru dla dodawanej cechy")
-                    return None
+                    raise ValueError(f"Brak wzoru dla cechy: {f_type}")
             
             df = pd.concat([df] + f_cols, axis=1).copy()
-            self.log_signal.emit(f"[{f_name}] Dodano cechy")            
             return df
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
         
     def add_targets(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
+            
+            targets = []
+            for target in self.config["targets"]:
+                target_str = target.strip()
+                if not target_str:
+                    continue
+                parts = target_str.split(":")
+                if len(parts) != 2:
+                    raise ValueError("Format targetu to 'nazwa_kolumny:shift'")
+                targets.append({
+                    "column": parts[0].strip(),
+                    "shift": int(parts[1].strip())
+                })
             
             t_cols = []
 
-            for t, col_name in zip(self.config["targets"], self.config["target_names"]):
+            for t, col_name in zip(targets, self.config["targets"]):
                 series = df[t['column']].shift(t['shift'])
                 series.name = col_name
                 t_cols.append(series)
                 
             if not t_cols:
-                self.log_signal.emit(f"[{f_name}] Brak wartości docelowych do dodania")
                 return None
             
             df = pd.concat([df] + t_cols, axis=1).copy()
-            self.log_signal.emit(f"[{f_name}] Dodano wartości docelowe")
             return df
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
         
     def dropna_and_cut(self, df, limit):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
 
             res_df = df.dropna()
 
             if res_df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych w df po dropna")
                 return None
             
             if limit:
@@ -143,54 +155,41 @@ class DataExtractor:
             len_res_df = len(res_df)
 
             if limit and len_res_df != limit:
-                self.log_signal.emit(f"[{f_name}] Zbyt mało rekordów do ucięcia, len(df) = {len_res_df}")
                 return None
 
-            self.log_signal.emit(f"[{f_name}] Usunięto NaN i ucięto df, len(df) = {len_res_df}")
             return res_df
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
 
     def join_at_end(self, df, df_append):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df_append is None:
-                self.log_signal.emit(f"[{f_name}] Błąd: Brak danych wejściowych")
                 return None
 
             if len(df) < len(df_append):
-                self.log_signal.emit(f"[{f_name}] Błąd: df jest krótszy niż dane do dołączenia")
                 return None
 
             df_aligned = df_append.copy()
             df_aligned.index = df.index[-len(df_append):]
-
             df_result = df.join(df_aligned)
-
-            self.log_signal.emit(f"[{f_name}] Dołączono kolumny")
             return df_result
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd podczas operacji join_at_end: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
         
     def add_diff(self, df):
         f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
-                self.log_signal.emit(f"[{f_name}] Brak danych w df")
                 return None
             
-            cols_to_diff = self.config["target_names"]
+            cols_to_diff = self.config["targets"]
             diff_df = df[cols_to_diff].diff().add_suffix('_diff')
             diff_df = diff_df.fillna(0)
             df = df.join(diff_df)
-            
-            self.log_signal.emit(f"[{f_name}] Dodano wartości diff")
             return df
 
         except Exception as e:
-            self.log_signal.emit(f"[{f_name}] Błąd: {e}")
-            return None
+            raise Exception(f"[{f_name}] Błąd: {e}")
