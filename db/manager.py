@@ -13,6 +13,23 @@ class DatabaseManager:
     def __init__(self, db_config):
         self.config = db_config
 
+    def add_log(self, train_uuid, message):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        INSERT INTO log (train_uuid, message) 
+                        VALUES (%s, %s)
+                    """, (train_uuid, message))
+
+                    conn.commit()
+
+                    return True
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+
     def count_running_trainings(self):
         try:
             with psycopg2.connect(**self.config) as conn:
@@ -40,8 +57,9 @@ class DatabaseManager:
                         JOIN status ON status_id = status.id
                         WHERE status.name = 'pending'
                     """)
+                    
                     rows = cur.fetchall()
-                    return rows
+                    return [row[0] for row in rows]
 
         except ValueError as e:
             raise e
