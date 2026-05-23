@@ -163,14 +163,19 @@ def get_training_config(train_uuid):
                     "epochs": None,
                     "train_noise": None,
                     "learning_rate": None,
+                    'instrument_ticker': None,
+                    'timeframe_range': None,
                     'features': [],
                     'targets': [],
-                    'architectures': []
+                    'architectures': [],
+                    'base_columns': []
                 }
                 cur.execute("""
                     SELECT
                         instrument.name,
+                        instrument.ticker,
                         timeframe.name,
+                        timeframe.range,
                         data_source.name,
                         all_samples,
                         test_samples,
@@ -189,14 +194,16 @@ def get_training_config(train_uuid):
                 if result is None:
                     raise ValueError(f"Brak treningu: {train_uuid}")
                 config["instrument_name"] = result[0]
-                config["timeframe_name"] = result[1]
-                config["data_source_name"] = result[2]
-                config["all_samples"] = result[3]
-                config["test_samples"] = result[4]
-                config["seed"] = result[5]
-                config["epochs"] = result[6]
-                config["train_noise"] = result[7]
-                config["learning_rate"] = result[8]
+                config["instrument_ticker"] = result[1]
+                config["timeframe_name"] = result[2]
+                config["timeframe_range"] = result[3]
+                config["data_source_name"] = result[4]
+                config["all_samples"] = result[5]
+                config["test_samples"] = result[6]
+                config["seed"] = result[7]
+                config["epochs"] = result[8]
+                config["train_noise"] = result[9]
+                config["learning_rate"] = result[10]
                 cur.execute("""
                     SELECT feature_type.name, feature_def.feature_periods, feature_def.shift
                     FROM feature_def
@@ -230,6 +237,8 @@ def get_training_config(train_uuid):
                     ORDER BY architecture.id
                 """, (train_uuid, ))
                 config['architectures'] = [row[0] for row in cur.fetchall()]
+                cur.execute("SELECT name FROM base_column ORDER BY id")
+                config['base_columns'] = [row[0] for row in cur.fetchall()]
                 return config
     except ValueError as e:
         raise e

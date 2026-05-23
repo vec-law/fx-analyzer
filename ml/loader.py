@@ -9,13 +9,13 @@ class Loader:
     def load_data(self):
         f_name = inspect.currentframe().f_code.co_name
         try:
-            if self.config['data_source'] == 'YF':
+            if self.config['data_source_name'] == 'YF':
                 self.log_signal.emit(f"[{f_name}] Rozpoczynanie ładowania danych z YF")
 
                 df = yf.download(
-                    tickers=self.config['instrument']['ticker'], 
-                    period=self.config['timeframe']['range'], 
-                    interval=self.config['timeframe']['name'], 
+                    tickers=self.config['instrument_ticker'], 
+                    period=self.config['timeframe_range'], 
+                    interval=self.config['timeframe_name'], 
                     auto_adjust=False,
                     progress=False,
                     multi_level_index=False
@@ -31,7 +31,7 @@ class Loader:
                 self.log_signal.emit(f"[{f_name}] Załadowano {len(df)} rekordów")
                 return df
             else:
-                self.log_signal.emit(f"[{f_name}] Nieobsługiwane źródło danych: {self.config['data_source']}")
+                self.log_signal.emit(f"[{f_name}] Nieobsługiwane źródło danych: {self.config['data_source_name']}")
                 return None
 
         except Exception as e:
