@@ -1,3 +1,4 @@
+from db.queries.trainings import get_user_trainings, update_training_status
 from fastapi import APIRouter, HTTPException, Header
 from pydantic import BaseModel
 from uuid import UUID
@@ -202,6 +203,13 @@ def del_user_endpoint(
     
         block_user(user_id)
         logout_user(user_id)
+
+        trainings = get_user_trainings(user_id)
+        for training in trainings:
+            if training['status'] in ('running', 'stopping', 'pending'):
+                update_training_status(training['train_uuid'], 'stopping')
+                raise ValueError("Treningi użytkownika są zatrzymywane — spróbuj ponownie za chwilę")
+
         del_user(user_id)
             
         return {"success": True}
@@ -246,6 +254,11 @@ def block_user_endpoint(
     
         block_user(user_id)
         logout_user(user_id)
+
+        trainings = get_user_trainings(user_id)
+        for training in trainings:
+            if training['status'] in ('running', 'stopping', 'pending'):
+                update_training_status(training['train_uuid'], 'stopping')
             
         return {"success": True}
     

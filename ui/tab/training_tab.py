@@ -106,12 +106,36 @@ class TrainingTab(BaseTab):
         self.console.clear()
 
     def on_run_task(self):
-        # TODO: worker nie jest jeszcze zaimplementowany
-        self.log_to_console("Uruchamianie treningu nie jest jeszcze zaimplementowane")
+        if not self.last_clicked_uuid:
+            self.log_to_console("Nie zaznaczono zadania")
+            return
+        try:
+            response = requests.post(
+                self.api_url + f"/users/{self.user_id}/trainings/{self.last_clicked_uuid}/run",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+            self.log_to_console(f"Uruchomiono trening: {self.last_clicked_uuid}")
+            self.on_load_training_tasks(show_log=False)
+        except Exception as e:
+            self.log_to_console(f"Błąd uruchamiania: {e}")
 
     def on_stop_task(self):
-        # TODO: worker nie jest jeszcze zaimplementowany
-        self.log_to_console("Zatrzymywanie treningu nie jest jeszcze zaimplementowane")
+        if not self.last_clicked_uuid:
+            self.log_to_console("Nie zaznaczono zadania")
+            return
+        try:
+            response = requests.patch(
+                self.api_url + f"/users/{self.user_id}/trainings/{self.last_clicked_uuid}/stop",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+            self.log_to_console(f"Zatrzymano trening: {self.last_clicked_uuid}")
+            self.on_load_training_tasks(show_log=False)
+        except Exception as e:
+            self.log_to_console(f"Błąd zatrzymywania: {e}")
 
     def set_running_ui(self, running: bool):
         for btn in [self.add_task_btn, self.remove_task_btn, 

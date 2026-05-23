@@ -201,7 +201,7 @@ class TrainingPipeline:
     def _on_stop(self, f_name):
         status = get_training_status(self.train_uuid)
         if status == 'stopping':
-            update_training_status(self.train_uuid, 'failed')
+            update_training_status(self.train_uuid, 'stopped')
             add_training_log(self.train_uuid, f"[{f_name}] Proces przerwany przez użytkownika")
             return True
         return False
