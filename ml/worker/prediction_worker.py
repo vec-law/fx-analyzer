@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QObject, pyqtSignal
-from src.pipeline.prediction_pipeline import PredictionPipeline
+from ml.pipeline.prediction_pipeline import PredictionPipeline
 
 class PredictionWorker(QObject):
     finished = pyqtSignal()

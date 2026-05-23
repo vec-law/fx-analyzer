@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
     QTableWidgetItem
 )
-from src.worker.prediction_worker import PredictionWorker
+from ml.worker.prediction_worker import PredictionWorker
 from PyQt6.QtWidgets import QFileDialog
 
 import pandas as pd

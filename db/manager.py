@@ -9,11 +9,46 @@ from psycopg2.extras import register_uuid
 register_uuid()
 load_dotenv()
 
-class DBManager:
+class DatabaseManager:
     def __init__(self, db_config):
         self.config = db_config
 
-    def get_trainings(self, user_id):
+    def count_running_trainings(self):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT train_uuid FROM training
+                        JOIN status ON status_id = status.id
+                        WHERE status.name = 'running'
+                    """)
+                    rows = cur.fetchall()
+
+                    return len(rows)
+
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+
+    def get_pending_trainings(self):
+        try:
+            with psycopg2.connect(**self.config) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT train_uuid FROM training
+                        JOIN status ON status_id = status.id
+                        WHERE status.name = 'pending'
+                    """)
+                    rows = cur.fetchall()
+                    return rows
+
+        except ValueError as e:
+            raise e
+        except Exception as e:
+            raise Exception(f"Błąd bazy danych: {str(e)}")
+
+    def get_user_trainings(self, user_id):
         try:
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:

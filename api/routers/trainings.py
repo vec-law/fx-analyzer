@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Header, Depends, HTTPException
 from pydantic import BaseModel
 from api.dependencies import get_db_manager
-from api.db_manager import DBManager
+from db.manager import DatabaseManager
 from uuid import UUID
 
 router = APIRouter()
@@ -24,7 +24,7 @@ class AddTrainingRequest(BaseModel):
 def get_trainings(
     user_id: int,
     authorization: str = Header(...),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -40,7 +40,7 @@ def get_trainings(
         if session_token != db_manager.get_session_token(user_id):
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        return {"trainings": db_manager.get_trainings(user_id)}
+        return {"trainings": db_manager.get_user_trainings(user_id)}
     
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -53,7 +53,7 @@ def add_training(
     user_id: int,
     request: AddTrainingRequest,
     authorization: str = Header(...),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -100,7 +100,7 @@ def del_training(
     user_id: int,
     train_uuid: UUID,
     authorization: str = Header(...),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -129,7 +129,7 @@ def get_training_config(
     user_id: int,
     train_uuid: UUID,
     authorization: str = Header(...),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -158,7 +158,7 @@ def run_training(
     user_id: int,
     train_uuid: UUID,
     authorization: str = Header(...),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -176,7 +176,7 @@ def run_training(
         
         status = db_manager.get_training_status(train_uuid)
         
-        if status == "pending" or status == "failed":
+        if status in ("created", "pending", "failed"):
             db_manager.update_training_status(train_uuid, "pending")
         else:
             raise ValueError("Nie można uruchomić treningu o tym statusie")
@@ -194,7 +194,7 @@ def stop_training(
     user_id: int,
     train_uuid: UUID,
     authorization: str = Header(...),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):

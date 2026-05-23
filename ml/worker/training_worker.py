@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QObject, pyqtSignal
-from src.pipeline.training_pipeline import TrainingPipeline
+from ml.pipeline.training_pipeline import TrainingPipeline
 
 class TrainingWorker(QObject):
     finished = pyqtSignal()

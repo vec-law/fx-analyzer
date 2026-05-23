@@ -5,14 +5,14 @@ from ui.tab.user_management_tab import UserManagementTab
 from ui.tab.training_tab import TrainingTab
 from ui.tab.prediction_tab import PredictionTab
 from ui.login_panel import LoginPanel
-from api.db_manager import DBManager
+from db.manager import DatabaseManager
 from ui.utils import show_message
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class GUI(QWidget):
-    def __init__(self, db_manager: DBManager):
+    def __init__(self, db_manager: DatabaseManager):
         super().__init__()
         self.db_manager = db_manager
         self.api_url = os.getenv("API_URL")

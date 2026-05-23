@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from safetensors.torch import save
 from safetensors.torch import load
-import src.model.architecture as archs
+import ml.model.architecture as archs
 
 class ModelManager:
     def __init__(self, log_signal):

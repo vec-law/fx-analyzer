@@ -4,8 +4,8 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
 from ui.tab.base_tab import BaseTab
-from src.worker.training_worker import TrainingWorker
-from api.db_manager import DBManager
+from ml.worker.training_worker import TrainingWorker
+from db.manager import DatabaseManager
 
 from dotenv import load_dotenv
 
@@ -24,7 +24,7 @@ class TrainingTab(BaseTab):
     def log_to_console(self, message: str):
         self.console.append(message)
 
-    def __init__(self, db_manager: DBManager, tab_widget=None):
+    def __init__(self, db_manager: DatabaseManager, tab_widget=None):
         super().__init__()
         self.db_manager = db_manager
 

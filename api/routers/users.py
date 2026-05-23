@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from api.dependencies import get_db_manager
-from api.db_manager import DBManager
+from db.manager import DatabaseManager
 from uuid import UUID
 
 class AddUserRequest(BaseModel):
@@ -22,7 +22,7 @@ def change_password(
     request: ChangePasswordRequest,
     authorization: str = Header(...),
     requester_id: str | None = Header(None, alias="x-user-id"),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
     ):
     try:
         if authorization.startswith("Bearer "):
@@ -74,7 +74,7 @@ def change_password(
 def get_role(
     user_id: int,
     authorization: str = Header(...),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
     ):
     try:
         if authorization.startswith("Bearer "):
@@ -102,7 +102,7 @@ def get_role(
 def get_users(
     authorization: str = Header(...),
     requester_id: str = Header(..., alias="x-user-id"),
-    db_manager : DBManager = Depends(get_db_manager)
+    db_manager : DatabaseManager = Depends(get_db_manager)
     ):
     try:
         if authorization.startswith("Bearer "):
@@ -137,7 +137,7 @@ def add_user(
     request: AddUserRequest,
     authorization: str = Header(...),
     requester_id: str = Header(..., alias="x-user-id"),
-    db_manager : DBManager = Depends(get_db_manager)
+    db_manager : DatabaseManager = Depends(get_db_manager)
     ):
     try:
         if authorization.startswith("Bearer "):
@@ -187,7 +187,7 @@ def del_user(
     user_id: int,
     authorization: str = Header(...),
     requester_id: str = Header(..., alias="x-user-id"),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -233,7 +233,7 @@ def block_user(
     user_id: int,
     authorization: str = Header(...),
     requester_id: str = Header(..., alias="x-user-id"),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -278,7 +278,7 @@ def unblock_user(
     user_id: int,
     authorization: str = Header(...),
     requester_id: str = Header(..., alias="x-user-id"),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):

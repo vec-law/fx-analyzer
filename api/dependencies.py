@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from api.db_manager import DBManager
+from db.manager import DatabaseManager
 
 load_dotenv()
 
@@ -12,7 +12,7 @@ db_config = {
     "port": int(os.getenv("DB_PORT"))
 }
 
-db_manager = DBManager(db_config)
+db_manager = DatabaseManager(db_config)
 
 def get_db_manager():
     return db_manager

@@ -66,6 +66,13 @@ CREATE TABLE training (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE log (
+    id SERIAL PRIMARY KEY,
+    train_uuid UUID REFERENCES training(train_uuid) ON DELETE CASCADE,
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE parameter_set (
     train_uuid UUID PRIMARY KEY REFERENCES training(train_uuid) ON DELETE CASCADE,
     all_samples INTEGER NOT NULL CHECK (all_samples > 0),

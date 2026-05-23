@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from api.dependencies import get_db_manager
 from uuid import UUID
-from api.db_manager import DBManager
+from db.manager import DatabaseManager
 
 router = APIRouter()
 
@@ -11,7 +11,7 @@ class LoginRequest(BaseModel):
     password: str
 
 @router.post("/auth/login")
-def login(request: LoginRequest, db_manager: DBManager = Depends(get_db_manager)):
+def login(request: LoginRequest, db_manager: DatabaseManager = Depends(get_db_manager)):
     try:
         if not request.user_name or not request.password:
             raise ValueError("Żadne z pól (login, hasło) nie może być puste")
@@ -38,7 +38,7 @@ def logout(
     authorization: str = Header(...),
     x_user_id: str = Header(...),
     x_target_user_id: str = Header(None),
-    db_manager: DBManager = Depends(get_db_manager)
+    db_manager: DatabaseManager = Depends(get_db_manager)
 ):
     try:
         if authorization.startswith("Bearer "):

@@ -1,11 +1,11 @@
 import inspect
-from src.loader import Loader
-from src.cleaner import Cleaner
-from src.data_extractor import DataExtractor
-from src.preprocessor import Preprocessor
+from ml.loader import Loader
+from ml.cleaner import Cleaner
+from ml.data_extractor import DataExtractor
+from ml.preprocessor import Preprocessor
 import torch
 import io
-from src.model.model_manager import ModelManager
+from ml.model.model_manager import ModelManager
 
 class PredictionPipeline:
     def __init__(self, pred_config: dict, log_signal, db_manager, pred_uuid):
