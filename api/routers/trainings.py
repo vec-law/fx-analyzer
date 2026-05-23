@@ -152,3 +152,75 @@ def get_training_config(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/users/{user_id}/trainings/{train_uuid}/run")
+def run_training(
+    user_id: int,
+    train_uuid: UUID,
+    authorization: str = Header(...),
+    db_manager: DBManager = Depends(get_db_manager)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        if db_manager.is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if session_token != db_manager.get_session_token(user_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        status = db_manager.get_training_status(train_uuid)
+        
+        if status == "pending" or status == "failed":
+            db_manager.update_training_status(train_uuid, "pending")
+        else:
+            raise ValueError("Nie można uruchomić treningu o tym statusie")
+
+        return {"success": True}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.patch("/users/{user_id}/trainings/{train_uuid}/stop")
+def stop_training(
+    user_id: int,
+    train_uuid: UUID,
+    authorization: str = Header(...),
+    db_manager: DBManager = Depends(get_db_manager)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not db_manager.user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        if db_manager.is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if session_token != db_manager.get_session_token(user_id):
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        status = db_manager.get_training_status(train_uuid)
+        
+        if status == "running":
+            db_manager.update_training_status(train_uuid, "stopping")
+        else:
+            raise ValueError("Trening nie jest uruchomiony")
+
+        return {"success": True}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

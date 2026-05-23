@@ -269,9 +269,6 @@ class DBManager:
 
     def update_training_status(self, train_uuid, status_name):
         try:
-            if not train_uuid or not status_name:
-                raise ValueError("Błąd: Brak UUID zadania lub nazwy statusu.")
-
             with psycopg2.connect(**self.config) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""

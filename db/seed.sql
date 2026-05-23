@@ -1,4 +1,4 @@
-INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed');
+INSERT INTO status (name) VALUES ('pending'), ('running'), ('completed'), ('failed'), ('stopping');
 INSERT INTO base_column (name) VALUES ('close'), ('high'), ('low'), ('open');
 INSERT INTO calculated_column (name) VALUES ('typical'), ('median'), ('weighted'), ('ohlc');
 INSERT INTO feature_type (name) VALUES ('sma'), ('ema'), ('rsi'), ('pct');
