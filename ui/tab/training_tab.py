@@ -3,6 +3,8 @@ import os
 from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
 from ui.tab.base_tab import BaseTab
+from ui.workers.training_status_poller import TrainingStatusPoller
+from ui.workers.training_logs_poller import TrainingLogsPoller
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,14 +22,17 @@ class TrainingTab(BaseTab):
     def log_to_console(self, message: str):
         self.console.append(message)
 
+    def log_list_to_console(self, messages: list):
+        for message in messages:
+            self.log_to_console(message)
+
     def __init__(self, tab_widget=None):
         super().__init__()
         self.api_url = os.getenv("API_URL")
         self.tab_widget = tab_widget
         self.last_clicked_uuid = None
-        # TODO: worker nie jest jeszcze zaimplementowany
-        # self.thread = None
-        # self.worker = None
+        self.status_poller = None
+        self.logs_pollers = {}
         self.init_ui()
         self.init_actions()
 
@@ -117,6 +122,7 @@ class TrainingTab(BaseTab):
             if response.status_code != 200:
                 raise ValueError(response.json()["detail"])
             self.log_to_console(f"Uruchomiono trening: {self.last_clicked_uuid}")
+            self.start_logs_poller()
             self.on_load_training_tasks(show_log=False)
         except Exception as e:
             self.log_to_console(f"Błąd uruchamiania: {e}")
@@ -174,21 +180,41 @@ class TrainingTab(BaseTab):
             
             if show_log:
                 self.log_to_console("Wczytano listę zadań.")
+
+            return trainings
+        
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania: {e}")
 
     def set_session(self, user_id, session_token):
         super().set_session(user_id, session_token)
-        self.on_load_training_tasks()
+        trainings = self.on_load_training_tasks()
+        if not trainings:
+            return
+        for t in trainings:
+            if t["status"] in ("running", "pending", "stopping"):
+                self.start_logs_poller(t["train_uuid"])
 
     def clear_session(self):
+        if self.status_poller:
+            self.status_poller.stop()
+            self.status_poller.wait()
+            self.status_poller = None
+
+        for poller in self.logs_pollers.values():
+            poller.stop()
+            poller.wait()
+        self.logs_pollers.clear()
+
         super().clear_session()
+
         self.console.clear()
         self.table.setRowCount(0)
         self.last_clicked_uuid = None
+
         for field in self.param_fields.values():
             field.clear()
-
+            
     def on_add_task(self):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
@@ -330,3 +356,16 @@ class TrainingTab(BaseTab):
                 self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
         except Exception as e:
             self.log_to_console(f"Błąd parametrów: {e}")
+
+    def start_status_poller(self):
+        self.status_poller = TrainingStatusPoller(self.api_url, self.user_id, self.session_token)
+        self.status_poller.status_received.connect(self.fill_tasks_table)
+        self.status_poller.start()
+
+    def start_logs_poller(self, train_uuid=None):
+        train_uuid = train_uuid or self.last_clicked_uuid
+        if train_uuid not in self.logs_pollers:
+            poller = TrainingLogsPoller(self.api_url, self.user_id, self.session_token, train_uuid)
+            poller.logs_received.connect(self.log_list_to_console)
+            poller.start()
+            self.logs_pollers[train_uuid] = poller

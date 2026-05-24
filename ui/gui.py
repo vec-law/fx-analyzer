@@ -65,6 +65,7 @@ class GUI(QWidget):
                 
             elif role_name == 'user':
                 self.training_tab.set_session(user_id, session_token)
+                self.training_tab.start_status_poller()
                 self.tabs.setTabVisible(0, False)
                 self.tabs.setTabVisible(1, True)
 
@@ -76,3 +77,4 @@ class GUI(QWidget):
     def on_user_logged_out(self):
         self.tabs.setTabVisible(0, False)
         self.tabs.setTabVisible(1, False)
+

@@ -3,6 +3,20 @@ import uuid
 import pandas as pd
 from db.config import DB_CONFIG
 
+def get_training_logs(train_uuid):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT message FROM log
+                    WHERE train_uuid = %s
+                    ORDER BY created_at
+                """, (train_uuid, ))
+                rows = cur.fetchall()
+                return [row[0] for row in rows]
+    except Exception as e:
+        raise Exception(f"Błąd bazy danych: {str(e)}")
+
 def count_running_trainings():
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:

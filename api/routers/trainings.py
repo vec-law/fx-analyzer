@@ -2,9 +2,11 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
 from db.queries.users import user_exists, is_blocked, get_session_token
+
 from db.queries.trainings import (
     get_user_trainings, add_training, del_training,
-    get_training_config, get_training_status, update_training_status
+    get_training_config, get_training_status, update_training_status,
+    get_training_logs
 )
 
 router = APIRouter()
@@ -24,7 +26,7 @@ class AddTrainingRequest(BaseModel):
     architectures: list
 
 @router.get("/users/{user_id}/trainings")
-def get_trainings(
+def get_trainings_endpoint(
     user_id: int,
     authorization: str = Header(...)
 ):
@@ -38,11 +40,13 @@ def get_trainings(
             raise ValueError("Użytkownik nie istnieje")
         if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        if session_token != get_session_token(user_id):
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         return {"trainings": get_user_trainings(user_id)}
     
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -64,7 +68,7 @@ def add_training_endpoint(
             raise ValueError("Użytkownik nie istnieje")
         if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        if session_token != get_session_token(user_id):
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         if not request.features or not request.targets or not request.architectures:
@@ -87,6 +91,8 @@ def add_training_endpoint(
         
         return {"train_uuid": add_training(user_id, config)}
         
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -108,7 +114,7 @@ def del_training_endpoint(
             raise ValueError("Użytkownik nie istnieje")
         if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        if session_token != get_session_token(user_id):
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         if get_training_status(train_uuid) in ("running", "stopping"):
@@ -116,6 +122,8 @@ def del_training_endpoint(
             
         return {"success": del_training(train_uuid)}
     
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -137,18 +145,20 @@ def get_training_config_endpoint(
             raise ValueError("Użytkownik nie istnieje")
         if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        if session_token != get_session_token(user_id):
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         return {"config": get_training_config(train_uuid)}
     
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/users/{user_id}/trainings/{train_uuid}/run")
-def run_training(
+def run_training_endpoint(
     user_id: int,
     train_uuid: UUID,
     authorization: str = Header(...)
@@ -163,25 +173,27 @@ def run_training(
             raise ValueError("Użytkownik nie istnieje")
         if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        if session_token != get_session_token(user_id):
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         status = get_training_status(train_uuid)
         
-        if status in ("created", "pending", "failed"):
+        if status in ("created", "pending", "failed", 'stopped'):
             update_training_status(train_uuid, "pending")
         else:
             raise ValueError("Nie można uruchomić treningu o tym statusie")
 
         return {"success": True}
         
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.patch("/users/{user_id}/trainings/{train_uuid}/stop")
-def stop_training(
+def stop_training_endpoint(
     user_id: int,
     train_uuid: UUID,
     authorization: str = Header(...)
@@ -196,7 +208,7 @@ def stop_training(
             raise ValueError("Użytkownik nie istnieje")
         if is_blocked(user_id):
             raise ValueError("Użytkownik zablokowany")
-        if session_token != get_session_token(user_id):
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         status = get_training_status(train_uuid)
@@ -208,6 +220,37 @@ def stop_training(
 
         return {"success": True}
         
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/users/{user_id}/trainings/{train_uuid}/logs")
+def get_training_logs_endpoint(
+    user_id: int,
+    train_uuid: UUID,
+    authorization: str = Header(...)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        if is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+        
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        return {"logs": get_training_logs(train_uuid)}
+    
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

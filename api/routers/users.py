@@ -51,7 +51,7 @@ def change_password_endpoint(
                 if get_role(requester_id) != "admin":
                     raise HTTPException(status_code=403, detail="Brak uprawnień")
         
-        if session_token != get_session_token(requester_id):
+        if (db_token := get_session_token(requester_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         if not request.new_password or not request.repeated_password or \
@@ -60,6 +60,8 @@ def change_password_endpoint(
 
         return {"success": change_password(user_id, request.new_password)}
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -79,7 +81,7 @@ def get_role_endpoint(
         if not user_exists(user_id):
             raise ValueError("Użytkownik nie istnieje")
         
-        if session_token != get_session_token(user_id):
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         if is_blocked(user_id):
@@ -87,6 +89,8 @@ def get_role_endpoint(
 
         return {"role_name": get_role(user_id)}
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -109,7 +113,7 @@ def get_users_endpoint(
         if not user_exists(requester_id := int(requester_id)):
             raise ValueError("Użytkownik nie istnieje")
         
-        if session_token != get_session_token(requester_id):
+        if (db_token := get_session_token(requester_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         if is_blocked(requester_id):
@@ -120,6 +124,8 @@ def get_users_endpoint(
 
         return {"users": get_users()}
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -143,7 +149,7 @@ def add_user_endpoint(
         if not user_exists(requester_id := int(requester_id)):
             raise ValueError("Użytkownik nie istnieje")
         
-        if session_token != get_session_token(requester_id):
+        if (db_token := get_session_token(requester_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
         if is_blocked(requester_id):
@@ -163,6 +169,8 @@ def add_user_endpoint(
             
         return {"success": add_user(request.user_name, request.password, request.is_admin)}
     
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -195,7 +203,7 @@ def del_user_endpoint(
         if is_blocked(requester_id):
             raise ValueError("Użytkownik zablokowany")
         
-        if session_token != get_session_token(requester_id):
+        if (db_token := get_session_token(requester_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
  
         if get_role(requester_id) != "admin":
@@ -214,6 +222,8 @@ def del_user_endpoint(
             
         return {"success": True}
     
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -246,7 +256,7 @@ def block_user_endpoint(
         if is_blocked(requester_id):
             raise ValueError("Użytkownik zablokowany")
         
-        if session_token != get_session_token(requester_id):
+        if (db_token := get_session_token(requester_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
  
         if get_role(requester_id) != "admin":
@@ -262,6 +272,8 @@ def block_user_endpoint(
             
         return {"success": True}
     
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -294,7 +306,7 @@ def unblock_user_endpoint(
         if is_blocked(requester_id):
             raise ValueError("Użytkownik zablokowany")
         
-        if session_token != get_session_token(requester_id):
+        if (db_token := get_session_token(requester_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
  
         if get_role(requester_id) != "admin":
@@ -304,6 +316,8 @@ def unblock_user_endpoint(
             
         return {"success": True}
     
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
