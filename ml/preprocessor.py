@@ -1,4 +1,3 @@
-import inspect
 import torch
 import pandas as pd
 
@@ -7,7 +6,6 @@ class Preprocessor:
         pass
 
     def split_data(self, df, samples_subset_2, selected_cols):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None, None
@@ -31,10 +29,9 @@ class Preprocessor:
             return df_subset_1, df_subset_2
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def calculate_stats(self, df, selected_cols):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None, None
@@ -52,10 +49,9 @@ class Preprocessor:
             return ser_mean, ser_std
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def scale_data(self, df, ser_mean, ser_std, selected_cols):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
@@ -80,10 +76,9 @@ class Preprocessor:
                 return None
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def create_tensors(self, df, selected_cols, device):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
@@ -100,10 +95,9 @@ class Preprocessor:
                 return None
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
 
     def descale_data(self, ten_norm, ser_mean, ser_std, selected_cols):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if ten_norm is None:
                 return None
@@ -130,4 +124,4 @@ class Preprocessor:
             return df_denorm
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")

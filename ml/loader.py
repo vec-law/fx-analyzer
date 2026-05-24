@@ -1,4 +1,3 @@
-import inspect
 import yfinance as yf
 
 class Loader:
@@ -6,7 +5,6 @@ class Loader:
         self.config = config
 
     def load_data(self):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if self.config['data_source_name'] == 'YF':
                 df = yf.download(
@@ -30,4 +28,4 @@ class Loader:
                 return None
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")

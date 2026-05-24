@@ -1,4 +1,3 @@
-import inspect
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -16,7 +15,6 @@ class ModelManager:
         self._stop_requested = True
 
     def create_model(self, x_num, y_num, params, arch, device):
-        f_name = inspect.currentframe().f_code.co_name
         torch.manual_seed(params['seed'])
         if device.type == 'cuda':
             torch.cuda.manual_seed_all(params['seed'])
@@ -32,7 +30,6 @@ class ModelManager:
         return model, optimizer, loss_function
 
     def _get_model(self, class_name, x_num, y_num):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             model_class = getattr(archs, class_name)
             if isinstance(model_class, type) and issubclass(model_class, nn.Module):
@@ -42,7 +39,6 @@ class ModelManager:
             return None
         
     def train_model(self, model, optimizer, loss_function, ten_train_norm_x, ten_train_norm_y, params, device, train_uuid):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None or optimizer is None or loss_function is None:
                 return None
@@ -65,15 +61,14 @@ class ModelManager:
                 optimizer.step()
 
                 if (epoch + 1) % 100 == 0:
-                    add_training_log(train_uuid, f"Epoch: {epoch+1}/{params['epochs']}, Loss: {loss.item():.6f}")
+                    add_training_log(train_uuid, f"[{str(train_uuid)[:10]}...] Epoch: {epoch+1}/{params['epochs']}, Loss: {loss.item():.6f}")
 
             return model
         
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def predict(self, model, ten_norm_x):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None or ten_norm_x is None:
                 return None
@@ -83,10 +78,9 @@ class ModelManager:
                 return model(ten_norm_x)
             
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def evaluate_model(self, model, loss_function, ten_test_norm_x, ten_test_norm_y):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None or loss_function is None:
                 return None, None
@@ -100,10 +94,9 @@ class ModelManager:
             return mse_loss, mae_loss
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
 
     def get_model_weights(self, model):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None:
                 return None
@@ -113,10 +106,9 @@ class ModelManager:
             return save(cpu_state_dict)
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def set_model_weights(self, model, weights):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if model is None or weights is None:
                 return False
@@ -125,4 +117,4 @@ class ModelManager:
             return True
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")

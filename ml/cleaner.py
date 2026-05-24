@@ -1,11 +1,8 @@
-import inspect
-
 class Cleaner:
     def __init__(self, config: dict):
         self.config = config
 
     def clean_data(self, df):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
@@ -27,7 +24,6 @@ class Cleaner:
 
                 if not invalid_periods.empty:
                     is_invalid = periods.isin(invalid_periods)
-                    last_invalid_date = df[is_invalid]['datetime'].iloc[-1]
                     last_invalid_idx = df[is_invalid].index[-1]
                     
                     df = df.loc[last_invalid_idx:].iloc[1:].copy()
@@ -38,4 +34,4 @@ class Cleaner:
             return df
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")

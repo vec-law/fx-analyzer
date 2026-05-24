@@ -1,4 +1,3 @@
-import inspect
 import pandas as pd
 
 class DataExtractor:
@@ -6,7 +5,6 @@ class DataExtractor:
         self.config = config
 
     def add_calculated_columns(self, df):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
@@ -41,15 +39,14 @@ class DataExtractor:
             return df
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
 
     def add_features(self, df):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
             
-            feautures = []
+            features = []
             for feature in self.config["features"]:
                 f_str = feature.strip()
                 if not f_str:
@@ -57,7 +54,7 @@ class DataExtractor:
                 parts = f_str.split(":")
                 if len(parts) != 3:
                     raise ValueError(f"Format feature: typ:parametry:shift")
-                feautures.append({
+                features.append({
                     "feature_type": parts[0].strip(),
                     "feature_periods": [int(p.strip()) for p in parts[1].split("-") if p.strip()],
                     "shift": int(parts[2].strip())
@@ -65,7 +62,7 @@ class DataExtractor:
             
             f_cols = []
             
-            for f, col_name in zip(feautures, self.config["features"]):
+            for f, col_name in zip(features, self.config["features"]):
                 f_type = f["feature_type"]
                 periods = f["feature_periods"]
                 shift = f["shift"]
@@ -101,10 +98,9 @@ class DataExtractor:
             return df
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def add_targets(self, df):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
@@ -136,10 +132,9 @@ class DataExtractor:
             return df
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def dropna_and_cut(self, df, limit):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
@@ -160,10 +155,9 @@ class DataExtractor:
             return res_df
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
 
     def join_at_end(self, df, df_append):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df_append is None:
                 return None
@@ -177,10 +171,9 @@ class DataExtractor:
             return df_result
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
         
     def add_diff(self, df):
-        f_name = inspect.currentframe().f_code.co_name
         try:
             if df is None or df.empty:
                 return None
@@ -192,4 +185,4 @@ class DataExtractor:
             return df
 
         except Exception as e:
-            raise Exception(f"[{f_name}] Błąd: {e}")
+            raise Exception(f"Błąd: {e}")
