@@ -41,4 +41,5 @@ class TrainingStatusPoller(QThread):
 
     def stop(self):
         self._running = False
+        self.session_token = None
         self._stop_event.set()

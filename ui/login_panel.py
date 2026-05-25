@@ -99,20 +99,6 @@ class LoginPanel(QWidget):
         try:
             show_message(self.login_message, "")
 
-            response = requests.delete(
-                self.api_url + "/auth/logout",
-                headers={
-                    "Authorization": f"Bearer {str(self.session_token)}",
-                    "X-User-ID": f"{self.user_id}"
-                }
-            )
-
-            if response.status_code != 200:
-                raise ValueError(response.json()["detail"])
-
-            if (response := response.json()) is not None:
-                self.user_id, self.session_token = None, None
-
             self.user_name_input.setEnabled(True)
             self.password_input.setEnabled(True)
             self.login_button.setEnabled(True)
@@ -122,6 +108,17 @@ class LoginPanel(QWidget):
             self.password_input.clear()
 
             self.user_logged_out.emit()
+
+            response = requests.delete(
+                self.api_url + "/auth/logout",
+                headers={
+                    "Authorization": f"Bearer {str(self.session_token)}",
+                    "X-User-ID": f"{self.user_id}"
+                }
+            )
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+            self.user_id, self.session_token = None, None
 
         except requests.exceptions.ConnectionError:
             show_message(self.login_message, "Nie można połączyć się z serwerem")
