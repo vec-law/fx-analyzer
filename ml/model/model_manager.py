@@ -57,7 +57,7 @@ def train_model(model, optimizer, loss_function, ten_train_norm_x, ten_train_nor
             optimizer.step()
 
             if (epoch + 1) % 100 == 0:
-                add_training_log(train_uuid, f"[{str(train_uuid)[:10]}...] Epoch: {epoch+1}/{params['epochs']}, Loss: {loss.item():.6f}")
+                add_training_log(train_uuid, f"[train_uuid: {str(train_uuid)[:6]}] Epoch: {epoch+1}/{params['epochs']}, Loss: {loss.item():.6f}")
 
         return model
     

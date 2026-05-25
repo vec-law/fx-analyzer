@@ -27,43 +27,43 @@ class TrainingPipeline:
     def run(self):
         try:
             update_training_status(self.train_uuid, 'running')
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Rozpoczynanie treningu")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Rozpoczynanie treningu")
 
             loader = get_loader(self.config)
             self.df = loader.load_data()
             if self.df is None or self.df.empty:
                 raise ValueError("Loader nie zwrócił danych")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Załadowano dane")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Załadowano dane")
             if self._on_stop(): return
 
             self.df = clean_data(self.df, self.config)
             if self.df is None or self.df.empty:
                 raise ValueError("Cleaner usunął wszystkie dane")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Oczyszczono dane")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Oczyszczono dane")
             if self._on_stop(): return
 
             self.df = add_calculated_columns(self.df, self.config)
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano obliczanych kolumn")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Dodano obliczane kolumny")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Dodano obliczane kolumny")
             if self._on_stop(): return
 
             self.df = add_features(self.df, self.config)
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano cech")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Dodano cechy")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Dodano cechy")
             if self._on_stop(): return
             
             self.df = add_targets(self.df, self.config)
             if self.df is None or self.df.empty:
                 raise ValueError("Nie dodano wartości docelowych")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Dodano wartości docelowe")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Dodano wartości docelowe")
             if self._on_stop(): return
             
             self.df = dropna_and_cut(self.df, self.config['all_samples'])
             if self.df is None or self.df.empty:
                 raise ValueError("Nie ucięto df")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Ucięto df")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Ucięto df")
             if self._on_stop(): return
             
             self.df_train, self.df_test = split_data(
@@ -73,7 +73,7 @@ class TrainingPipeline:
             )
             if self.df_train is None:
                 raise ValueError("Nie wykonano splitu")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Wykonano split")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Wykonano split")
             if self._on_stop(): return
             
             self.ser_mean, self.ser_std = calculate_stats(
@@ -82,7 +82,7 @@ class TrainingPipeline:
             )
             if self.ser_mean is None or self.ser_std is None:
                 raise ValueError("Nie obliczono statystyk")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Obliczono statystyki")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Obliczono statystyki")
             if self._on_stop(): return
         
             save_training_stats(self.train_uuid, self.ser_mean, self.ser_std)
@@ -94,7 +94,7 @@ class TrainingPipeline:
             )
             if self.df_train_norm is None or self.df_train_norm.empty:
                 raise ValueError("Nie znormalizowano df_train")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Znormalizowano df_train")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Znormalizowano df_train")
             if self._on_stop(): return
             
             if self.df_test is not None and not self.df_test.empty:
@@ -104,7 +104,7 @@ class TrainingPipeline:
                 )
                 if self.df_test_norm is None or self.df_test_norm.empty:
                     raise ValueError("Nie znormalizowano df_test")
-                add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Znormalizowano df_test")
+                add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Znormalizowano df_test")
                 if self._on_stop(): return
 
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -117,7 +117,7 @@ class TrainingPipeline:
                 self.df_train_norm, self.config['targets'], self.device)
             if self.ten_train_norm_x is None or self.ten_train_norm_y is None:
                 raise ValueError("Nie utworzono ten_train_norm")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Utworzono ten_train_norm")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Utworzono ten_train_norm")
             if self._on_stop(): return
             
             if self.df_test_norm is not None and not self.df_test_norm.empty:
@@ -127,7 +127,7 @@ class TrainingPipeline:
                     self.df_test_norm, self.config['targets'], self.device)
                 if self.ten_test_norm_x is None or self.ten_test_norm_y is None:
                     raise ValueError("Nie utworzono ten_test_norm")
-                add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Utworzono ten_test_norm")
+                add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Utworzono ten_test_norm")
                 if self._on_stop(): return
 
             for arch in self.config['architectures']:
@@ -141,7 +141,7 @@ class TrainingPipeline:
                 )
                 if model is None or optimizer is None or loss_function is None:
                     raise ValueError("Nie utworzono modelu")
-                add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Utworzono model")
+                add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Utworzono model")
                 if self._on_stop(): return
                 
                 model = train_model(
@@ -151,7 +151,7 @@ class TrainingPipeline:
                 )
                 if model is None:
                     raise ValueError("Nie wykonano uczenia modelu")
-                add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Wykonano uczenie modelu")
+                add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Wykonano uczenie modelu")
                 if self._on_stop(): return
 
                 mae_loss = None
@@ -164,36 +164,36 @@ class TrainingPipeline:
                     )
                     if mse_loss is None or mae_loss is None:
                         raise ValueError("Nie wykonano ewaluacji modelu")
-                    add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Wykonano ewaluację modelu")
+                    add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Wykonano ewaluację modelu")
                     if self._on_stop(): return
                     
                 weights = get_model_weights(model)
                 if weights is None:
                     raise ValueError("Nie odczytano wag modelu")
-                add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Odczytano wagi modelu")
+                add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Odczytano wagi modelu")
                 if self._on_stop(): return
                 
                 if not save_model_weights(self.train_uuid, arch, weights, mse_loss, mae_loss):
                     raise ValueError("Nie zapisano wag modelu")
-                add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Zapisano wagi modelu")
+                add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Zapisano wagi modelu")
                 if self._on_stop(): return
 
             if self._on_stop(): return
 
             update_training_status(self.train_uuid, "completed")
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Koniec treningu")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Koniec treningu")
 
         except Exception as e:
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Błąd: {e}")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Błąd: {e}")
             try:
                 update_training_status(self.train_uuid, 'failed')
             except Exception as db_err:
-                add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Błąd bazy danych: {db_err}")
+                add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Błąd bazy danych: {db_err}")
 
     def _on_stop(self):
         status = get_training_status(self.train_uuid)
         if status == 'stopping':
             update_training_status(self.train_uuid, 'stopped')
-            add_training_log(self.train_uuid, f"[{str(self.train_uuid)[:10]}...] Proces przerwany przez użytkownika")
+            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Proces przerwany przez użytkownika")
             return True
         return False
