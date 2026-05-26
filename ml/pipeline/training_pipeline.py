@@ -8,9 +8,10 @@ from db.queries.models import save_model_weights
 from db.queries.trainings import update_training_status, save_training_stats, add_training_log, get_training_status
 
 class TrainingPipeline:
-    def __init__(self, config: dict, train_uuid):
-        self.config = config
+    def __init__(self, user_id, train_uuid, config: dict):
+        self.user_id = user_id
         self.train_uuid = train_uuid
+        self.config = config
         self.df = None
         self.df_train = None
         self.df_train_norm = None
@@ -26,7 +27,7 @@ class TrainingPipeline:
 
     def run(self):
         try:
-            update_training_status(self.train_uuid, 'running')
+            update_training_status(self.user_id, self.train_uuid, 'running')
             add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Rozpoczynanie treningu")
 
             loader = get_loader(self.config)
@@ -147,7 +148,7 @@ class TrainingPipeline:
                 model = train_model(
                     model, optimizer, loss_function,
                     self.ten_train_norm_x, self.ten_train_norm_y,
-                    self.config, self.device, self.train_uuid
+                    self.config, self.device, self.train_uuid, self.user_id
                 )
                 if model is None:
                     raise ValueError("Nie wykonano uczenia modelu")
@@ -180,20 +181,23 @@ class TrainingPipeline:
 
             if self._on_stop(): return
 
-            update_training_status(self.train_uuid, "completed")
+            update_training_status(self.user_id, self.train_uuid, "completed")
             add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Koniec treningu")
 
         except Exception as e:
             add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Błąd: {e}")
             try:
-                update_training_status(self.train_uuid, 'failed')
+                update_training_status(self.user_id, self.train_uuid, 'failed')
             except Exception as db_err:
                 add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Błąd bazy danych: {db_err}")
 
     def _on_stop(self):
-        status = get_training_status(self.train_uuid)
+        status = get_training_status(self.user_id, self.train_uuid)
         if status == 'stopping':
-            update_training_status(self.train_uuid, 'stopped')
-            add_training_log(self.train_uuid, f"[train_uuid: {str(self.train_uuid)[:6]}] Proces przerwany przez użytkownika")
+            update_training_status(self.user_id, self.train_uuid, 'stopped')
+            add_training_log(
+                self.train_uuid,
+                f"[train_uuid: {str(self.train_uuid)[:6]}] Proces przerwany przez użytkownika"
+            )
             return True
         return False

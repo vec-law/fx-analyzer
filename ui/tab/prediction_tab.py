@@ -96,7 +96,7 @@ class PredictionTab(BaseTab):
         self.pred_table.cellClicked.connect(self.on_pred_table_clicked)
         self.add_pred_btn.clicked.connect(self.on_add_prediction)
         self.remove_pred_btn.clicked.connect(self.on_remove_prediction)
-        # self.load_params_btn.clicked.connect(self.on_load_params_to_fields)
+        self.load_params_btn.clicked.connect(self.on_load_prediction_params)
         # self.run_pred_btn.clicked.connect(self.on_run_prediction)
         # self.stop_pred_btn.clicked.connect(self.on_stop_prediction)
         # self.plot_charts_btn.clicked.connect(self.on_plot_charts)
@@ -122,6 +122,40 @@ class PredictionTab(BaseTab):
         if self.worker:
             self.worker.stop()
             self.log_to_console("Zatrzymywanie predykcji...")
+
+    def on_load_prediction_params(self):
+        if not self.last_clicked_uuid:
+            self.log_to_console("Nie wybrano zadania")
+            return
+        
+        try:
+            response = requests.get(
+                self.api_url + f"/users/{self.user_id}/trainings/{self.last_clicked_uuid}/config",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            if (response := response.json()) is not None:
+                train_config = response["config"]
+            
+                self.param_fields["instrument_name"].setText(train_config["instrument_name"])
+                self.param_fields["timeframe_name"].setText(train_config["timeframe_name"])
+                self.param_fields["data_source_name"].setText(train_config["data_source_name"])
+                self.param_fields["all_samples"].setText(str(train_config["all_samples"]))
+                self.param_fields["test_samples"].setText(str(train_config["test_samples"]))
+                self.param_fields["seed"].setText(str(train_config["seed"]))
+                self.param_fields["epochs"].setText(str(train_config["epochs"]))
+                self.param_fields["train_noise"].setText(str(train_config["train_noise"]))
+                self.param_fields["learning_rate"].setText(str(train_config["learning_rate"]))
+                self.param_fields["features"].setText(", ".join(train_config["features"]))
+                self.param_fields["targets"].setText(", ".join(train_config["targets"]))
+                self.param_fields["architectures"].setText(", ".join(train_config["architectures"]))
+
+                self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
+        except Exception as e:
+            self.log_to_console(f"Błąd parametrów: {e}")
 
     def on_load_params_to_fields(self):
         if not self.last_clicked_pred_uuid:

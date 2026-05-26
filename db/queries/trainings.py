@@ -3,15 +3,17 @@ import uuid
 import pandas as pd
 from db.config import DB_CONFIG
 
-def get_training_logs(train_uuid):
+def get_training_logs(user_id, train_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT message FROM log
                     WHERE train_uuid = %s
+                    AND train_uuid
+                    IN (SELECT train_uuid FROM training WHERE user_id = %s)
                     ORDER BY created_at
-                """, (train_uuid, ))
+                """, (train_uuid, user_id))
                 rows = cur.fetchall()
                 return [row[0] for row in rows]
     except Exception as e:
@@ -36,12 +38,12 @@ def get_pending_trainings():
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT train_uuid FROM training
+                    SELECT user_id, train_uuid FROM training
                     JOIN status ON status_id = status.id
                     WHERE status.name = 'pending'
                 """)
                 rows = cur.fetchall()
-                return [row[0] for row in rows]
+                return [{"user_id": row[0], "train_uuid": row[1]} for row in rows]
     except Exception as e:
         raise Exception(f"Błąd bazy danych: {str(e)}")
 
@@ -152,11 +154,15 @@ def add_training(user_id, config):
     except Exception as e:
         raise Exception(f"Błąd bazy danych przy dodawaniu zadania: {str(e)}")
 
-def del_training(train_uuid):
+def del_training(user_id, train_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM training WHERE train_uuid = %s", (train_uuid,))
+                cur.execute("""
+                    DELETE FROM training
+                    WHERE train_uuid = %s
+                    AND user_id = %s
+                    """, (train_uuid, user_id))
                 if cur.rowcount == 0:
                     raise Exception(f"Trening {train_uuid} nie istnieje w bazie danych.")
                 conn.commit()
@@ -164,7 +170,7 @@ def del_training(train_uuid):
     except Exception as e:
         raise Exception(f"Błąd podczas usuwania zadania: {str(e)}")
 
-def get_training_config(train_uuid):
+def get_training_config(user_id, train_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
@@ -209,10 +215,11 @@ def get_training_config(train_uuid):
                     JOIN parameter_set ON training.train_uuid = parameter_set.train_uuid
                     JOIN data_source ON training.data_source_id = data_source.id
                     WHERE training.train_uuid = %s
-                """, (train_uuid, ))
+                    AND user_id = %s
+                """, (train_uuid, user_id))
                 result = cur.fetchone()
                 if result is None:
-                    raise ValueError(f"Brak treningu: {train_uuid}")
+                    raise ValueError(f"Brak treningu {train_uuid} lub trening nie należy do użytkownika")
                 config["instrument_name"] = result[0]
                 config["instrument_ticker"] = result[1]
                 config["timeframe_name"] = result[2]
@@ -269,7 +276,7 @@ def get_training_config(train_uuid):
     except Exception as e:
         raise Exception(f"Błąd podczas pobierania konfiguracji: {str(e)}")
 
-def get_training_status(train_uuid):
+def get_training_status(user_id, train_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
@@ -278,13 +285,14 @@ def get_training_status(train_uuid):
                     FROM training
                     JOIN status ON training.status_id = status.id
                     WHERE training.train_uuid = %s
-                """, (train_uuid,))
+                    AND user_id = %s
+                """, (train_uuid, user_id))
                 result = cur.fetchone()
                 return result[0] if result else None
     except Exception as e:
         raise Exception(f"Błąd pobierania statusu: {str(e)}")
 
-def update_training_status(train_uuid, status_name):
+def update_training_status(user_id, train_uuid, status_name):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
@@ -292,7 +300,8 @@ def update_training_status(train_uuid, status_name):
                     UPDATE training
                     SET status_id = (SELECT id FROM status WHERE name = %s)
                     WHERE train_uuid = %s
-                """, (status_name, train_uuid))
+                    AND user_id = %s
+                """, (status_name, train_uuid, user_id))
                 if cur.rowcount == 0:
                     raise Exception(f"Nie znaleziono treningu o UUID: {train_uuid}")
                 conn.commit()

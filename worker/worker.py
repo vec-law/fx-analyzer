@@ -12,12 +12,15 @@ def run_worker():
         if count_running_trainings() < int(os.getenv("MAX_RUNNING_TRAININGS")) and \
             (train_pending_tasks := get_pending_trainings()):
 
-            train_uuid = train_pending_tasks[0]
+            train_pending_task = train_pending_tasks[0]
+            train_uuid = train_pending_task["train_uuid"]
+            user_id = train_pending_task["user_id"]
             
             thread = Thread(
                 target=TrainingPipeline(
-                    config=get_training_config(train_uuid),
-                    train_uuid=train_uuid
+                    user_id=user_id,
+                    train_uuid=train_uuid,
+                    config=get_training_config(user_id, train_uuid)
                 ).run
             )
             thread.start()

@@ -32,7 +32,7 @@ def _get_model(class_name, x_num, y_num):
     except AttributeError:
         return None
     
-def train_model(model, optimizer, loss_function, ten_train_norm_x, ten_train_norm_y, params, device, train_uuid):
+def train_model(model, optimizer, loss_function, ten_train_norm_x, ten_train_norm_y, params, device, train_uuid, user_id):
     try:
         if model is None or optimizer is None or loss_function is None:
             return None
@@ -45,7 +45,7 @@ def train_model(model, optimizer, loss_function, ten_train_norm_x, ten_train_nor
 
         for epoch in range(params['epochs']):
             if (epoch + 1) % 100 == 0:
-                status = get_training_status(train_uuid)
+                status = get_training_status(user_id, train_uuid)
                 if status == 'stopping':
                     return None
             

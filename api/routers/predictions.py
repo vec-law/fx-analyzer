@@ -100,7 +100,7 @@ def del_prediction_endpoint(
         if get_prediction_status(pred_uuid) in ("running", "stopping"):
             raise ValueError("Nie można usunąć predykcji która jest uruchomiona")
             
-        return {"success": del_prediction(pred_uuid)}
+        return {"success": del_prediction(user_id, pred_uuid)}
     
     except HTTPException:
         raise

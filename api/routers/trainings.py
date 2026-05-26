@@ -119,10 +119,10 @@ def del_training_endpoint(
         if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        if get_training_status(train_uuid) in ("running", "stopping"):
+        if get_training_status(user_id, train_uuid) in ("running", "stopping"):
             raise ValueError("Nie można usunąć treningu który jest uruchomiony")
             
-        return {"success": del_training(train_uuid)}
+        return {"success": del_training(user_id, train_uuid)}
     
     except HTTPException:
         raise
@@ -150,7 +150,7 @@ def get_training_config_endpoint(
         if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        return {"config": get_training_config(train_uuid)}
+        return {"config": get_training_config(user_id, train_uuid)}
     
     except HTTPException:
         raise
@@ -178,10 +178,10 @@ def run_training_endpoint(
         if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        status = get_training_status(train_uuid)
+        status = get_training_status(user_id, train_uuid)
         
         if status in ("created", "pending", "failed", 'stopped'):
-            update_training_status(train_uuid, "pending")
+            update_training_status(user_id, train_uuid, "pending")
         else:
             raise ValueError("Nie można uruchomić treningu o tym statusie")
 
@@ -213,10 +213,10 @@ def stop_training_endpoint(
         if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        status = get_training_status(train_uuid)
+        status = get_training_status(user_id, train_uuid)
         
         if status == "running":
-            update_training_status(train_uuid, "stopping")
+            update_training_status(user_id, train_uuid, "stopping")
         else:
             raise ValueError("Trening nie jest uruchomiony")
 
@@ -249,7 +249,7 @@ def get_training_logs_endpoint(
         if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        return {"logs": get_training_logs(train_uuid)}
+        return {"logs": get_training_logs(user_id, train_uuid)}
     
     except HTTPException:
         raise

@@ -142,13 +142,18 @@ def get_predictions():
     except Exception as e:
         raise Exception(f"Błąd podczas pobierania listy predykcji: {str(e)}")
 
-def del_prediction(pred_uuid):
+def del_prediction(user_id, pred_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM prediction WHERE pred_uuid = %s", (pred_uuid,))
+                cur.execute("""
+                    DELETE FROM prediction
+                    WHERE pred_uuid = %s
+                    AND train_uuid IN
+                    (SELECT train_uuid FROM training WHERE user_id = %s)
+                    """, (pred_uuid, user_id))
                 if cur.rowcount == 0:
-                    raise Exception(f"Predykcja {pred_uuid} nie istnieje.")
+                    raise Exception(f"Predykcja {pred_uuid} nie istnieje lub nie należy do użytkownika")
                 conn.commit()
         return True
     except Exception as e:
