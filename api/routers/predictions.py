@@ -97,7 +97,7 @@ def del_prediction_endpoint(
         if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        if get_prediction_status(pred_uuid) in ("running", "stopping"):
+        if get_prediction_status(user_id, pred_uuid) in ("running", "stopping"):
             raise ValueError("Nie można usunąć predykcji która jest uruchomiona")
             
         return {"success": del_prediction(user_id, pred_uuid)}
@@ -162,6 +162,41 @@ def run_prediction_endpoint(
             update_prediction_status(user_id, pred_uuid, "pending")
         else:
             raise ValueError("Nie można uruchomić predykcji o tym statusie")
+
+        return {"success": True}
+        
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.patch("/users/{user_id}/predictions/{pred_uuid}/stop")
+def stop_prediction_endpoint(
+    user_id: int,
+    pred_uuid: UUID,
+    authorization: str = Header(...)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        if is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        status = get_prediction_status(user_id, pred_uuid)
+        
+        if status == "running":
+            update_prediction_status(user_id, pred_uuid, "stopping")
+        else:
+            raise ValueError("Predykcja nie jest uruchomiona")
 
         return {"success": True}
         
