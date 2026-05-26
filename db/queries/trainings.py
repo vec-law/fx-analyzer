@@ -45,7 +45,7 @@ def get_pending_trainings():
     except Exception as e:
         raise Exception(f"Błąd bazy danych: {str(e)}")
 
-def get_user_trainings(user_id):
+def get_user_trainings(user_id, status=None):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
@@ -63,8 +63,9 @@ def get_user_trainings(user_id):
                     JOIN data_source ON training.data_source_id = data_source.id
                     JOIN status ON training.status_id = status.id
                     WHERE training.user_id = %s
+                    AND (%s IS NULL OR status.name = %s)
                     ORDER BY training.created_at DESC
-                """, (user_id, ))
+                """, (user_id, status, status))
                 rows = cur.fetchall()
                 return [
                     {

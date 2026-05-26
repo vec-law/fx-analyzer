@@ -4,7 +4,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
     QTableWidgetItem
 )
-from ml.worker.prediction_worker import PredictionWorker
 from PyQt6.QtWidgets import QFileDialog
 
 import pandas as pd
@@ -12,27 +11,22 @@ import io
 import matplotlib.pyplot as plt
 import os
 
-class PredictionTab(QWidget):
+from ui.tab.base_tab import BaseTab
+
+class PredictionTab(BaseTab):
     PARAM_MAP = {
         "Liczba próbek": "all_samples",
         "Liczba próbek przewidywanych": "predicted_samples"
     }
 
-    def __init__(self, db_manager, tab_widget=None):
+    def __init__(self, tab_widget=None):
         super().__init__()
-        self.db_manager = db_manager
+        self.api_url = os.getenv("API_URL")
         self.tab_widget = tab_widget
         self.last_clicked_train_uuid = None
         self.last_clicked_pred_uuid = None
-        self.thread = None
-        self.worker = None
         self.init_ui()
-        self.init_actions()
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.on_load_completed_trainings()
-        self.fill_pred_table()
+        # self.init_actions()
 
     def init_ui(self):
         main_layout = QHBoxLayout()
@@ -116,27 +110,8 @@ class PredictionTab(QWidget):
             self.log_to_console("Błąd: Nie wybrano predykcji")
             return
 
-        if self.thread is not None and self.thread.isRunning():
-            return
-
         self.toggle_ui_lock(True)
-
-        self.thread = QThread()
-        self.worker = PredictionWorker(self.db_manager, self.last_clicked_pred_uuid)
-        self.worker.moveToThread(self.thread)
-
-        self.thread.started.connect(self.worker.run)
-        self.worker.log_signal.connect(self.log_to_console)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
         
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(lambda: setattr(self, 'thread', None))
-        self.thread.finished.connect(lambda: setattr(self, 'worker', None))
-        self.thread.finished.connect(self.fill_pred_table)
-        self.thread.finished.connect(lambda: self.toggle_ui_lock(False))
-
-        self.thread.start()
         self.log_to_console(f"Uruchomiono predykcję: {self.last_clicked_pred_uuid}")
 
     def on_stop_prediction(self):
@@ -301,3 +276,12 @@ class PredictionTab(QWidget):
 
     def log_to_console(self, message: str):
         self.console.append(message)
+
+    def set_session(self, user_id, session_token):
+        super().set_session(user_id, session_token)
+        trainings = self.on_load_completed_trainings()
+        # if not trainings:
+        #     return
+        # for t in trainings:
+        #     if t["status"] in ("running", "pending", "stopping"):
+        #         self.start_logs_poller(t["train_uuid"])

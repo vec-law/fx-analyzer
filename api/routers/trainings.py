@@ -2,6 +2,7 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
 from db.queries.users import user_exists, is_blocked, get_session_token
+from typing import Optional
 
 from db.queries.trainings import (
     get_user_trainings, add_training, del_training,
@@ -28,7 +29,8 @@ class AddTrainingRequest(BaseModel):
 @router.get("/users/{user_id}/trainings")
 def get_trainings_endpoint(
     user_id: int,
-    authorization: str = Header(...)
+    authorization: str = Header(...),
+    status: Optional[str] = None
 ):
     try:
         if authorization.startswith("Bearer "):
@@ -43,7 +45,7 @@ def get_trainings_endpoint(
         if (db_token := get_session_token(user_id)) is None or session_token != db_token:
             raise HTTPException(status_code=401, detail="Brak dostępu")
         
-        return {"trainings": get_user_trainings(user_id)}
+        return {"trainings": get_user_trainings(user_id, status)}
     
     except HTTPException:
         raise
