@@ -177,7 +177,7 @@ def update_prediction_status(pred_uuid, status_name):
     except Exception as e:
         raise Exception(f"Nie udało się zaktualizować statusu predykcji: {str(e)}")
 
-def get_prediction_config(pred_uuid):
+def get_prediction_config(user_id, pred_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
@@ -189,8 +189,10 @@ def get_prediction_config(pred_uuid):
                         status.name
                     FROM prediction
                     JOIN status ON prediction.status_id = status.id
+                    JOIN training ON prediction.train_uuid = training.train_uuid
                     WHERE prediction.pred_uuid = %s
-                """, (pred_uuid,))
+                    AND training.user_id = %s
+                """, (pred_uuid, user_id))
                 row = cur.fetchone()
                 if row:
                     return {
