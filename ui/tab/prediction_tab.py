@@ -65,11 +65,11 @@ class PredictionTab(BaseTab):
         right_layout = QVBoxLayout()
         tables_layout = QHBoxLayout()
 
-        self.source_table = QTableWidget()
-        self.source_table.setColumnCount(4)
-        self.source_table.setHorizontalHeaderLabels(["UUID Treningu", "Instrument", "Interwał", "Utworzono"])
-        self.source_table.setSelectionBehavior(self.source_table.SelectionBehavior.SelectRows)
-        self.source_table.setSelectionMode(self.source_table.SelectionMode.SingleSelection)
+        self.train_table = QTableWidget()
+        self.train_table.setColumnCount(4)
+        self.train_table.setHorizontalHeaderLabels(["UUID Treningu", "Instrument", "Interwał", "Utworzono"])
+        self.train_table.setSelectionBehavior(self.train_table.SelectionBehavior.SelectRows)
+        self.train_table.setSelectionMode(self.train_table.SelectionMode.SingleSelection)
 
         self.pred_table = QTableWidget()
         self.pred_table.setColumnCount(4)
@@ -77,8 +77,8 @@ class PredictionTab(BaseTab):
         self.pred_table.setSelectionBehavior(self.pred_table.SelectionBehavior.SelectRows)
         self.pred_table.setSelectionMode(self.pred_table.SelectionMode.SingleSelection)
 
-        tables_layout.addWidget(self.source_table, 2)
-        tables_layout.addWidget(self.pred_table, 3)
+        tables_layout.addWidget(self.train_table, 1)
+        tables_layout.addWidget(self.pred_table, 1)
 
         self.console = QTextEdit()
         self.console.setReadOnly(True)
@@ -92,7 +92,7 @@ class PredictionTab(BaseTab):
 
     def init_actions(self):
         self.clear_console_btn.clicked.connect(lambda: self.console.clear())
-        self.source_table.cellClicked.connect(self.on_source_table_clicked)
+        self.train_table.cellClicked.connect(self.on_train_table_clicked)
         self.pred_table.cellClicked.connect(self.on_pred_table_clicked)
         self.add_pred_btn.clicked.connect(self.on_add_prediction)
         self.remove_pred_btn.clicked.connect(self.on_remove_prediction)
@@ -137,7 +137,7 @@ class PredictionTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania parametrów: {e}")
 
-    def on_load_completed_trainings(self, show_log=True):       
+    def on_load_trainings(self, show_log=True):       
         try:
             response = requests.get(
                 self.api_url + f"/users/{self.user_id}/trainings",
@@ -149,40 +149,71 @@ class PredictionTab(BaseTab):
                 raise ValueError(response.json()["detail"]) 
 
             trainings = response.json()["trainings"]
-
-            if not trainings:
-                if show_log:
-                    self.log_to_console("Brak zakończonych treningów w bazie.")
-                return
             
-            self.fill_source_table(trainings)
-            
-            if show_log:
-                self.log_to_console("Wczytano listę zadań.")
+            self.fill_train_table(trainings)
 
             return trainings
         
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania: {e}")
 
-    def fill_source_table(self, tasks: list):
-        self.source_table.setRowCount(len(tasks))
-        for row, t in enumerate(tasks):
-            self.source_table.setItem(row, 0, QTableWidgetItem(str(t.get("train_uuid", ""))))
-            self.source_table.setItem(row, 1, QTableWidgetItem(str(t.get("instrument", ""))))
-            self.source_table.setItem(row, 2, QTableWidgetItem(str(t.get("timeframe_name", ""))))
-            self.source_table.setItem(row, 3, QTableWidgetItem(str(t.get("created_at", ""))))
+    def on_load_predictions(self, show_log=True):       
+        try:
+            response = requests.get(
+                self.api_url + f"/users/{self.user_id}/predictions",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"]) 
+
+            predictions = response.json()["predictions"]
+            
+            self.fill_pred_table(predictions)
+
+            return predictions
         
-        if len(tasks) > 0:
-            self.last_clicked_train_uuid = self.source_table.item(0, 0).text()
-            self.source_table.selectRow(0)
+        except Exception as e:
+            self.log_to_console(f"Błąd wczytywania: {e}")
+
+    def fill_train_table(self, trainings: list):
+        self.train_table.setRowCount(len(trainings))
+        for row, t in enumerate(trainings):
+            self.train_table.setItem(row, 0, QTableWidgetItem(str(t.get("train_uuid", ""))))
+            self.train_table.setItem(row, 1, QTableWidgetItem(str(t.get("instrument", ""))))
+            self.train_table.setItem(row, 2, QTableWidgetItem(str(t.get("timeframe_name", ""))))
+            self.train_table.setItem(row, 3, QTableWidgetItem(str(t.get("created_at", ""))))
+        
+        if len(trainings) > 0:
+            self.last_clicked_train_uuid = self.train_table.item(0, 0).text()
+            self.train_table.selectRow(0)
         else:
             self.last_clicked_train_uuid = None
             
-        self.source_table.resizeColumnsToContents()
+        self.train_table.resizeColumnsToContents()
 
-    def on_source_table_clicked(self, row, column):
-        item = self.source_table.item(row, 0)
+    def fill_pred_table(self, predictions: list):
+        self.pred_table.setRowCount(len(predictions))
+        
+        for row, pred in enumerate(predictions):
+            curr_uuid = str(pred.get("pred_uuid", ""))
+            
+            self.pred_table.setItem(row, 0, QTableWidgetItem(curr_uuid))
+            self.pred_table.setItem(row, 1, QTableWidgetItem(str(pred.get("train_uuid", ""))))
+            self.pred_table.setItem(row, 2, QTableWidgetItem(str(pred.get("status", ""))))
+            self.pred_table.setItem(row, 3, QTableWidgetItem(str(pred.get("created_at", ""))))
+
+        if predictions and len(predictions) > 0:
+            first_uuid = self.pred_table.item(0, 0).text()
+            self.last_clicked_pred_uuid = first_uuid
+            self.pred_table.selectRow(0)
+        else:
+            self.last_clicked_pred_uuid = None
+
+        self.pred_table.resizeColumnsToContents()
+
+    def on_train_table_clicked(self, row, column):
+        item = self.train_table.item(row, 0)
         if item:
             self.last_clicked_train_uuid = item.text()
 
@@ -272,39 +303,41 @@ class PredictionTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd: {e}")
 
-    def fill_pred_table(self):
-        try:
-            predictions = self.db_manager.get_predictions()
-            self.pred_table.setRowCount(len(predictions))
-            
-            for row, pred in enumerate(predictions):
-                curr_uuid = str(pred.get("pred_uuid", ""))
-                
-                self.pred_table.setItem(row, 0, QTableWidgetItem(curr_uuid))
-                self.pred_table.setItem(row, 1, QTableWidgetItem(str(pred.get("train_uuid", ""))))
-                self.pred_table.setItem(row, 2, QTableWidgetItem(str(pred.get("status", ""))))
-                dt = pred.get("created_at")
-                self.pred_table.setItem(row, 3, QTableWidgetItem(dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""))
 
-            if predictions and len(predictions) > 0:
-                first_uuid = self.pred_table.item(0, 0).text()
-                self.last_clicked_pred_uuid = first_uuid
-                self.pred_table.selectRow(0)
-            else:
-                self.last_clicked_pred_uuid = None
-
-            self.pred_table.resizeColumnsToContents()
-        except Exception as e:
-            self.log_to_console(f"Błąd odświeżania tabeli predykcji: {e}")
 
     def log_to_console(self, message: str):
         self.console.append(message)
 
     def set_session(self, user_id, session_token):
         super().set_session(user_id, session_token)
-        trainings = self.on_load_completed_trainings()
+        trainings = self.on_load_trainings()
+        predictions = self.on_load_predictions()
         # if not trainings:
         #     return
         # for t in trainings:
         #     if t["status"] in ("running", "pending", "stopping"):
         #         self.start_logs_poller(t["train_uuid"])
+
+    def clear_session(self):
+        # if self.status_poller:
+        #     self.status_poller.stop()
+        #     self.status_poller.wait()
+        #     self.status_poller = None
+
+        # for poller in self.logs_pollers.values():
+        #     poller.stop()
+        #     poller.wait()
+        # self.logs_pollers.clear()
+
+        super().clear_session()
+
+        self.console.clear()
+
+        self.train_table.setRowCount(0)
+        self.pred_table.setRowCount(0)
+
+        self.last_clicked_train_uuid = None
+        self.last_clicked_pred_uuid = None
+
+        # for field in self.param_fields.values():
+        #     field.clear()

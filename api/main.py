@@ -4,6 +4,7 @@ from db.queries.users import ensure_admin
 from api.routers import auth
 from api.routers import users
 from api.routers import trainings
+from api.routers import predictions
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -15,3 +16,4 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(trainings.router)
+app.include_router(predictions.router)

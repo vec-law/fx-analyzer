@@ -2,6 +2,45 @@ import psycopg2
 import uuid
 from db.config import DB_CONFIG
 
+def get_user_predictions(user_id, status=None):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT 
+                        prediction.pred_uuid, 
+                        prediction.train_uuid, 
+                        status.name, 
+                        prediction.all_samples, 
+                        prediction.predicted_samples, 
+                        prediction.created_at,
+                        instrument.name,
+                        timeframe.name
+                    FROM prediction
+                    JOIN status ON prediction.status_id = status.id
+                    JOIN training ON prediction.train_uuid = training.train_uuid
+                    JOIN instrument ON training.instrument_id = instrument.id
+                    JOIN timeframe ON training.timeframe_id = timeframe.id
+                    WHERE training.user_id = %s
+                    AND (%s IS NULL OR status.name = %s)
+                    ORDER BY prediction.created_at DESC
+                """, (user_id, status, status))
+                rows = cur.fetchall()
+                return [
+                    {
+                        'pred_uuid': r[0],
+                        'train_uuid': r[1],
+                        'status': r[2],
+                        'all_samples': r[3],
+                        'predicted_samples': r[4],
+                        'created_at': r[5],
+                        'instrument_name': r[6],
+                        'timeframe_name': r[7]
+                    } for r in rows
+                ]
+    except Exception as e:
+        raise Exception(f"Błąd: {str(e)}")
+
 def add_prediction(train_uuid, all_samples, predicted_samples):
     pred_uuid = str(uuid.uuid4())
     try:
