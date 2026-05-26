@@ -2,6 +2,72 @@ import psycopg2
 import uuid
 from db.config import DB_CONFIG
 
+def get_prediction_logs(user_id, pred_uuid):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT message FROM prediction_log
+                    JOIN prediction ON prediction.pred_uuid = prediction_log.pred_uuid
+                    JOIN training ON training.train_uuid = prediction.train_uuid
+                    WHERE prediction_log.pred_uuid = %s
+                    AND user_id = %s
+                """, (pred_uuid, user_id))
+                rows = cur.fetchall()
+                return [row[0] for row in rows]
+    except Exception as e:
+        raise Exception(f"Błąd bazy danych: {str(e)}")
+
+def add_prediction_log(pred_uuid, message):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO prediction_log (pred_uuid, message) 
+                    VALUES (%s, %s)
+                """, (pred_uuid, message))
+
+                conn.commit()
+
+                return True
+    except ValueError as e:
+        raise e
+    except Exception as e:
+        raise Exception(f"Błąd bazy danych: {str(e)}")
+
+def count_running_predictions():
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*) FROM prediction
+                    JOIN status ON status_id = status.id
+                    WHERE status.name = 'running'
+                """)
+                rows = cur.fetchone()[0]
+                return rows
+    except Exception as e:
+        raise Exception(f"Błąd bazy danych: {str(e)}")
+
+def get_pending_predictions():
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT
+                        training.user_id,
+                        training.train_uuid,
+                        prediction.pred_uuid
+                    FROM prediction
+                    JOIN training ON training.train_uuid = prediction.train_uuid
+                    JOIN status ON prediction.status_id = status.id
+                    WHERE status.name = 'pending'
+                """)
+                rows = cur.fetchall()
+                return [{"user_id": row[0], "train_uuid": row[1], "pred_uuid": row[2]} for row in rows]
+    except Exception as e:
+        raise Exception(f"Błąd bazy danych: {str(e)}")
+
 def get_prediction_status(user_id, pred_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
@@ -195,18 +261,21 @@ def save_prediction_result(pred_uuid, arch_name, data_bytes):
     except Exception as e:
         raise Exception(f"Błąd bazy danych przy zapisywaniu wyniku: {str(e)}")
 
-def load_prediction_result(pred_uuid, arch_name):
+def load_prediction_result(user_id, pred_uuid, arch_name):
     query = """
         SELECT prediction_result.data 
         FROM prediction_result
         JOIN architecture ON prediction_result.architecture_id = architecture.id
-        WHERE prediction_result.pred_uuid = %s 
+        JOIN prediction ON prediction.pred_uuid = prediction_result.pred_uuid
+        JOIN training ON training.train_uuid = prediction.train_uuid
+        WHERE prediction_result.pred_uuid = %s
         AND architecture.name = %s
+        AND training.user_id = %s
     """
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
-                cur.execute(query, (pred_uuid, arch_name))
+                cur.execute(query, (pred_uuid, arch_name, user_id))
                 result = cur.fetchone()
                 if result:
                     return bytes(result[0])

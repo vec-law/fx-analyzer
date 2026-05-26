@@ -1,18 +1,18 @@
-from PyQt6.QtCore import QThread
+import base64
 from PyQt6.QtWidgets import (
-    QWidget, QPushButton, QTextEdit, QTableWidget,
+    QPushButton, QTextEdit, QTableWidget,
     QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QFormLayout,
     QTableWidgetItem
 )
 from PyQt6.QtWidgets import QFileDialog
-
 import pandas as pd
 import io
-import matplotlib.pyplot as plt
-
-import requests
 import os
+import requests
+import matplotlib.pyplot as plt
 from ui.tab.base_tab import BaseTab
+from ui.workers.prediction_status_poller import PredictionStatusPoller
+from ui.workers.prediction_logs_poller import PredictionLogsPoller
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,6 +29,8 @@ class PredictionTab(BaseTab):
         self.tab_widget = tab_widget
         self.last_clicked_train_uuid = None
         self.last_clicked_pred_uuid = None
+        self.status_poller = None
+        self.logs_pollers = {}
         self.init_ui()
         self.init_actions()
 
@@ -77,8 +79,8 @@ class PredictionTab(BaseTab):
         self.pred_table.setSelectionBehavior(self.pred_table.SelectionBehavior.SelectRows)
         self.pred_table.setSelectionMode(self.pred_table.SelectionMode.SingleSelection)
 
-        tables_layout.addWidget(self.train_table, 1)
-        tables_layout.addWidget(self.pred_table, 1)
+        tables_layout.addWidget(self.train_table, 5)
+        tables_layout.addWidget(self.pred_table, 6)
 
         self.console = QTextEdit()
         self.console.setReadOnly(True)
@@ -99,7 +101,7 @@ class PredictionTab(BaseTab):
         self.load_params_btn.clicked.connect(self.on_load_prediction_params)
         self.run_pred_btn.clicked.connect(self.on_run_prediction)
         self.stop_pred_btn.clicked.connect(self.on_stop_prediction)
-        # self.plot_charts_btn.clicked.connect(self.on_plot_charts)
+        self.plot_charts_btn.clicked.connect(self.on_plot_charts)
 
     def toggle_ui_lock(self, is_running: bool):
         if self.tab_widget:
@@ -108,15 +110,6 @@ class PredictionTab(BaseTab):
         self.add_pred_btn.setEnabled(not is_running)
         self.remove_pred_btn.setEnabled(not is_running)
         self.run_pred_btn.setEnabled(not is_running)
-
-    # def on_run_prediction(self):
-    #     if not self.last_clicked_pred_uuid:
-    #         self.log_to_console("Błąd: Nie wybrano predykcji")
-    #         return
-
-    #     self.toggle_ui_lock(True)
-        
-    #     self.log_to_console(f"Uruchomiono predykcję: {self.last_clicked_pred_uuid}")
 
     def on_run_prediction(self):
         if not self.last_clicked_pred_uuid:
@@ -130,7 +123,7 @@ class PredictionTab(BaseTab):
             if response.status_code != 200:
                 raise ValueError(response.json()["detail"])
             self.log_to_console(f"Uruchomiono predykcję: {self.last_clicked_pred_uuid}")
-            # self.start_logs_poller()
+            self.start_logs_poller()
             self.on_load_predictions(show_log=False)
         except Exception as e:
             self.log_to_console(f"Błąd uruchamiania: {e}")
@@ -174,7 +167,9 @@ class PredictionTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd parametrów: {e}")
 
-    def on_load_trainings(self, show_log=True):       
+    def on_load_trainings(self, show_log=True):    
+        if not self.user_id:
+            return   
         try:
             response = requests.get(
                 self.api_url + f"/users/{self.user_id}/trainings",
@@ -219,7 +214,7 @@ class PredictionTab(BaseTab):
             self.train_table.setItem(row, 0, QTableWidgetItem(str(t.get("train_uuid", ""))))
             self.train_table.setItem(row, 1, QTableWidgetItem(str(t.get("instrument", ""))))
             self.train_table.setItem(row, 2, QTableWidgetItem(str(t.get("timeframe_name", ""))))
-            self.train_table.setItem(row, 3, QTableWidgetItem(str(t.get("created_at", ""))))
+            self.train_table.setItem(row, 3, QTableWidgetItem(str(t.get("created_at", "")).replace("T", " ").split(".")[0]))
         
         if len(trainings) > 0:
             self.last_clicked_train_uuid = self.train_table.item(0, 0).text()
@@ -238,7 +233,7 @@ class PredictionTab(BaseTab):
             self.pred_table.setItem(row, 0, QTableWidgetItem(curr_uuid))
             self.pred_table.setItem(row, 1, QTableWidgetItem(str(pred.get("train_uuid", ""))))
             self.pred_table.setItem(row, 2, QTableWidgetItem(str(pred.get("status", ""))))
-            self.pred_table.setItem(row, 3, QTableWidgetItem(str(pred.get("created_at", ""))))
+            self.pred_table.setItem(row, 3, QTableWidgetItem(str(pred.get("created_at", "")).replace("T", " ").split(".")[0]))
 
         if predictions and len(predictions) > 0:
             first_uuid = self.pred_table.item(0, 0).text()
@@ -336,15 +331,38 @@ class PredictionTab(BaseTab):
         if not plots_dir: return
 
         try:
-            pred_config = self.db_manager.get_prediction_config(pred_uuid)
-            if not pred_config or pred_config["status"] != 'completed': return
+            response = requests.get(
+                self.api_url + f"/users/{self.user_id}/predictions/{pred_uuid}/config",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            pred_config = response.json()["config"]
+
+            if pred_config["status"] != 'completed': return
             
-            train_config = self.db_manager.get_training_config(pred_config['train_uuid'])
-            if not train_config: return
+            response = requests.get(
+                self.api_url + f"/users/{self.user_id}/trainings/{pred_config['train_uuid']}/config",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            train_config = response.json()["config"]
             
-            for arch in train_config['architectures']:
-                data = self.db_manager.load_prediction_result(pred_uuid, arch)
-                if not data: continue
+            for arch_name in train_config['architectures']:
+                response = requests.get(
+                    self.api_url + f"/users/{self.user_id}/predictions/{pred_uuid}/result/{arch_name}",
+                    headers={"Authorization": f"Bearer {str(self.session_token)}"}
+                )
+
+                if response.status_code != 200:
+                    raise ValueError(response.json()["detail"])
+
+                data = base64.b64decode(response.json()["data"])
                 
                 df = pd.read_parquet(io.BytesIO(data))
                 if df.empty: continue
@@ -354,17 +372,17 @@ class PredictionTab(BaseTab):
 
                 plt.scatter(df.index, df['close'], color='#CC0000', marker='o', s=2, label='Cena bieżąca close', zorder=1)
 
-                for target in train_config["target_names"]:
+                for target in train_config["targets"]:
                     plt.plot(df.index, df[target], linewidth=1, label=f"Predykcja {target}", zorder=2)
                 
-                plt.title(f"{train_config['instrument']['name']} - {arch}")
+                plt.title(f"{train_config['instrument_name']} - {arch_name}")
                 plt.legend(loc='best', fontsize='small')
                 plt.xlabel("Numer próbki")
                 plt.ylabel("Cena")
                 
                 plt.tight_layout()
 
-                plot_name = f"{train_config['instrument']['name']}_{arch}_{pred_uuid[:6]}.png".replace(" ", "")
+                plot_name = f"{train_config['instrument_name']}_{arch_name}_{pred_uuid[:6]}.png".replace(" ", "")
                 plt.savefig(os.path.join(plots_dir, plot_name), dpi=120)
                 plt.close('all')
 
@@ -373,8 +391,6 @@ class PredictionTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd: {e}")
 
-
-
     def log_to_console(self, message: str):
         self.console.append(message)
 
@@ -382,22 +398,22 @@ class PredictionTab(BaseTab):
         super().set_session(user_id, session_token)
         trainings = self.on_load_trainings()
         predictions = self.on_load_predictions()
-        # if not trainings:
-        #     return
-        # for t in trainings:
-        #     if t["status"] in ("running", "pending", "stopping"):
-        #         self.start_logs_poller(t["train_uuid"])
+        if not predictions:
+            return
+        for p in predictions:
+            if p["status"] in ("running", "pending", "stopping"):
+                self.start_logs_poller(p["pred_uuid"])
 
     def clear_session(self):
-        # if self.status_poller:
-        #     self.status_poller.stop()
-        #     self.status_poller.wait()
-        #     self.status_poller = None
+        if self.status_poller:
+            self.status_poller.stop()
+            self.status_poller.wait()
+            self.status_poller = None
 
-        # for poller in self.logs_pollers.values():
-        #     poller.stop()
-        #     poller.wait()
-        # self.logs_pollers.clear()
+        for poller in self.logs_pollers.values():
+            poller.stop()
+            poller.wait()
+        self.logs_pollers.clear()
 
         super().clear_session()
 
@@ -411,3 +427,23 @@ class PredictionTab(BaseTab):
 
         # for field in self.param_fields.values():
         #     field.clear()
+
+    def start_status_poller(self):
+        self.status_poller = PredictionStatusPoller(self.api_url, self.user_id, self.session_token)
+        self.status_poller.status_received.connect(self.fill_pred_table)
+        self.status_poller.start()
+
+    def start_logs_poller(self, pred_uuid=None):
+        pred_uuid = pred_uuid or self.last_clicked_pred_uuid
+        if pred_uuid not in self.logs_pollers:
+            poller = PredictionLogsPoller(self.api_url, self.user_id, self.session_token, pred_uuid)
+            poller.logs_received.connect(self.log_list_to_console)
+            poller.start()
+            self.logs_pollers[pred_uuid] = poller
+
+    def log_to_console(self, message: str):
+        self.console.append(message)
+
+    def log_list_to_console(self, messages: list):
+        for message in messages:
+            self.log_to_console(message)

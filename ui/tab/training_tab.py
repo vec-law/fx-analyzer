@@ -19,13 +19,6 @@ class TrainingTab(BaseTab):
         "Wartości docelowe": "targets", "Architektury modeli": "architectures"
     }
 
-    def log_to_console(self, message: str):
-        self.console.append(message)
-
-    def log_list_to_console(self, messages: list):
-        for message in messages:
-            self.log_to_console(message)
-
     def __init__(self, tab_widget=None):
         super().__init__()
         self.api_url = os.getenv("API_URL")
@@ -104,7 +97,7 @@ class TrainingTab(BaseTab):
             self.table.setItem(row, 1, QTableWidgetItem(t["instrument"]))
             self.table.setItem(row, 2, QTableWidgetItem(t["timeframe_name"]))
             self.table.setItem(row, 3, QTableWidgetItem(t["status"]))
-            self.table.setItem(row, 4, QTableWidgetItem(str(t["created_at"])))
+            self.table.setItem(row, 4, QTableWidgetItem(str(t.get("created_at", "")).replace("T", " ").split(".")[0]))
         self.table.resizeColumnsToContents()
 
     def on_clear_console(self):
@@ -335,23 +328,22 @@ class TrainingTab(BaseTab):
             if response.status_code != 200:
                 raise ValueError(response.json()["detail"])
 
-            if (response := response.json()) is not None:
-                train_config = response["config"]
-            
-                self.param_fields["instrument_name"].setText(train_config["instrument_name"])
-                self.param_fields["timeframe_name"].setText(train_config["timeframe_name"])
-                self.param_fields["data_source_name"].setText(train_config["data_source_name"])
-                self.param_fields["all_samples"].setText(str(train_config["all_samples"]))
-                self.param_fields["test_samples"].setText(str(train_config["test_samples"]))
-                self.param_fields["seed"].setText(str(train_config["seed"]))
-                self.param_fields["epochs"].setText(str(train_config["epochs"]))
-                self.param_fields["train_noise"].setText(str(train_config["train_noise"]))
-                self.param_fields["learning_rate"].setText(str(train_config["learning_rate"]))
-                self.param_fields["features"].setText(", ".join(train_config["features"]))
-                self.param_fields["targets"].setText(", ".join(train_config["targets"]))
-                self.param_fields["architectures"].setText(", ".join(train_config["architectures"]))
+            train_config = response.json()["config"]
+        
+            self.param_fields["instrument_name"].setText(train_config["instrument_name"])
+            self.param_fields["timeframe_name"].setText(train_config["timeframe_name"])
+            self.param_fields["data_source_name"].setText(train_config["data_source_name"])
+            self.param_fields["all_samples"].setText(str(train_config["all_samples"]))
+            self.param_fields["test_samples"].setText(str(train_config["test_samples"]))
+            self.param_fields["seed"].setText(str(train_config["seed"]))
+            self.param_fields["epochs"].setText(str(train_config["epochs"]))
+            self.param_fields["train_noise"].setText(str(train_config["train_noise"]))
+            self.param_fields["learning_rate"].setText(str(train_config["learning_rate"]))
+            self.param_fields["features"].setText(", ".join(train_config["features"]))
+            self.param_fields["targets"].setText(", ".join(train_config["targets"]))
+            self.param_fields["architectures"].setText(", ".join(train_config["architectures"]))
 
-                self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
+            self.log_to_console(f"Wczytano parametry: {self.last_clicked_uuid}")
         except Exception as e:
             self.log_to_console(f"Błąd parametrów: {e}")
 
@@ -367,3 +359,10 @@ class TrainingTab(BaseTab):
             poller.logs_received.connect(self.log_list_to_console)
             poller.start()
             self.logs_pollers[train_uuid] = poller
+
+    def log_to_console(self, message: str):
+        self.console.append(message)
+
+    def log_list_to_console(self, messages: list):
+        for message in messages:
+            self.log_to_console(message)

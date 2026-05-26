@@ -73,6 +73,13 @@ CREATE TABLE log (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE prediction_log (
+    id SERIAL PRIMARY KEY,
+    pred_uuid UUID REFERENCES prediction(pred_uuid) ON DELETE CASCADE,
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE parameter_set (
     train_uuid UUID PRIMARY KEY REFERENCES training(train_uuid) ON DELETE CASCADE,
     all_samples INTEGER NOT NULL CHECK (all_samples > 0),

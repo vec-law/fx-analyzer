@@ -38,7 +38,7 @@ class GUI(QWidget):
         self.setLayout(layout)
 
         self.setWindowTitle("fx-analyzer")
-        self.resize(1200, 700)
+        self.resize(1600, 900)
 
         self.login_panel.user_logged_in.connect(self.on_user_logged_in)
         self.login_panel.user_logged_out.connect(self.on_user_logged_out)
@@ -68,7 +68,11 @@ class GUI(QWidget):
             elif role_name == 'user':
                 self.training_tab.set_session(user_id, session_token)
                 self.training_tab.start_status_poller()
+                self.training_tab.status_poller.status_received.connect(
+                    lambda _: self.prediction_tab.on_load_trainings(show_log=False)
+                )
                 self.prediction_tab.set_session(user_id, session_token)
+                self.prediction_tab.start_status_poller()
                 self.tabs.setTabVisible(0, False)
                 self.tabs.setTabVisible(1, True)
                 self.tabs.setTabVisible(2, True)
