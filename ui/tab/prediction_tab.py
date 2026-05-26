@@ -30,7 +30,7 @@ class PredictionTab(BaseTab):
         self.last_clicked_train_uuid = None
         self.last_clicked_pred_uuid = None
         self.init_ui()
-        # self.init_actions()
+        self.init_actions()
 
     def init_ui(self):
         main_layout = QHBoxLayout()
@@ -96,10 +96,10 @@ class PredictionTab(BaseTab):
         self.pred_table.cellClicked.connect(self.on_pred_table_clicked)
         self.add_pred_btn.clicked.connect(self.on_add_prediction)
         self.remove_pred_btn.clicked.connect(self.on_remove_prediction)
-        self.load_params_btn.clicked.connect(self.on_load_params_to_fields)
-        self.run_pred_btn.clicked.connect(self.on_run_prediction)
-        self.stop_pred_btn.clicked.connect(self.on_stop_prediction)
-        self.plot_charts_btn.clicked.connect(self.on_plot_charts)
+        # self.load_params_btn.clicked.connect(self.on_load_params_to_fields)
+        # self.run_pred_btn.clicked.connect(self.on_run_prediction)
+        # self.stop_pred_btn.clicked.connect(self.on_stop_prediction)
+        # self.plot_charts_btn.clicked.connect(self.on_plot_charts)
 
     def toggle_ui_lock(self, is_running: bool):
         if self.tab_widget:
@@ -224,34 +224,67 @@ class PredictionTab(BaseTab):
 
     def on_add_prediction(self):
         if not self.last_clicked_train_uuid:
-            self.log_to_console("Błąd: Nie zaznaczono ukończonego treningu w lewej tabeli.")
+            self.log_to_console("Nie zaznaczono żadnego treningu")
             return
         try:
-            vals = {p: self.param_fields[p].text().strip() for p in self.PARAM_MAP.values()}
-            for key, val in vals.items():
+            pred_config = {p: self.param_fields[p].text().strip() for p in self.PARAM_MAP.values()}
+            for key, val in pred_config.items():
                 if not val:
                     raise ValueError(f"Pole {key} nie może być puste.")
-
-            pred_uuid = self.db_manager.add_prediction(
-                train_uuid=self.last_clicked_train_uuid,
-                all_samples=int(vals["all_samples"]),
-                predicted_samples=int(vals["predicted_samples"])
+                
+            pred_config["train_uuid"] = self.last_clicked_train_uuid
+                
+            response = requests.post(
+                self.api_url + f"/users/{self.user_id}/predictions",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"},
+                json=pred_config
             )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            pred_uuid = response.json()["pred_uuid"]
             
-            if pred_uuid:
-                self.log_to_console(f"Dodano predykcję: {pred_uuid}")
-                self.fill_pred_table()
+            self.pred_table.clearSelection()
+            self.last_clicked_pred_uuid = pred_uuid
+            self.on_load_predictions(show_log=False)
+            
+            for row in range(self.pred_table.rowCount()):
+                item = self.pred_table.item(row, 0)
+                if item and item.text() == pred_uuid:
+                    self.pred_table.selectRow(row)
+                    self.pred_table.setCurrentItem(item)
+                    break
+
+            self.log_to_console(f"Dodano predykcję: {pred_uuid}")
+
         except Exception as e:
             self.log_to_console(f"Błąd dodawania predykcji: {e}")
 
     def on_remove_prediction(self):
         if not self.last_clicked_pred_uuid:
+            self.log_to_console("Nie wybrano predykcji do usunięcia")
             return
+        
         try:
-            self.db_manager.del_prediction(self.last_clicked_pred_uuid)
-            self.log_to_console(f"Usunięto predykcję: {self.last_clicked_pred_uuid}")
-            self.last_clicked_pred_uuid = None
-            self.fill_pred_table()
+            response = requests.delete(
+                self.api_url + f"/users/{self.user_id}/predictions/{self.last_clicked_pred_uuid}",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+
+            self.log_to_console(f"Usunięto zadanie: {self.last_clicked_pred_uuid}")
+            self.on_load_predictions(show_log=False)
+
+            if self.pred_table.rowCount() > 0:
+                self.pred_table.selectRow(0)
+                item = self.pred_table.item(0, 0)
+                self.last_clicked_pred_uuid = item.text() if item else None
+            else:
+                self.last_clicked_pred_uuid = None
+
         except Exception as e:
             self.log_to_console(f"Błąd usuwania: {e}")
 

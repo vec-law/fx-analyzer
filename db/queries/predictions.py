@@ -2,6 +2,21 @@ import psycopg2
 import uuid
 from db.config import DB_CONFIG
 
+def get_prediction_status(pred_uuid):
+    try:
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT status.name 
+                    FROM prediction
+                    JOIN status ON prediction.status_id = status.id
+                    WHERE prediction.pred_uuid = %s
+                """, (pred_uuid, ))
+                result = cur.fetchone()
+                return result[0] if result else None
+    except Exception as e:
+        raise Exception(f"Błąd pobierania statusu: {str(e)}")
+
 def get_user_predictions(user_id, status=None):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
@@ -25,7 +40,9 @@ def get_user_predictions(user_id, status=None):
                     AND (%s IS NULL OR status.name = %s)
                     ORDER BY prediction.created_at DESC
                 """, (user_id, status, status))
+
                 rows = cur.fetchall()
+
                 return [
                     {
                         'pred_uuid': r[0],
@@ -38,27 +55,55 @@ def get_user_predictions(user_id, status=None):
                         'timeframe_name': r[7]
                     } for r in rows
                 ]
+            
+    except ValueError as e:
+        raise e
     except Exception as e:
         raise Exception(f"Błąd: {str(e)}")
 
-def add_prediction(train_uuid, all_samples, predicted_samples):
+def add_prediction(user_id, config):
     pred_uuid = str(uuid.uuid4())
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO prediction (
-                        pred_uuid, train_uuid, status_id, 
-                        all_samples, predicted_samples
-                    ) 
-                    VALUES (%s, %s, (SELECT id FROM status WHERE name = 'pending'), %s, %s)
-                """, (pred_uuid, train_uuid, all_samples, predicted_samples))
+                        pred_uuid,
+                        train_uuid,
+                        status_id, 
+                        all_samples,
+                        predicted_samples
+                    )
+                    SELECT
+                        %s,
+                        %s,
+                        (SELECT id FROM status WHERE name = 'pending'),
+                        %s,
+                        %s
+                    FROM training
+                    WHERE train_uuid = %s
+                    AND user_id = %s
+                    AND training.status_id = (SELECT id FROM status WHERE name = 'completed') 
+                    """, (
+                        pred_uuid,
+                        config["train_uuid"],
+                        config["all_samples"],
+                        config["predicted_samples"],
+                        config["train_uuid"],
+                        user_id
+                    )
+                )
                 conn.commit()
+
+                if cur.rowcount == 0:
+                    raise ValueError("Trening nie istnieje lub nie należy do użytkownika")
+                
                 return pred_uuid
+            
     except ValueError as e:
         raise e
     except Exception as e:
-        raise Exception(f"Błąd bazy danych przy dodawaniu predykcji: {str(e)}")
+        raise Exception(f"Błąd: {str(e)}")
 
 def get_predictions():
     try:

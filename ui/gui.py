@@ -44,6 +44,7 @@ class GUI(QWidget):
         self.login_panel.user_logged_out.connect(self.on_user_logged_out)
         self.login_panel.user_logged_out.connect(self.user_management_tab.clear_session)
         self.login_panel.user_logged_out.connect(self.training_tab.clear_session)
+        self.login_panel.user_logged_out.connect(self.prediction_tab.clear_session)
 
     def on_user_logged_in(self, user_id, session_token):
         try:

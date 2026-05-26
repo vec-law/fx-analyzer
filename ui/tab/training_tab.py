@@ -39,14 +39,14 @@ class TrainingTab(BaseTab):
     def init_ui(self):
         left_layout = QVBoxLayout()
         self.add_task_btn = QPushButton("Dodaj trening")
-        self.remove_task_btn = QPushButton("Usuń trening")
+        self.remove_training_btn = QPushButton("Usuń trening")
         self.load_params_btn = QPushButton("Wczytaj parametry")
         self.clear_console_btn = QPushButton("Wyczyść konsolę")
         self.run_task_btn = QPushButton("Uruchom trening")
         self.stop_task_btn = QPushButton("Zatrzymaj trening")
 
         self.buttons = [
-            self.add_task_btn, self.remove_task_btn,
+            self.add_task_btn, self.remove_training_btn,
             self.load_params_btn, self.clear_console_btn,
             self.run_task_btn, self.stop_task_btn
         ]
@@ -84,12 +84,12 @@ class TrainingTab(BaseTab):
         self.setLayout(main_layout)
 
     def init_actions(self):
-        self.remove_task_btn.clicked.connect(self.on_remove_task)
+        self.remove_training_btn.clicked.connect(self.on_remove_training)
         self.load_params_btn.clicked.connect(self.on_load_params)
         self.clear_console_btn.clicked.connect(self.on_clear_console)
-        self.add_task_btn.clicked.connect(self.on_add_task)
-        self.run_task_btn.clicked.connect(self.on_run_task)
-        self.stop_task_btn.clicked.connect(self.on_stop_task)
+        self.add_task_btn.clicked.connect(self.on_add_training)
+        self.run_task_btn.clicked.connect(self.on_run_training)
+        self.stop_task_btn.clicked.connect(self.on_stop_training)
         self.table.cellClicked.connect(self.on_table_cell_clicked)
 
     def on_table_cell_clicked(self, row, column):
@@ -110,7 +110,7 @@ class TrainingTab(BaseTab):
     def on_clear_console(self):
         self.console.clear()
 
-    def on_run_task(self):
+    def on_run_training(self):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie zaznaczono zadania")
             return
@@ -123,11 +123,11 @@ class TrainingTab(BaseTab):
                 raise ValueError(response.json()["detail"])
             self.log_to_console(f"Uruchomiono trening: {self.last_clicked_uuid}")
             self.start_logs_poller()
-            self.on_load_training_tasks(show_log=False)
+            self.on_load_trainings(show_log=False)
         except Exception as e:
             self.log_to_console(f"Błąd uruchamiania: {e}")
 
-    def on_stop_task(self):
+    def on_stop_training(self):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie zaznaczono zadania")
             return
@@ -139,19 +139,19 @@ class TrainingTab(BaseTab):
             if response.status_code != 200:
                 raise ValueError(response.json()["detail"])
             self.log_to_console(f"Zatrzymano trening: {self.last_clicked_uuid}")
-            self.on_load_training_tasks(show_log=False)
+            self.on_load_trainings(show_log=False)
         except Exception as e:
             self.log_to_console(f"Błąd zatrzymywania: {e}")
 
     def set_running_ui(self, running: bool):
-        for btn in [self.add_task_btn, self.remove_task_btn, 
+        for btn in [self.add_task_btn, self.remove_training_btn, 
                     self.load_params_btn, self.run_task_btn]:
             btn.setEnabled(not running)
             
         if self.tab_widget:
             self.tab_widget.tabBar().setEnabled(not running)
 
-    def on_load_training_tasks(self, show_log=True):
+    def on_load_trainings(self, show_log=True):
         try:
             response = requests.get(
                 self.api_url + f"/users/{self.user_id}/trainings",
@@ -188,7 +188,7 @@ class TrainingTab(BaseTab):
 
     def set_session(self, user_id, session_token):
         super().set_session(user_id, session_token)
-        trainings = self.on_load_training_tasks()
+        trainings = self.on_load_trainings()
         if not trainings:
             return
         for t in trainings:
@@ -215,7 +215,7 @@ class TrainingTab(BaseTab):
         for field in self.param_fields.values():
             field.clear()
             
-    def on_add_task(self):
+    def on_add_training(self):
         try:
             field_values = {param: self.param_fields[param].text().strip() for param in self.PARAM_MAP.values()}
             required_fields = list(self.PARAM_MAP.values())
@@ -276,12 +276,11 @@ class TrainingTab(BaseTab):
             if response.status_code != 200:
                 raise ValueError(response.json()["detail"])
 
-            if (response := response.json()) is not None:
-                new_uuid = response["train_uuid"]
+            new_uuid = response.json()["train_uuid"]
 
             self.table.clearSelection()
             self.last_clicked_uuid = new_uuid
-            self.on_load_training_tasks(show_log=False)
+            self.on_load_trainings(show_log=False)
             
             for row in range(self.table.rowCount()):
                 item = self.table.item(row, 0)
@@ -295,7 +294,7 @@ class TrainingTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd dodawania: {e}")
 
-    def on_remove_task(self):
+    def on_remove_training(self):
         if not self.last_clicked_uuid:
             self.log_to_console("Nie wybrano zadania do usunięcia")
             return
@@ -309,16 +308,15 @@ class TrainingTab(BaseTab):
             if response.status_code != 200:
                 raise ValueError(response.json()["detail"])
 
-            if (response := response.json()) is not None:
-                self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
-                self.on_load_training_tasks(show_log=False)
+            self.log_to_console(f"Usunięto zadanie: {self.last_clicked_uuid}")
+            self.on_load_trainings(show_log=False)
 
-                if self.table.rowCount() > 0:
-                    self.table.selectRow(0)
-                    item = self.table.item(0, 0)
-                    self.last_clicked_uuid = item.text() if item else None
-                else:
-                    self.last_clicked_uuid = None
+            if self.table.rowCount() > 0:
+                self.table.selectRow(0)
+                item = self.table.item(0, 0)
+                self.last_clicked_uuid = item.text() if item else None
+            else:
+                self.last_clicked_uuid = None
 
         except Exception as e:
             self.log_to_console(f"Błąd usuwania: {e}")
