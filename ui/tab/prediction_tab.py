@@ -9,9 +9,13 @@ from PyQt6.QtWidgets import QFileDialog
 import pandas as pd
 import io
 import matplotlib.pyplot as plt
-import os
 
+import requests
+import os
 from ui.tab.base_tab import BaseTab
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class PredictionTab(BaseTab):
     PARAM_MAP = {
@@ -133,13 +137,33 @@ class PredictionTab(BaseTab):
         except Exception as e:
             self.log_to_console(f"Błąd wczytywania parametrów: {e}")
 
-    def on_load_completed_trainings(self):
+    def on_load_completed_trainings(self, show_log=True):       
         try:
-            all_tasks = self.db_manager.get_trainings()
-            completed = [t for t in all_tasks if str(t.get("status")).lower() == 'completed']
-            self.fill_source_table(completed)
+            response = requests.get(
+                self.api_url + f"/users/{self.user_id}/trainings",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"},
+                params={"status": "completed"}
+            )
+
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"]) 
+
+            trainings = response.json()["trainings"]
+
+            if not trainings:
+                if show_log:
+                    self.log_to_console("Brak zakończonych treningów w bazie.")
+                return
+            
+            self.fill_source_table(trainings)
+            
+            if show_log:
+                self.log_to_console("Wczytano listę zadań.")
+
+            return trainings
+        
         except Exception as e:
-            self.log_to_console(f"Błąd wczytywania treningów: {e}")
+            self.log_to_console(f"Błąd wczytywania: {e}")
 
     def fill_source_table(self, tasks: list):
         self.source_table.setRowCount(len(tasks))
@@ -147,8 +171,7 @@ class PredictionTab(BaseTab):
             self.source_table.setItem(row, 0, QTableWidgetItem(str(t.get("train_uuid", ""))))
             self.source_table.setItem(row, 1, QTableWidgetItem(str(t.get("instrument", ""))))
             self.source_table.setItem(row, 2, QTableWidgetItem(str(t.get("timeframe_name", ""))))
-            dt = t.get("created_at")
-            self.source_table.setItem(row, 3, QTableWidgetItem(dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""))
+            self.source_table.setItem(row, 3, QTableWidgetItem(str(t.get("created_at", ""))))
         
         if len(tasks) > 0:
             self.last_clicked_train_uuid = self.source_table.item(0, 0).text()
