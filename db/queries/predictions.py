@@ -2,7 +2,7 @@ import psycopg2
 import uuid
 from db.config import DB_CONFIG
 
-def get_prediction_status(pred_uuid):
+def get_prediction_status(user_id, pred_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
@@ -10,8 +10,10 @@ def get_prediction_status(pred_uuid):
                     SELECT status.name 
                     FROM prediction
                     JOIN status ON prediction.status_id = status.id
+                    JOIN training ON prediction.train_uuid = training.train_uuid
                     WHERE prediction.pred_uuid = %s
-                """, (pred_uuid, ))
+                    AND user_id = %s
+                """, (pred_uuid, user_id))
                 result = cur.fetchone()
                 return result[0] if result else None
     except Exception as e:
@@ -105,43 +107,6 @@ def add_prediction(user_id, config):
     except Exception as e:
         raise Exception(f"Błąd: {str(e)}")
 
-def get_predictions():
-    try:
-        with psycopg2.connect(**DB_CONFIG) as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT 
-                        prediction.pred_uuid, 
-                        prediction.train_uuid, 
-                        status.name, 
-                        prediction.all_samples, 
-                        prediction.predicted_samples, 
-                        prediction.created_at,
-                        instrument.name,
-                        timeframe.name
-                    FROM prediction
-                    JOIN status ON prediction.status_id = status.id
-                    JOIN training ON prediction.train_uuid = training.train_uuid
-                    JOIN instrument ON training.instrument_id = instrument.id
-                    JOIN timeframe ON training.timeframe_id = timeframe.id
-                    ORDER BY prediction.created_at DESC
-                """)
-                rows = cur.fetchall()
-                return [
-                    {
-                        'pred_uuid': r[0],
-                        'train_uuid': r[1],
-                        'status': r[2],
-                        'all_samples': r[3],
-                        'predicted_samples': r[4],
-                        'created_at': r[5],
-                        'instrument_name': r[6],
-                        'timeframe_name': r[7]
-                    } for r in rows
-                ]
-    except Exception as e:
-        raise Exception(f"Błąd podczas pobierania listy predykcji: {str(e)}")
-
 def del_prediction(user_id, pred_uuid):
     try:
         with psycopg2.connect(**DB_CONFIG) as conn:
@@ -159,7 +124,7 @@ def del_prediction(user_id, pred_uuid):
     except Exception as e:
         raise Exception(f"Błąd podczas usuwania predykcji: {str(e)}")
 
-def update_prediction_status(pred_uuid, status_name):
+def update_prediction_status(user_id, pred_uuid, status_name):
     try:
         if not pred_uuid or not status_name:
             raise ValueError("Błąd: Brak UUID predykcji lub nazwy statusu")
@@ -168,8 +133,11 @@ def update_prediction_status(pred_uuid, status_name):
                 cur.execute("""
                     UPDATE prediction
                     SET status_id = (SELECT id FROM status WHERE name = %s)
-                    WHERE pred_uuid = %s
-                """, (status_name, pred_uuid))
+                    FROM training
+                    WHERE prediction.pred_uuid = %s
+                    AND prediction.train_uuid = training.train_uuid
+                    AND training.user_id = %s
+                    """, (status_name, pred_uuid, user_id))
                 if cur.rowcount == 0:
                     raise Exception(f"Nie znaleziono predykcji o UUID: {pred_uuid}")
                 conn.commit()

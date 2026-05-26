@@ -97,7 +97,7 @@ class PredictionTab(BaseTab):
         self.add_pred_btn.clicked.connect(self.on_add_prediction)
         self.remove_pred_btn.clicked.connect(self.on_remove_prediction)
         self.load_params_btn.clicked.connect(self.on_load_prediction_params)
-        # self.run_pred_btn.clicked.connect(self.on_run_prediction)
+        self.run_pred_btn.clicked.connect(self.on_run_prediction)
         # self.stop_pred_btn.clicked.connect(self.on_stop_prediction)
         # self.plot_charts_btn.clicked.connect(self.on_plot_charts)
 
@@ -109,14 +109,31 @@ class PredictionTab(BaseTab):
         self.remove_pred_btn.setEnabled(not is_running)
         self.run_pred_btn.setEnabled(not is_running)
 
+    # def on_run_prediction(self):
+    #     if not self.last_clicked_pred_uuid:
+    #         self.log_to_console("Błąd: Nie wybrano predykcji")
+    #         return
+
+    #     self.toggle_ui_lock(True)
+        
+    #     self.log_to_console(f"Uruchomiono predykcję: {self.last_clicked_pred_uuid}")
+
     def on_run_prediction(self):
         if not self.last_clicked_pred_uuid:
-            self.log_to_console("Błąd: Nie wybrano predykcji")
+            self.log_to_console("Nie zaznaczono predykcji")
             return
-
-        self.toggle_ui_lock(True)
-        
-        self.log_to_console(f"Uruchomiono predykcję: {self.last_clicked_pred_uuid}")
+        try:
+            response = requests.post(
+                self.api_url + f"/users/{self.user_id}/predictions/{self.last_clicked_pred_uuid}/run",
+                headers={"Authorization": f"Bearer {str(self.session_token)}"}
+            )
+            if response.status_code != 200:
+                raise ValueError(response.json()["detail"])
+            self.log_to_console(f"Uruchomiono predykcję: {self.last_clicked_pred_uuid}")
+            # self.start_logs_poller()
+            self.on_load_predictions(show_log=False)
+        except Exception as e:
+            self.log_to_console(f"Błąd uruchamiania: {e}")
 
     def on_stop_prediction(self):
         if self.worker:

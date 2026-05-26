@@ -6,7 +6,7 @@ from typing import Optional
 
 from db.queries.predictions import (
     get_user_predictions, add_prediction, get_prediction_status,
-    del_prediction, get_prediction_config
+    del_prediction, get_prediction_config, update_prediction_status
 )
 
 router = APIRouter()
@@ -130,6 +130,41 @@ def get_prediction_config_endpoint(
         
         return {"config": get_prediction_config(user_id, pred_uuid)}
     
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/users/{user_id}/predictions/{pred_uuid}/run")
+def run_prediction_endpoint(
+    user_id: int,
+    pred_uuid: UUID,
+    authorization: str = Header(...)
+):
+    try:
+        if authorization.startswith("Bearer "):
+            session_token = UUID(authorization.removeprefix("Bearer "))
+        else:
+            raise ValueError("Nieprawidłowy format nagłówka Authorization")
+        
+        if not user_exists(user_id):
+            raise ValueError("Użytkownik nie istnieje")
+        if is_blocked(user_id):
+            raise ValueError("Użytkownik zablokowany")
+        if (db_token := get_session_token(user_id)) is None or session_token != db_token:
+            raise HTTPException(status_code=401, detail="Brak dostępu")
+        
+        status = get_prediction_status(user_id, pred_uuid)
+        
+        if status in ("created", "pending", "failed", 'stopped'):
+            update_prediction_status(user_id, pred_uuid, "pending")
+        else:
+            raise ValueError("Nie można uruchomić predykcji o tym statusie")
+
+        return {"success": True}
+        
     except HTTPException:
         raise
     except ValueError as e:

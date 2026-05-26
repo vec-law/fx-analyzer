@@ -24,12 +24,12 @@ def count_running_trainings():
         with psycopg2.connect(**DB_CONFIG) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT train_uuid FROM training
+                    SELECT COUNT(*) FROM training
                     JOIN status ON status_id = status.id
                     WHERE status.name = 'running'
                 """)
-                rows = cur.fetchall()
-                return len(rows)
+                rows = cur.fetchone()[0]
+                return rows
     except Exception as e:
         raise Exception(f"Błąd bazy danych: {str(e)}")
 
