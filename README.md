@@ -1,8 +1,10 @@
 # fx-analyzer
 
-**PL:** Desktopowa aplikacja do analizy rynku FX.
+**v1.2.0-beta**
 
-**EN:** Desktop application for FX market analysis.
+**PL:** Aplikacja do trenowania modeli sieci neuronowych i generowania prognoz cen instrumentów finansowych.
+
+**EN:** An application for training neural network models and generating price forecasts for financial instruments.
 
 ---
 
@@ -16,9 +18,9 @@
 
 ## Opis projektu (About)
 
-**PL:** Aplikacja desktopowa do analizy i prognozowania trendów na rynku FX przy wykorzystaniu sieci neuronowych. Umożliwia automatyczne pobieranie i przetwarzanie danych rynkowych, obliczanie wskaźników technicznych, trening modeli, generowanie predykcji oraz zapis wyników w postaci wykresów. Zadania treningu i predykcji są zarządzane z poziomu graficznego interfejsu. Konfiguracje zadań, wagi modeli i wyniki predykcji są przechowywane w bazie danych.
+**PL:** Aplikacja do trenowania modeli sieci neuronowych i generowania prognoz cen instrumentów finansowych (waluty, indeksy, surowce, kryptowaluty). Posiada funkcje zarządzania użytkownikami oraz zadaniami treningu i predykcji. Umożliwia automatyczne pobieranie danych instrumentów, obliczanie wskaźników technicznych, przygotowanie danych, trenowanie modeli oraz generowanie predykcji. Dostęp do aplikacji możliwy jest przez REST API lub graficzny interfejs użytkownika. Wszystkie zadania wykonywane są w tle przez osobny proces roboczy w oddzielnych wątkach. Konfiguracje zadań, wagi modeli, wyniki predykcji oraz logi zapisywane są w bazie danych.
 
-**EN:** Desktop application for analysing and forecasting trends on the FX market using neural networks. Enables automatic retrieval and processing of market data, calculation of technical indicators, model training, prediction generation and export of results as charts. Training and prediction tasks are managed through a graphical interface. Task configurations, model weights and prediction results are stored in a database.
+**EN:** An application for training neural network models and generating price forecasts for financial instruments (currencies, indices, commodities, cryptocurrencies). Provides user management and training and prediction task management. Enables automatic data fetching, technical indicator calculation, data preparation, model training and prediction generation. The application is accessible via REST API or a graphical user interface. All tasks are executed in the background by a separate worker process in individual threads. Task configurations, model weights, prediction results and logs are stored in the database.
 
 ---
 
@@ -26,6 +28,7 @@
 
 | Biblioteka / Library | Zastosowanie / Purpose |
 |----------------------|------------------------|
+| FastAPI + uvicorn | REST API |
 | PyQt6 | interfejs graficzny / graphical interface |
 | PyTorch | sieci neuronowe / neural networks |
 | PostgreSQL + psycopg2 | baza danych / database |
@@ -33,6 +36,9 @@
 | pandas + numpy | przetwarzanie danych / data processing |
 | matplotlib | wykresy / charts |
 | safetensors + pyarrow | serializacja modeli i wyników / model and result serialisation |
+| bcrypt | hashowanie haseł / password hashing |
+| httpx | klient HTTP / HTTP client |
+| python-dotenv | konfiguracja środowiska / environment configuration |
 
 ---
 
@@ -41,7 +47,7 @@
 - Python 3.14
 - PostgreSQL
 - Pipenv
-- CUDA (opcjonalnie / optional)
+- CUDA (opcjonalnie, wymagane do treningu na GPU / optional, required for GPU training)
 - Plik `.env` z danymi dostępowymi do bazy danych / `.env` file with database credentials
 
 ---
@@ -54,21 +60,52 @@
    cd fx-analyzer
    ```
 
-2. Skonfiguruj bazę danych PostgreSQL i utwórz schemat / Set up PostgreSQL and initialise the schema:
-   ```bash
-   psql -U <użytkownik/user> -d <baza/database> -f db/schema.sql
-   ```
-
-3. Utwórz plik `.env` z danymi dostępowymi do bazy danych / Create a `.env` file with database credentials.
-
-4. Zainstaluj zależności / Install dependencies:
+2. Zainstaluj zależności / Install dependencies:
    ```bash
    pipenv install
    ```
 
-5. Uruchom aplikację / Run the application:
+3. Skonfiguruj bazę danych PostgreSQL / Set up PostgreSQL database:
    ```bash
-   pipenv run python main.py
+   psql -U <użytkownik/user> -d <baza/database> -f db/schema.sql
+   psql -U <użytkownik/user> -d <baza/database> -f db/seed.sql
+   ```
+
+4. Utwórz plik `.env` w katalogu głównym projektu / Create a `.env` file in the root directory of the project:
+   ```env
+   DB_NAME=fx_analyzer_db
+   DB_USER=postgres
+   DB_PASSWORD=
+   DB_HOST=localhost
+   DB_PORT=5432
+
+   ADMIN_LOGIN=admin
+   ADMIN_PASSWORD=
+
+   API_URL=http://127.0.0.1:8000
+
+   MAX_RUNNING_TRAININGS=10
+   MAX_RUNNING_PREDICTIONS=10
+   ```
+
+   | Zmienna / Variable | Opis / Description |
+   |--------------------|---------------------|
+   | `DB_NAME` | nazwa bazy danych / database name |
+   | `DB_USER` | użytkownik bazy danych / database user |
+   | `DB_PASSWORD` | hasło do bazy danych / database password |
+   | `DB_HOST` | host bazy danych / database host |
+   | `DB_PORT` | port bazy danych / database port |
+   | `ADMIN_LOGIN` | login administratora tworzony przy starcie API / admin login created on API startup |
+   | `ADMIN_PASSWORD` | hasło administratora / admin password |
+   | `API_URL` | adres API używany przez GUI / API address used by GUI |
+   | `MAX_RUNNING_TRAININGS` | maksymalna liczba równoległych treningów / maximum number of concurrent trainings |
+   | `MAX_RUNNING_PREDICTIONS` | maksymalna liczba równoległych predykcji / maximum number of concurrent predictions |
+
+5. Uruchom komponenty aplikacji / Run the application components:
+   ```bash
+   pipenv run python run_api.py
+   pipenv run python run_worker.py
+   pipenv run python run_gui.py
    ```
 
 > [!TIP]
@@ -108,24 +145,62 @@
 
 ```
 fx-analyzer/
-├── db/                  # schemat bazy danych / database schema
-├── src/
-│   ├── model/           # definicja i zarządzanie sieciami neuronowymi / neural network definition and management
-│   ├── pipeline/        # potoki treningu i predykcji / training and prediction pipelines
-│   ├── ui/              # interfejs graficzny (okno główne, zakładki) / graphical interface (main window, tabs)
-│   └── worker/          # wątki robocze treningu i predykcji / training and prediction worker threads
-├── cleaner.py           # czyszczenie danych / data cleaning
-├── data_extractor.py    # obliczanie wskaźników i cech / indicator and feature calculation
-├── db_manager.py  # obsługa bazy danych / database handler
-├── loader.py            # pobieranie danych rynkowych / market data retrieval
-├── preprocessor.py      # normalizacja i podział danych / data normalisation and splitting
-└── main.py              # punkt wejścia / entry point
+├── api/          # REST API (FastAPI)
+├── worker/       # Proces roboczy / worker process
+├── gui/          # Interfejs graficzny (PyQt6)
+├── ml/           # Logika ML: ładowanie danych, pipeline, model
+├── db/           # Połączenie z bazą danych, zapytania SQL
+├── run_api.py
+├── run_worker.py
+├── run_gui.py
+├── version.py
+└── Pipfile
 ```
+
+---
+
+## API
+
+Dokumentacja dostępna po uruchomieniu pod adresem / Documentation available after launch at:
+`http://127.0.0.1:8000/docs`
+
+Autoryzacja odbywa się przez token sesji przekazywany w nagłówku / Authorization is done via session token passed in the header:
+`Authorization: Bearer <session_token>`
+
+### Endpointy / Endpoints
+
+| Metoda / Method | Ścieżka / Path | Opis / Description |
+|-----------------|----------------|---------------------|
+| POST | `/auth/login` | Logowanie / Login |
+| DELETE | `/auth/logout` | Wylogowanie / Logout |
+| GET | `/users` | Lista użytkowników / List users |
+| POST | `/users` | Dodanie użytkownika / Add user |
+| DELETE | `/users/{user_id}` | Usunięcie użytkownika / Delete user |
+| PATCH | `/users/{user_id}/password` | Zmiana hasła / Change password |
+| PATCH | `/users/{user_id}/block` | Zablokowanie użytkownika / Block user |
+| PATCH | `/users/{user_id}/unblock` | Odblokowanie użytkownika / Unblock user |
+| GET | `/users/{user_id}/role` | Rola użytkownika / User role |
+| GET | `/users/{user_id}/trainings` | Lista treningów / List trainings |
+| POST | `/users/{user_id}/trainings` | Dodanie treningu / Add training |
+| DELETE | `/users/{user_id}/trainings/{train_uuid}` | Usunięcie treningu / Delete training |
+| GET | `/users/{user_id}/trainings/{train_uuid}/config` | Konfiguracja treningu / Training config |
+| POST | `/users/{user_id}/trainings/{train_uuid}/run` | Uruchomienie treningu / Run training |
+| PATCH | `/users/{user_id}/trainings/{train_uuid}/stop` | Zatrzymanie treningu / Stop training |
+| GET | `/users/{user_id}/trainings/{train_uuid}/logs` | Logi treningu / Training logs |
+| GET | `/users/{user_id}/predictions` | Lista predykcji / List predictions |
+| POST | `/users/{user_id}/predictions` | Dodanie predykcji / Add prediction |
+| DELETE | `/users/{user_id}/predictions/{pred_uuid}` | Usunięcie predykcji / Delete prediction |
+| GET | `/users/{user_id}/predictions/{pred_uuid}/config` | Konfiguracja predykcji / Prediction config |
+| POST | `/users/{user_id}/predictions/{pred_uuid}/run` | Uruchomienie predykcji / Run prediction |
+| PATCH | `/users/{user_id}/predictions/{pred_uuid}/stop` | Zatrzymanie predykcji / Stop prediction |
+| GET | `/users/{user_id}/predictions/{pred_uuid}/logs` | Logi predykcji / Prediction logs |
+| GET | `/users/{user_id}/predictions/{pred_uuid}/result/{arch_name}` | Wyniki predykcji / Prediction results |
 
 ---
 
 ## Historia zmian (Changelog)
 
+- **v1.2.0-beta**: Dodanie REST API (FastAPI) jako głównego interfejsu aplikacji / Added REST API (FastAPI) as the main application interface. Zmiana roli GUI na klienta API / Changed GUI role to API client. Przeniesienie wykonywania zadań z GUI do workera, możliwość równoległego uruchamiania wielu zadań / Moved task execution from GUI to worker, support for running multiple tasks concurrently. Dodanie zarządzania użytkownikami, utworzenie ról admin i user / Added user management, created admin and user roles. Dodanie mechanizmu autoryzacji opartego na identyfikatorze użytkownika i tokenie sesji / Added authorization mechanism based on user identifier and session token
 - **v1.1.0-beta**: Przepisanie aplikacji od podstaw — zastąpienie skryptu konsolowego aplikacją desktopową z graficznym interfejsem, dodanie bazy danych, podział na niezależne potoki treningu i predykcji uruchamiane w osobnych wątkach, zarządzanie zadaniami przez interfejs graficzny / Full rewrite — replaced console script with a desktop application with graphical interface, added database, split into independent training and prediction pipelines running in separate threads, task management through graphical interface
 - **v1.0.2**: Dodanie logiki wyboru modelu / Added model selection logic
 - **v1.0.1**: Dodanie testów integracyjnych / Added integration tests
