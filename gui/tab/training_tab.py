@@ -2,9 +2,9 @@ import requests
 import os
 from PyQt6.QtWidgets import QPushButton, QTextEdit, QTableWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QLabel, QLineEdit, QFormLayout, QTableWidgetItem
-from ui.tab.base_tab import BaseTab
-from ui.workers.training_status_poller import TrainingStatusPoller
-from ui.workers.training_logs_poller import TrainingLogsPoller
+from gui.tab.base_tab import BaseTab
+from gui.workers.training_status_poller import TrainingStatusPoller
+from gui.workers.training_logs_poller import TrainingLogsPoller
 from dotenv import load_dotenv
 
 load_dotenv()

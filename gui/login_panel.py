@@ -2,8 +2,8 @@ import requests
 import os
 from uuid import UUID
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QLabel
-from ui.popup.change_password_popup import ChangePasswordPopup
-from ui.utils import show_message
+from gui.popup.change_password_popup import ChangePasswordPopup
+from gui.utils import show_message
 from PyQt6.QtCore import pyqtSignal
 from dotenv import load_dotenv
 

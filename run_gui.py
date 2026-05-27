@@ -1,7 +1,7 @@
 import sys
 from dotenv import load_dotenv
 from PyQt6.QtWidgets import QApplication
-from ui.gui import GUI
+from gui.gui import GUI
 
 load_dotenv()
 

@@ -1,11 +1,11 @@
 import requests
 import os
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QTabWidget
-from ui.tab.user_management_tab import UserManagementTab
-from ui.tab.training_tab import TrainingTab
-from ui.tab.prediction_tab import PredictionTab
-from ui.login_panel import LoginPanel
-from ui.utils import show_message
+from gui.tab.user_management_tab import UserManagementTab
+from gui.tab.training_tab import TrainingTab
+from gui.tab.prediction_tab import PredictionTab
+from gui.login_panel import LoginPanel
+from gui.utils import show_message
 from dotenv import load_dotenv
 
 load_dotenv()

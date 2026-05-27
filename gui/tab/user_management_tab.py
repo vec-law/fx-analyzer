@@ -2,11 +2,11 @@ import requests
 import os
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView
 from PyQt6.QtCore import Qt
-from ui.utils import show_message
-from ui.tab.base_tab import BaseTab
-from ui.popup.change_password_popup import ChangePasswordPopup
-from ui.popup.add_user_popup import AddUserPopup
-from ui.popup.del_user_popup import DelUserPopup
+from gui.utils import show_message
+from gui.tab.base_tab import BaseTab
+from gui.popup.change_password_popup import ChangePasswordPopup
+from gui.popup.add_user_popup import AddUserPopup
+from gui.popup.del_user_popup import DelUserPopup
 from dotenv import load_dotenv
 
 load_dotenv()

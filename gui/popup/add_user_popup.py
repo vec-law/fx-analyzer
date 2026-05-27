@@ -2,7 +2,7 @@ import requests
 import os
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QLineEdit, QPushButton, QCheckBox
 from PyQt6.QtCore import pyqtSignal
-from ui.utils import show_message
+from gui.utils import show_message
 from dotenv import load_dotenv
 
 load_dotenv()

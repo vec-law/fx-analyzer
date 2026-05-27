@@ -10,9 +10,9 @@ import io
 import os
 import requests
 import matplotlib.pyplot as plt
-from ui.tab.base_tab import BaseTab
-from ui.workers.prediction_status_poller import PredictionStatusPoller
-from ui.workers.prediction_logs_poller import PredictionLogsPoller
+from gui.tab.base_tab import BaseTab
+from gui.workers.prediction_status_poller import PredictionStatusPoller
+from gui.workers.prediction_logs_poller import PredictionLogsPoller
 from dotenv import load_dotenv
 
 load_dotenv()
