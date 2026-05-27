@@ -145,7 +145,7 @@ def add_prediction(user_id, config):
                     SELECT
                         %s,
                         %s,
-                        (SELECT id FROM status WHERE name = 'pending'),
+                        (SELECT id FROM status WHERE name = 'created'),
                         %s,
                         %s
                     FROM training
