@@ -108,6 +108,8 @@
    pipenv run python run_gui.py
    ```
 
+6. Po uruchomieniu API konto administratora zostaje utworzone automatycznie na podstawie danych z pliku `.env` (`ADMIN_LOGIN`, `ADMIN_PASSWORD`). Konta użytkowników tworzone są przez administratora z poziomu API lub GUI / After starting the API, the admin account is created automatically based on the `.env` file (`ADMIN_LOGIN`, `ADMIN_PASSWORD`). User accounts are created by the administrator via API or GUI.
+
 > [!TIP]
 > **Windows:** Jeśli `psql` nie jest rozpoznawany, dodaj `C:\Program Files\PostgreSQL\<wersja>\bin` do zmiennej PATH / If `psql` is not recognised, add `C:\Program Files\PostgreSQL\<version>\bin` to your PATH variable.
 
